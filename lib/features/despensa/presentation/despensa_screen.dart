@@ -6,10 +6,10 @@ import 'widgets/producto_card.dart';
 
 class DespensaScreen extends StatelessWidget {
   const DespensaScreen({super.key});
-
+  
   @override
   Widget build(BuildContext context) {
-    // Ordenamos por días restantes (los más urgentes primero)
+    
     final productos = [...productosEjemplo]
       ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
 
@@ -20,7 +20,7 @@ class DespensaScreen extends StatelessWidget {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            // ── Header ──────────────────────────────────────
+            //Header
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -63,7 +63,7 @@ class DespensaScreen extends StatelessWidget {
 
                     const SizedBox(height: 16),
 
-                    // ── Stats bar ───────────────────────────
+                    //Stats bar
                     Row(
                       children: [
                         _StatCard(
@@ -98,7 +98,6 @@ class DespensaScreen extends StatelessWidget {
               ),
             ),
 
-            // ── Sección urgentes ─────────────────────────────
             if (urgentes.isNotEmpty) ...[
               SliverToBoxAdapter(
                 child: Padding(
@@ -125,7 +124,7 @@ class DespensaScreen extends StatelessWidget {
               ),
             ],
 
-            // ── Sección en buen estado ───────────────────────
+          
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
@@ -158,7 +157,7 @@ class DespensaScreen extends StatelessWidget {
   }
 }
 
-// ── Widget interno: tarjeta de estadística ───────────────
+
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final String value;
@@ -192,7 +191,7 @@ class _StatCard extends StatelessWidget {
               value,
               style: TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.w700, // iOS prefiere semi-bold/bold
+                fontWeight: FontWeight.w700,
                 color: color,
               ),
             ),
