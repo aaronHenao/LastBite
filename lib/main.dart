@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
-import 'package:lastbite/features/despensa/presentation/despensa_screen.dart';
+import 'package:lastbite/core/navigation/main_shell.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
       title: 'LastBite',
       theme: AppTheme.dark,
       debugShowCheckedModeBanner: false,
-      home: const DespensaScreen(),
+      home: const MainShell(),
 
     );
   }

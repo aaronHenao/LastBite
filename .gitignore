@@ -33,6 +33,15 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Node / npm artifacts
+node_modules/
+**/node_modules/
+package.json
+package-lock.json
+npm-debug.log*
+yarn-error.log*
+*.tgz
+
 # Symbolication related
 app.*.symbols
 
