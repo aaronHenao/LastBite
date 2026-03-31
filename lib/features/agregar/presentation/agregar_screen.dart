@@ -359,7 +359,7 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
           const SizedBox(height: 16),
           _SaveButton(
             onPressed: () {
-              // Por ahora solo validamos que no estén vacíos
+              
               if (_nombreCtrl.text.isEmpty || _fechaCtrl.text.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Completa nombre y fecha.')),

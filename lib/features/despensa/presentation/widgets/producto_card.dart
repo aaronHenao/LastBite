@@ -9,31 +9,31 @@ class ProductoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Extraemos la lógica de urgencia
+    
     final bool esUrgente = producto.urgente;
     
-    // Si es urgente, usamos el naranja (accent), si no, usamos el verde (green)
+    
     final Color colorEstado = esUrgente ? AppColors.accent : AppColors.green;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.card, // Blanco puro
-        borderRadius: BorderRadius.circular(20), // Un poco más curvo para verse moderno
+        color: AppColors.card, 
+        borderRadius: BorderRadius.circular(20),
         border: !esUrgente 
             ? Border.all(color: AppColors.border.withValues(alpha: 0.5)) 
-            : null, // Quitamos el borde si es urgente para que brille la sombra
+            : null, 
         boxShadow: [
           if (esUrgente)
             BoxShadow(
-              color: AppColors.accent.withValues(alpha: 0.25), // Resplandor naranja
+              color: AppColors.accent.withValues(alpha: 0.25), 
               blurRadius: 18,
               offset: const Offset(0, 8),
               spreadRadius: -4,
             )
           else
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03), // Sombra sutil casi invisible
+              color: Colors.black.withValues(alpha: 0.03), 
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -41,11 +41,11 @@ class ProductoCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Emoji
+          
           Text(producto.emoji, style: const TextStyle(fontSize: 30)),
           const SizedBox(width: 14),
 
-          // Nombre y cantidad
+          
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,7 +71,7 @@ class ProductoCard extends StatelessWidget {
             ),
           ),
 
-          // Badge de días (Cambiado a un estilo de "píldora" más limpio)
+         
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
