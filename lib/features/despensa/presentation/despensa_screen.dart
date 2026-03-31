@@ -6,10 +6,11 @@ import 'widgets/producto_card.dart';
 
 class DespensaScreen extends StatelessWidget {
   const DespensaScreen({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
-    
+    final textTheme = Theme.of(context).textTheme;
+
     final productos = [...productosEjemplo]
       ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
 
@@ -35,9 +36,7 @@ class DespensaScreen extends StatelessWidget {
                           children: [
                             Text(
                               'MI DESPENSA',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                              style: textTheme.titleSmall?.copyWith(
                                 letterSpacing: 2,
                                 color: AppColors.textMuted,
                               ),
@@ -45,7 +44,7 @@ class DespensaScreen extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               'LastBite 🌿',
-                              style: TextStyle(
+                              style: textTheme.bodyLarge?.copyWith(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.textMain,
@@ -104,7 +103,7 @@ class DespensaScreen extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                   child: Text(
                     '⚠️ PRÓXIMOS A VENCER',
-                    style: TextStyle(
+                    style: textTheme.titleSmall?.copyWith(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1,
@@ -124,13 +123,12 @@ class DespensaScreen extends StatelessWidget {
               ),
             ],
 
-          
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                 child: Text(
                   '📦 EN BUEN ESTADO',
-                  style: TextStyle(
+                  style: textTheme.titleSmall?.copyWith(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1,
@@ -156,7 +154,6 @@ class DespensaScreen extends StatelessWidget {
     );
   }
 }
-
 
 class _StatCard extends StatelessWidget {
   final IconData icon;
@@ -185,11 +182,11 @@ class _StatCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(icon, size: 20, color: color), 
+            Icon(icon, size: 20, color: color),
             const SizedBox(height: 4),
             Text(
               value,
-              style: TextStyle(
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: color,
@@ -197,10 +194,8 @@ class _StatCard extends StatelessWidget {
             ),
             Text(
               label.toUpperCase(),
-              style: TextStyle(
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 fontSize: 8,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1,
                 color: AppColors.textMuted,
               ),
             ),

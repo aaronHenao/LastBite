@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'LastBite',
-      theme: AppTheme.dark,
+      theme: AppTheme.light,
       debugShowCheckedModeBanner: false,
       home: const MainShell(),
 

@@ -9,31 +9,31 @@ class ProductoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    
+    final textTheme = Theme.of(context).textTheme;
+
     final bool esUrgente = producto.urgente;
-    
-    
+
     final Color colorEstado = esUrgente ? AppColors.accent : AppColors.green;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.card, 
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(20),
-        border: !esUrgente 
-            ? Border.all(color: AppColors.border.withValues(alpha: 0.5)) 
-            : null, 
+        border: !esUrgente
+            ? Border.all(color: AppColors.border.withValues(alpha: 0.5))
+            : null,
         boxShadow: [
           if (esUrgente)
             BoxShadow(
-              color: AppColors.accent.withValues(alpha: 0.25), 
+              color: AppColors.accent.withValues(alpha: 0.25),
               blurRadius: 18,
               offset: const Offset(0, 8),
               spreadRadius: -4,
             )
           else
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03), 
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -41,18 +41,16 @@ class ProductoCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          
           Text(producto.emoji, style: const TextStyle(fontSize: 30)),
           const SizedBox(width: 14),
 
-          
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   producto.nombre,
-                  style: const TextStyle(
+                  style: textTheme.bodyLarge?.copyWith(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textMain,
@@ -61,7 +59,7 @@ class ProductoCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${producto.cantidad} · ${producto.categoria}',
-                  style: const TextStyle(
+                  style: textTheme.bodySmall?.copyWith(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                     color: AppColors.textMuted,
@@ -71,7 +69,6 @@ class ProductoCard extends StatelessWidget {
             ),
           ),
 
-         
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -80,7 +77,7 @@ class ProductoCard extends StatelessWidget {
             ),
             child: Text(
               '${producto.diasRestantes}d ${esUrgente ? "⚠️" : ""}',
-              style: TextStyle(
+              style: textTheme.bodySmall?.copyWith(
                 fontSize: 12,
                 fontWeight: FontWeight.w900,
                 color: colorEstado,

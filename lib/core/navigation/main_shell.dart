@@ -86,10 +86,7 @@ class _FloatingMenuBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onTap;
 
-  const _FloatingMenuBar({
-    required this.selectedIndex,
-    required this.onTap,
-  });
+  const _FloatingMenuBar({required this.selectedIndex, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -169,11 +166,7 @@ class _MenuItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 22,
-              color: selected ? activeColor : inactiveColor,
-            ),
+            Icon(icon, size: 22, color: selected ? activeColor : inactiveColor),
             const SizedBox(height: 4),
             Text(
               label.toUpperCase(),
@@ -225,7 +218,7 @@ class _ComingSoonScreen extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 title,
-                style: const TextStyle(
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textMain,
@@ -235,7 +228,7 @@ class _ComingSoonScreen extends StatelessWidget {
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontSize: 15,
                   height: 1.4,
                   color: AppColors.textMuted,
