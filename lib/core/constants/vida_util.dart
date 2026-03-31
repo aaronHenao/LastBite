@@ -1,20 +1,29 @@
 const Map<String, int> vidaUtilPorCategoria = {
-  'verdura':     7,
-  'fruta':       7,
-  'hierba':      5,
-  'carne':       3,
-  'pollo':       3,
-  'pescado':     2,
-  'huevo':       21,
-  'leche':       8,
-  'yogur':       14,
-  'queso':       21,
-  'mantequilla': 30,
-  'pan':         5,
-  'embutido':    7,
-  'jugo':        7,
-  'grano':       365,
-  'conserva':    365,
-  'cereal':      180,
-  'otro':        7,
+  'Verdura':     7,
+  'Fruta':       7,
+  'Hierba':      5,
+  'Carne':       3,
+  'Pollo':       3,
+  'Pescado':     2,
+  'Huevo':       21,
+  'Leche':       8,
+  'Yogur':       14,
+  'Queso':       21,
+  'Mantequilla': 30,
+  'Pan':         5,
+  'Embutido':    7,
+  'Jugo':        7,
+  'Grano':       365,
+  'Conserva':    365,
+  'Cereal':      180,
+  'Otro':        7,
 };
+
+int vidaUtilRecomendada(String categoria) {
+  final vidaUtilMiniscula = categoria.trim().toLowerCase();
+  final match = vidaUtilPorCategoria.entries.firstWhere(
+    (entry) => entry.key.toLowerCase() == vidaUtilMiniscula,
+    orElse: () => const MapEntry('Otro', 7),
+  );
+  return match.value;
+}
