@@ -60,7 +60,7 @@ class DespensaScreen extends StatelessWidget {
                       ],
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 25),
 
                     //Stats bar
                     Row(
@@ -101,15 +101,26 @@ class DespensaScreen extends StatelessWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                  child: Text(
-                    '⚠️ PRÓXIMOS A VENCER',
-                    style: textTheme.titleSmall?.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                      color: AppColors.danger,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(
+                        CupertinoIcons.exclamationmark_triangle,
+                        size: 16,
+                        color: AppColors.danger,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'PRÓXIMOS A VENCER',
+                        style: textTheme.titleSmall?.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                        color: AppColors.danger,
                     ),
                   ),
+                    ],
+                  )
                 ),
               ),
               SliverList(
@@ -126,15 +137,28 @@ class DespensaScreen extends StatelessWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                child: Text(
-                  '📦 EN BUEN ESTADO',
-                  style: textTheme.titleSmall?.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
-                    color: AppColors.textMuted,
-                  ),
-                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      CupertinoIcons.cube_box_fill, 
+                      size: 16, 
+                      color: AppColors.green
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'EN BUEN ESTADO',
+                      style: textTheme.titleSmall?.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                      color: AppColors.textMuted,
+                      ),
+                    ),
+
+                  ],
+
+                )
               ),
             ),
             SliverList(
@@ -182,12 +206,12 @@ class _StatCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(icon, size: 20, color: color),
-            const SizedBox(height: 4),
+            Icon(icon, size: 25, color: color),
+            const SizedBox(height: 12),
             Text(
               value,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontSize: 20,
+                fontSize: 25,
                 fontWeight: FontWeight.w700,
                 color: color,
               ),
@@ -195,7 +219,7 @@ class _StatCard extends StatelessWidget {
             Text(
               label.toUpperCase(),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontSize: 8,
+                fontSize: 10,
                 color: AppColors.textMuted,
               ),
             ),

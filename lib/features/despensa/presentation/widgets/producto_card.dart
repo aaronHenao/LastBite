@@ -1,3 +1,5 @@
+import 'dart:math';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/producto.dart';
@@ -51,8 +53,8 @@ class ProductoCard extends StatelessWidget {
                 Text(
                   producto.nombre,
                   style: textTheme.bodyLarge?.copyWith(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.textMain,
                   ),
                 ),
@@ -75,14 +77,26 @@ class ProductoCard extends StatelessWidget {
               color: colorEstado.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(
-              '${producto.diasRestantes}d ${esUrgente ? "⚠️" : ""}',
-              style: textTheme.bodySmall?.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                color: colorEstado,
-                letterSpacing: -0.5,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${producto.diasRestantes}d',
+                    style: textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: colorEstado,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                if(esUrgente)
+                  Icon(
+                    CupertinoIcons.exclamationmark_triangle_fill,
+                    size:14,
+                    color: colorEstado,
+                  )
+              ],
             ),
           ),
         ],
