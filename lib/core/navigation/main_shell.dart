@@ -38,13 +38,19 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true,
-      body: IndexedStack(index: _selectedIndex, children: _pages),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: _FloatingMenuBar(
-        selectedIndex: _selectedIndex,
-        onTap: _onItemTapped,
-      ),
+      backgroundColor: AppColors.bg,
+      body: Stack(
+        children:[
+          IndexedStack(index: _selectedIndex, children: _pages),
+
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _FloatingMenuBar(selectedIndex: _selectedIndex, onTap: _onItemTapped),
+          )
+        ]
+      )
     );
   }
 }
@@ -58,20 +64,19 @@ class _FloatingMenuBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      minimum: const EdgeInsets.fromLTRB(50, 0, 50, 20),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(30, 0, 30, 30),
       child: Container(
-        height: 76,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        height: 70,
         decoration: BoxDecoration(
-          color: AppColors.surface.withValues(alpha: 0.94),
-          borderRadius: BorderRadius.circular(24),
+          color: AppColors.surface.withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(28),
           border: Border.all(color: AppColors.border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
           ],
         ),

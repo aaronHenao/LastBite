@@ -15,10 +15,12 @@ class ProductoCard extends StatelessWidget {
 
     final bool esUrgente = producto.urgente;
 
+    final int diasRestantes = producto.diasRestantes;
+
     final Color colorEstado = esUrgente ? AppColors.accent : AppColors.green;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(20),
@@ -90,7 +92,7 @@ class ProductoCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                if(esUrgente)
+                if(diasRestantes <= 1)
                   Icon(
                     CupertinoIcons.exclamationmark_triangle_fill,
                     size:14,
