@@ -202,7 +202,6 @@ class _StatCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/agregar/presentation/agregar_screen.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_screen.dart';
@@ -83,7 +84,7 @@ class _FloatingMenuBar extends StatelessWidget {
         child: Row(
           children: [
             _MenuItem(
-              icon: CupertinoIcons.home,
+              icon: HugeIcons.strokeRoundedHome04,
               selected: selectedIndex == 0,
               onTap: () => onTap(0),
             ),
@@ -93,7 +94,7 @@ class _FloatingMenuBar extends StatelessWidget {
               onTap: () => onTap(1),
             ),
             _MenuItem(
-              icon: CupertinoIcons.search,
+              icon: HugeIcons.strokeRoundedChefHat,
               selected: selectedIndex == 2,
               onTap: () => onTap(2),
             ),
@@ -132,7 +133,7 @@ class _MenuItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 22, color: selected ? activeColor : inactiveColor),
+            Icon(icon, size: 24, color: selected ? activeColor : inactiveColor),
             const SizedBox(height: 4),
             const SizedBox(height: 2),
             AnimatedContainer(

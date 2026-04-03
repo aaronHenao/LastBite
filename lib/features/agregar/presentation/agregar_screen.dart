@@ -586,22 +586,26 @@ class _SaveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return SizedBox(
       width: double.infinity,
       child: FilledButton.icon(
         onPressed: onPressed,
-        icon: const Icon(Icons.add_task_rounded),
+        icon: const Icon(CupertinoIcons.check_mark_circled, size: 20),
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.green,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.bg,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
         ),
-        label: const Text(
+        label: Text(
           'Guardar producto',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          style: textTheme.titleMedium?.copyWith(
+            color: AppColors.bg,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );
