@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -15,7 +14,7 @@ class ProductoCard extends StatelessWidget {
 
     final bool esUrgente = producto.urgente;
 
-    final int diasRestantes = producto.diasRestantes;
+    final int _diasRestantes = producto.diasRestantes;
 
     final Color colorEstado = esUrgente ? AppColors.accent : AppColors.green;
 
@@ -92,7 +91,7 @@ class ProductoCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                if(diasRestantes <= 1)
+                if(_diasRestantes <= 1)
                   Icon(
                     CupertinoIcons.exclamationmark_triangle_fill,
                     size:14,

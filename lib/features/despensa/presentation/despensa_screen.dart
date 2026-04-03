@@ -37,7 +37,7 @@ class DespensaScreen extends StatelessWidget {
                             Text(
                               'MI DESPENSA',
                               style: textTheme.titleSmall?.copyWith(
-                                letterSpacing: 2,
+                                letterSpacing: 2.4,
                                 color: AppColors.textMuted,
                               ),
                             ),

@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:lastbite/core/constants/unidades_medida.dart';
 import 'package:lastbite/core/constants/vida_util.dart';
@@ -21,6 +21,8 @@ class _AgregarScreenState extends State<AgregarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
@@ -31,31 +33,29 @@ class _AgregarScreenState extends State<AgregarScreen> {
               onTap: widget.onBackToPantry,
               borderRadius: BorderRadius.circular(10),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 child: Text(
                   '← Volver',
                   style: TextStyle(
-                    fontSize: 21,
+                    fontSize: 15,
                     color: AppColors.textMuted.withValues(alpha: 0.9),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            const Text(
+            const SizedBox(height: 11),
+            Text(
               'AGREGAR ALIMENTO',
-              style: TextStyle(
-                fontSize: 13,
+              style: textTheme.titleSmall?.copyWith(
                 letterSpacing: 2.4,
-                fontWeight: FontWeight.w700,
                 color: AppColors.textMuted,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Entrada Hibrida',
-              style: TextStyle(
-                fontSize: 42,
+              style: textTheme.bodyLarge?.copyWith(
+                fontSize: 24,
                 fontWeight: FontWeight.w800,
                 color: AppColors.textMain,
               ),
@@ -89,6 +89,8 @@ class _HybridModeSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -99,12 +101,14 @@ class _HybridModeSwitch extends StatelessWidget {
       child: Row(
         children: [
           _modeButton(
+            textTheme: textTheme,
             label: 'Escanear',
-            icon: Icons.camera_alt_rounded,
+            icon: CupertinoIcons.photo_camera_solid, 
             selected: mode == _EntryMode.scan,
             onTap: () => onChanged(_EntryMode.scan),
           ),
           _modeButton(
+            textTheme: textTheme,
             label: 'Manual',
             icon: Icons.eco,
             selected: mode == _EntryMode.manual,
@@ -116,6 +120,7 @@ class _HybridModeSwitch extends StatelessWidget {
   }
 
   Widget _modeButton({
+    required TextTheme textTheme,
     required String label,
     required IconData icon,
     required bool selected,
@@ -128,7 +133,7 @@ class _HybridModeSwitch extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             color: selected ? AppColors.accent : Colors.transparent,
@@ -144,9 +149,7 @@ class _HybridModeSwitch extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 23,
-                  fontWeight: FontWeight.w700,
+                style: textTheme.titleMedium?.copyWith(
                   color: selected ? Colors.white : AppColors.textMuted,
                 ),
               ),
@@ -163,31 +166,33 @@ class _ScanEntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return CustomPaint(
       painter: _DashedRoundedRectPainter(color: AppColors.accent, radius: 24),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(20, 28, 20, 26),
+        padding: const EdgeInsets.fromLTRB(20, 50, 20, 50),
         child: Column(
           children: [
             Icon(
-              Icons.camera_alt_rounded,
+              CupertinoIcons.camera_viewfinder,
               size: 56,
               color: AppColors.textMuted.withValues(alpha: 0.85),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            const SizedBox(height: 18),
+            Text(
               'Apunta al codigo de barras',
-              style: TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textMain,
+              style: textTheme.titleLarge?.copyWith(
+                color: AppColors.textMain.withValues(alpha: 0.9),
               ),
             ),
-            const SizedBox(height: 6),
-            const Text(
+            const SizedBox(height: 10),
+            Text(
               'Toca para simular escaneo',
-              style: TextStyle(fontSize: 18, color: AppColors.textMuted),
+              style: textTheme.titleMedium?.copyWith(
+                color: AppColors.textMuted.withValues(alpha: 0.9),
+              ),
             ),
             const SizedBox(height: 18),
             Container(
@@ -195,7 +200,7 @@ class _ScanEntryCard extends StatelessWidget {
               height: 92,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: AppColors.danger, width: 1),
                 color: AppColors.surface,
               ),
               child: const Center(child: _FakeBarcode()),
@@ -212,20 +217,43 @@ class _FakeBarcode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(18, (index) {
-        final bool thick = index % 3 == 0;
-        final double height = index % 4 == 0 ? 56 : 48;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 1.2),
-          child: Container(
-            width: thick ? 3.2 : 1.8,
-            height: height,
-            color: AppColors.textMuted.withValues(alpha: 0.52),
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: List.generate(20, (index) {
+            final bool thick = index % 4 == 0;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 1.2),
+              child: Container(
+                width: thick ? 3 : 1.5,
+                height: 50,
+                margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                decoration: BoxDecoration(
+                  color: AppColors.textMuted.withValues(alpha: 0.52),
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
+            );
+          }),
+        ),
+        Container(
+          width: 160,
+          height: 2,
+          decoration: BoxDecoration(
+            color: AppColors.accent,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.accent.withValues(alpha: 0.6),
+                blurRadius: 8,
+                spreadRadius: 1,
+              ),
+            ],
           ),
-        );
-      }),
+        ),
+      ],
     );
   }
 }
@@ -241,6 +269,7 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
   final _nombreCtrl = TextEditingController();
   final _cantidadCtrl = TextEditingController();
   final _fechaCtrl = TextEditingController();
+  bool _mostrarMensajeRecomendacion = false;
   String? _categoriaSeleccionada;
   UnidadMedida? _unidadSeleccionada;
 
@@ -288,6 +317,7 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -309,10 +339,12 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
             onCategoriaChanged: (categoria) {
               setState(() {
                 _categoriaSeleccionada = categoria;
+
+                if (categoria != null) {
+                  _mostrarMensajeRecomendacion = true;
+                  _recomendarFechaParaCategoria(categoria);
+                }
               });
-              if (categoria != null) {
-                _recomendarFechaParaCategoria(categoria);
-              }
             },
           ),
           const SizedBox(height: 12),
@@ -348,18 +380,26 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
             readOnly: true,
             onTap: () => _seleccionarFecha(context),
           ),
-          const SizedBox(height: 6),
-          const Text(
-            'Esta es la fecha de caducidad recomendada para este producto',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 12,
+          const SizedBox(height: 8),
+          if (_mostrarMensajeRecomendacion) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 2),
+                child: Text(
+                  'Esta es la fecha de caducidad recomendada para este producto',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.green.withValues(alpha: 0.8),
+                    fontWeight: FontWeight.w500,
+                    height: 1.2,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 16),
           _SaveButton(
             onPressed: () {
-              
               if (_nombreCtrl.text.isEmpty || _fechaCtrl.text.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Completa nombre y fecha.')),
@@ -394,22 +434,25 @@ class _InputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return TextField(
       controller: controller,
       readOnly: readOnly,
       onTap: onTap,
-      style: const TextStyle(
-        color: AppColors.textMain,
-        fontSize: 15,
+      style: textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.w500,
+        color: AppColors.textMain,
       ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         filled: true,
         fillColor: AppColors.card,
-        labelStyle: const TextStyle(color: AppColors.textMuted),
-        hintStyle: TextStyle(
+        labelStyle: textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w500,
+          color: AppColors.textMuted,
+        ),
+        hintStyle: textTheme.bodySmall?.copyWith(
           color: AppColors.textMuted.withValues(alpha: 0.75),
         ),
         border: OutlineInputBorder(
@@ -441,7 +484,7 @@ class _CategoriaDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final categorias = vidaUtilPorCategoria.keys.toList();
-
+    final textTheme = Theme.of(context).textTheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
@@ -452,11 +495,14 @@ class _CategoriaDropdown extends StatelessWidget {
       child: DropdownButton<String>(
         isExpanded: true,
         underline: const SizedBox(),
-        hint: const Text(
+        borderRadius: BorderRadius.circular(20),
+        elevation: 8,
+
+        hint: Text(
           'Selecciona una categoría',
-          style: TextStyle(
+          style: textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w500,
             color: AppColors.textMuted,
-            fontSize: 15,
           ),
         ),
         value: categoriaSeleccionada,
@@ -465,21 +511,16 @@ class _CategoriaDropdown extends StatelessWidget {
             value: categoria,
             child: Text(
               categoria,
-              style: const TextStyle(
-                color: AppColors.textMain,
-                fontSize: 15,
+              style: textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w500,
+                color: AppColors.textMain,
               ),
             ),
           );
         }).toList(),
         onChanged: onCategoriaChanged,
-        style: const TextStyle(
-          color: AppColors.textMain,
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
-        ),
         dropdownColor: AppColors.surface,
+        icon: const Icon(CupertinoIcons.chevron_down, size: 16),
         iconEnabledColor: AppColors.textMuted,
       ),
     );
@@ -497,6 +538,7 @@ class _UnidadDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
@@ -507,11 +549,13 @@ class _UnidadDropdown extends StatelessWidget {
       child: DropdownButton<UnidadMedida>(
         isExpanded: true,
         underline: const SizedBox(),
-        hint: const Text(
+        borderRadius: BorderRadius.circular(20),
+        elevation: 8,
+        hint: Text(
           'Unidad',
-          style: TextStyle(
+          style: textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w500,
             color: AppColors.textMuted,
-            fontSize: 15,
           ),
         ),
         value: unidadSeleccionada,
@@ -520,21 +564,16 @@ class _UnidadDropdown extends StatelessWidget {
             value: unidad,
             child: Text(
               unidad.abreviatura,
-              style: const TextStyle(
-                color: AppColors.textMain,
-                fontSize: 15,
+              style: textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w500,
+                color: AppColors.textMain,
               ),
             ),
           );
         }).toList(),
         onChanged: onUnidadChanged,
-        style: const TextStyle(
-          color: AppColors.textMain,
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
-        ),
         dropdownColor: AppColors.surface,
+        icon: const Icon(CupertinoIcons.chevron_down, size: 16),
         iconEnabledColor: AppColors.textMuted,
       ),
     );
@@ -543,9 +582,7 @@ class _UnidadDropdown extends StatelessWidget {
 
 class _SaveButton extends StatelessWidget {
   final VoidCallback? onPressed;
-  const _SaveButton({
-    this.onPressed,
-  });
+  const _SaveButton({this.onPressed});
 
   @override
   Widget build(BuildContext context) {
