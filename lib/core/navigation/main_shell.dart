@@ -4,6 +4,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/agregar/presentation/agregar_screen.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_screen.dart';
+import 'package:lastbite/features/recetas/presentation/recetas_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -18,11 +19,7 @@ class _MainShellState extends State<MainShell> {
   late final List<Widget> _pages = [
     const DespensaScreen(),
     AgregarScreen(onBackToPantry: () => _onItemTapped(0)),
-    const _ComingSoonScreen(
-      icon: Icons.search,
-      title: 'Recetas',
-      subtitle: 'Pronto encontraras recetas para aprovechar tus alimentos.',
-    ),
+    const RecetasScreen(),
     const _ComingSoonScreen(
       icon: Icons.notifications_outlined,
       title: 'Alertas',
