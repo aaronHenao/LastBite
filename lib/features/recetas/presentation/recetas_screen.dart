@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:lastbite/features/despensa/domain/producto.dart';
+import 'package:lastbite/features/recetas/data/datasources/recetas_remote_data_source.dart';
+import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
+import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
@@ -12,8 +16,21 @@ class RecetasScreen extends StatefulWidget {
 }
 
 class _RecetasScreenState extends State<RecetasScreen> {
+  final _busquedaDataSource = RecetasBusquedaRemoteDataSource();
+  final _detalleDataSource = RecetasDetalleRemoteDataSource();
   final _searchCtrl = TextEditingController();
+
+  List<Receta> _recetas = const [];
+  bool _cargandoRecetas = true;
+  String? _errorCarga;
+  String? _avisoTraduccion;
   String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarRecetasDesdeApi();
+  }
 
   @override
   void dispose() {
@@ -23,13 +40,63 @@ class _RecetasScreenState extends State<RecetasScreen> {
 
   List<Receta> get _recetasFiltradas {
     // Ordenamiento por porcentaje de match descendente
-    final lista = [...recetasEjemplo]
+    final lista = [..._recetas]
       ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
 
     if (_query.isEmpty) return lista;
     return lista
         .where((r) => r.titulo.toLowerCase().contains(_query.toLowerCase()))
         .toList();
+  }
+
+  String get _urgentesLabel {
+    final urgentes = [...productosEjemplo]
+      ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
+
+    final topUrgentes = urgentes.where((p) => p.urgente).take(5).toList();
+    if (topUrgentes.isEmpty) {
+      return 'No hay productos urgentes en tu despensa';
+    }
+
+    return topUrgentes
+        .map((p) => '${p.nombre} (${p.diasRestantes}d)')
+        .join(' · ');
+  }
+
+  Future<void> _cargarRecetasDesdeApi() async {
+    setState(() {
+      _cargandoRecetas = true;
+      _errorCarga = null;
+    });
+
+    try {
+      final productosDespensa = productosEjemplo.map((p) => p.nombre).toList();
+      final raw = await _busquedaDataSource.buscarRecetasPorDespensaRaw(
+        productosDespensa: productosDespensa,
+        number: 20,
+        ignorePantry: false,
+      );
+
+      final recetas =
+          RecetaBusquedaRemoteModel.fromApiRawList(
+              raw,
+            ).map((m) => m.toDomain()).toList()
+            ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
+
+      if (!mounted) return;
+      setState(() {
+        _recetas = recetas;
+        _cargandoRecetas = false;
+        _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorCarga = e.toString();
+        _cargandoRecetas = false;
+        _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
+      });
+    }
   }
 
   @override
@@ -147,7 +214,7 @@ class _RecetasScreenState extends State<RecetasScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Espinacas (1d) · Tomates (2d) · Pollo (3d)',
+                                _urgentesLabel,
                                 style: textTheme.bodyMedium?.copyWith(
                                   fontSize: 12,
                                   color: AppColors.textMuted,
@@ -169,6 +236,30 @@ class _RecetasScreenState extends State<RecetasScreen> {
                       color: AppColors.textMuted,
                     ),
                   ),
+                  if (_avisoTraduccion != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.yellow.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppColors.yellow.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Text(
+                        _avisoTraduccion!,
+                        style: textTheme.bodySmall?.copyWith(
+                          fontSize: 11,
+                          color: AppColors.textMain,
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                 ],
               ),
@@ -176,7 +267,56 @@ class _RecetasScreenState extends State<RecetasScreen> {
           ),
 
           //Lista de recetas
-          _recetasFiltradas.isEmpty
+          _cargandoRecetas
+              ? const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 60),
+                    child: Center(
+                      child: CircularProgressIndicator(color: AppColors.accent),
+                    ),
+                  ),
+                )
+              : _errorCarga != null
+              ? SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'No se pudieron cargar recetas',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textMain,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _errorCarga!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: _cargarRecetasDesdeApi,
+                            child: const Text('Reintentar'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              : _recetasFiltradas.isEmpty
               ? SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.only(top: 60),
@@ -203,7 +343,7 @@ class _RecetasScreenState extends State<RecetasScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                       child: RecetaCard(
                         receta: receta,
-                        onTap: () => _abrirDetalle(context, receta),
+                        onTap: () => _abrirDetalle(receta),
                       ),
                     );
                   }, childCount: _recetasFiltradas.length),
@@ -215,12 +355,70 @@ class _RecetasScreenState extends State<RecetasScreen> {
     );
   }
 
-  void _abrirDetalle(BuildContext context, Receta receta) {
+  Future<void> _abrirDetalle(Receta receta) async {
+    var recetaConDetalle = receta;
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final raw = await _detalleDataSource.obtenerDetalleRecetaRaw(
+        recetaId: receta.id,
+      );
+      final detalle = RecetaDetalleRemoteModel.fromApiRaw(raw);
+      recetaConDetalle = _fusionarDetalle(receta, detalle);
+
+      final aviso = _detalleDataSource.lastTranslationWarning;
+      if (aviso != null && mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(aviso, style: const TextStyle(fontSize: 12))),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se pudo cargar detalle completo: $e',
+            style: const TextStyle(fontSize: 12),
+          ),
+        ),
+      );
+    }
+
+    if (!mounted) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => RecetaDetalleSheet(receta: receta),
+      builder: (_) => RecetaDetalleSheet(receta: recetaConDetalle),
     );
+  }
+
+  Receta _fusionarDetalle(Receta base, RecetaDetalleRemoteModel detalle) {
+    final info = detalle.informacion;
+
+    return Receta(
+      id: base.id,
+      titulo: info.titulo.isNotEmpty ? info.titulo : base.titulo,
+      imagenUrl: info.imagenUrl.isNotEmpty ? info.imagenUrl : base.imagenUrl,
+      ingredientesUsados: base.ingredientesUsados,
+      ingredientesFaltantes: base.ingredientesFaltantes,
+      likes: info.likes > 0 ? info.likes : base.likes,
+      minutosPreparacion: info.minutosPreparacion,
+      porciones: info.porciones,
+      ingredientes: detalle.ingredientes.isNotEmpty
+          ? detalle.ingredientes
+          : base.ingredientes,
+      instrucciones: _limpiarHtml(info.instrucciones),
+    );
+  }
+
+  String? _limpiarHtml(String? texto) {
+    if (texto == null || texto.trim().isEmpty) return null;
+
+    final sinTags = texto.replaceAll(RegExp(r'<[^>]*>'), ' ');
+    return sinTags
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 }

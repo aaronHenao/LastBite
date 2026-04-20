@@ -2,7 +2,7 @@ class Receta {
   final int id;
   final String titulo;
   final String imagenUrl;
-  final int ingredientesUsados;   // cuántos hay en la despensa
+  final int ingredientesUsados; // cuántos hay en la despensa
   final int ingredientesFaltantes; // cuántos faltan para prepararla
   final int likes;
 

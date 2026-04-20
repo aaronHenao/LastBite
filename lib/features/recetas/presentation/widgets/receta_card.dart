@@ -1,13 +1,24 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/recetas/domain/receta.dart';
 
+String _urlImagenOptimizada(String originalUrl) {
+  if (originalUrl.isEmpty) return originalUrl;
+
+  final highRes = originalUrl.replaceAll('-312x231', '-636x393');
+  if (!kIsWeb) return highRes;
+
+  final withoutScheme = highRes.replaceFirst(RegExp(r'^https?://'), '');
+  final encoded = Uri.encodeComponent(withoutScheme);
+  return 'https://images.weserv.nl/?url=$encoded&w=1200&fit=cover&output=jpg&q=90';
+}
 
 class RecetaCard extends StatelessWidget {
   final Receta receta;
   final VoidCallback onTap;
 
-  const RecetaCard({required this.receta, required this.onTap});
+  const RecetaCard({super.key, required this.receta, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -42,12 +53,31 @@ class RecetaCard extends StatelessWidget {
                   top: Radius.circular(18),
                 ),
               ),
-              child: Center(
-                child: Text(
-                  _emojiParaReceta(receta.titulo),
-                  style: const TextStyle(fontSize: 52),
-                ),
-              ),
+              child: receta.imagenUrl.isEmpty
+                  ? Center(
+                      child: Text(
+                        _emojiParaReceta(receta.titulo),
+                        style: const TextStyle(fontSize: 52),
+                      ),
+                    )
+                  : ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(18),
+                      ),
+                      child: Image.network(
+                        _urlImagenOptimizada(receta.imagenUrl),
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        filterQuality: FilterQuality.high,
+                        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+                        errorBuilder: (_, error, stackTrace) => Center(
+                          child: Text(
+                            _emojiParaReceta(receta.titulo),
+                            style: const TextStyle(fontSize: 52),
+                          ),
+                        ),
+                      ),
+                    ),
             ),
 
             // ── Info ────────────────────────────────────────
@@ -201,7 +231,7 @@ class _IngredientTag extends StatelessWidget {
 class RecetaDetalleSheet extends StatelessWidget {
   final Receta receta;
 
-  const RecetaDetalleSheet({required this.receta});
+  const RecetaDetalleSheet({super.key, required this.receta});
 
   @override
   Widget build(BuildContext context) {
@@ -241,12 +271,30 @@ class RecetaDetalleSheet extends StatelessWidget {
                     color: AppColors.card,
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  child: Center(
-                    child: Text(
-                      _emojiParaReceta(receta.titulo),
-                      style: const TextStyle(fontSize: 60),
-                    ),
-                  ),
+                  child: receta.imagenUrl.isEmpty
+                      ? Center(
+                          child: Text(
+                            _emojiParaReceta(receta.titulo),
+                            style: const TextStyle(fontSize: 60),
+                          ),
+                        )
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: Image.network(
+                            _urlImagenOptimizada(receta.imagenUrl),
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            filterQuality: FilterQuality.high,
+                            webHtmlElementStrategy:
+                                WebHtmlElementStrategy.prefer,
+                            errorBuilder: (_, error, stackTrace) => Center(
+                              child: Text(
+                                _emojiParaReceta(receta.titulo),
+                                style: const TextStyle(fontSize: 60),
+                              ),
+                            ),
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 16),
