@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/core/navigation/main_shell.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    const ProviderScope(child: MyApp())
+  );
 }
 
 class MyApp extends StatelessWidget {

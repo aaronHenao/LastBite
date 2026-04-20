@@ -1,22 +1,24 @@
 import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/constants/unidades_medida.dart';
 import 'package:lastbite/core/constants/vida_util.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
+import 'package:lastbite/features/despensa/domain/producto.dart';
+import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 
 enum _EntryMode { scan, manual }
 
-class AgregarScreen extends StatefulWidget {
+class AgregarScreen extends ConsumerStatefulWidget {
   final VoidCallback? onBackToPantry;
-
   const AgregarScreen({super.key, this.onBackToPantry});
 
   @override
-  State<AgregarScreen> createState() => _AgregarScreenState();
+  ConsumerState<AgregarScreen> createState() => _AgregarScreenState();
 }
 
-class _AgregarScreenState extends State<AgregarScreen> {
+class _AgregarScreenState extends ConsumerState<AgregarScreen> {
   _EntryMode _mode = _EntryMode.scan;
 
   @override
@@ -72,7 +74,18 @@ class _AgregarScreenState extends State<AgregarScreen> {
               switchOutCurve: Curves.easeIn,
               child: _mode == _EntryMode.scan
                   ? const _ScanEntryCard(key: ValueKey('scan'))
-                  : const _ManualEntryForm(key: ValueKey('manual')),
+                  : _ManualEntryForm(
+                    key: ValueKey('manual'),
+                    onGuardar: (producto){
+                      ref.read(despensaProvider.notifier).agregar(producto);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${producto.nombre} agregado a la despensa.'),
+                          backgroundColor: AppColors.green,
+                        )
+                      );
+                    }
+                    ),
             ),
           ],
         ),
@@ -259,7 +272,8 @@ class _FakeBarcode extends StatelessWidget {
 }
 
 class _ManualEntryForm extends StatefulWidget {
-  const _ManualEntryForm({super.key});
+  final ValueChanged<Producto> onGuardar;
+  const _ManualEntryForm({super.key, required this.onGuardar});
 
   @override
   State<_ManualEntryForm> createState() => _ManualEntryFormState();
@@ -404,17 +418,53 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Completa nombre y fecha.')),
                 );
-                return;
+                return;    
               }
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${_nombreCtrl.text} agregado (demo).')),
+
+              final partesFecha = _fechaCtrl.text.split('/');
+              final fecha = DateTime(
+                int.parse(partesFecha[2]),
+                int.parse(partesFecha[1]),
+                int.parse(partesFecha[0])
               );
+
+              final producto = Producto(
+                id: DateTime.now().millisecondsSinceEpoch.toString(), 
+                nombre: _nombreCtrl.text.trim(), 
+                emoji: _emojiParaCategoria(_categoriaSeleccionada ?? ''), 
+                categoria: _categoriaSeleccionada ?? 'otro', 
+                cantidad: _cantidadCtrl.text.trim().isEmpty ? '1 unidad': '${_cantidadCtrl.text.trim()} ${_unidadSeleccionada?.abreviatura ?? ''}', 
+                fechaCaducidad: fecha, 
+                esFresco: _categoriaSeleccionada == 'fruta' || _categoriaSeleccionada == 'verdura'
+              );
+
+              widget.onGuardar(producto);
             },
           ),
         ],
       ),
     );
   }
+
+  String _emojiParaCategoria(String categoria) {
+  switch (categoria) {
+    case 'verdura':     return '🥦';
+    case 'fruta':       return '🍎';
+    case 'pollo':       return '🍗';
+    case 'carne':       return '🥩';
+    case 'pescado':     return '🐟';
+    case 'huevo':       return '🥚';
+    case 'leche':       return '🥛';
+    case 'yogur':       return '🥛';
+    case 'queso':       return '🧀';
+    case 'pan':         return '🍞';
+    case 'grano':       return '🍝';
+    case 'jugo':        return '🧃';
+    case 'embutido':    return '🌭';
+    case 'conserva':    return '🥫';
+    default:            return '🥫';
+  }
+}
 }
 
 class _InputField extends StatelessWidget {

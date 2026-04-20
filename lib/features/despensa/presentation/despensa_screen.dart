@@ -1,17 +1,19 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/producto.dart';
 import 'widgets/producto_card.dart';
 
-class DespensaScreen extends StatelessWidget {
+class DespensaScreen extends ConsumerWidget {
   const DespensaScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
 
-    final productos = [...productosEjemplo]
+    final productos = [...ref.watch(despensaProvider)]
       ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
 
     final urgentes = productos.where((p) => p.urgente).toList();
