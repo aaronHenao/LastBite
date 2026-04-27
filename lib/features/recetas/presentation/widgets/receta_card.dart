@@ -228,13 +228,51 @@ class _IngredientTag extends StatelessWidget {
 }
 
 // ── Bottom sheet de detalle ───────────────────────────────
-class RecetaDetalleSheet extends StatelessWidget {
+class RecetaDetalleSheet extends StatefulWidget {
   final Receta receta;
+  final Future<Receta>? detalleFuture;
 
-  const RecetaDetalleSheet({super.key, required this.receta});
+  const RecetaDetalleSheet({
+    super.key,
+    required this.receta,
+    this.detalleFuture,
+  });
+
+  @override
+  State<RecetaDetalleSheet> createState() => _RecetaDetalleSheetState();
+}
+
+class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
+  late Receta _receta;
+  bool _cargandoDetalle = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _receta = widget.receta;
+    _cargarDetalleSiExiste();
+  }
+
+  Future<void> _cargarDetalleSiExiste() async {
+    final future = widget.detalleFuture;
+    if (future == null) return;
+
+    setState(() => _cargandoDetalle = true);
+    try {
+      final detalle = await future;
+      if (!mounted) return;
+      setState(() => _receta = detalle);
+    } catch (_) {
+      // Keep the base recipe data if full detail loading fails.
+    } finally {
+      if (mounted) setState(() => _cargandoDetalle = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final receta = _receta;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.75,
       minChildSize: 0.5,
@@ -372,6 +410,10 @@ class RecetaDetalleSheet extends StatelessWidget {
                   ),
                 ],
               ),
+              if (_cargandoDetalle) ...[
+                const SizedBox(height: 12),
+                const LinearProgressIndicator(minHeight: 2),
+              ],
               const SizedBox(height: 20),
 
               // Ingredientes

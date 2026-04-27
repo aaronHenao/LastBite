@@ -4,6 +4,7 @@ import 'ai_translation_data_source.dart';
 import 'recetas_remote_exception.dart';
 
 const String _recipesBaseUrl = 'https://api.spoonacular.com/recipes';
+const int _maxRecetasPorBusqueda = 3;
 
 class RecetasBusquedaRemoteDataSource {
   RecetasBusquedaRemoteDataSource({
@@ -27,6 +28,7 @@ class RecetasBusquedaRemoteDataSource {
   }) async {
     _validarApiKey();
     _translator.clearWarning();
+    final numberLimitado = number.clamp(1, _maxRecetasPorBusqueda).toInt();
 
     final ingredientesNormalizados = _normalizarIngredientes(productosDespensa);
     final ingredientes = await _translator.translateIngredientsToEnglish(
@@ -44,7 +46,7 @@ class RecetasBusquedaRemoteDataSource {
         '$_recipesBaseUrl/findByIngredients',
         queryParameters: {
           'ingredients': ingredientes.join(','),
-          'number': number,
+          'number': numberLimitado,
           'ranking': 1,
           'ignorePantry': ignorePantry,
           'apiKey': _apiKey,
@@ -54,7 +56,10 @@ class RecetasBusquedaRemoteDataSource {
       final data = response.data;
       if (data == null) return const [];
 
-      final raw = data.whereType<Map<String, dynamic>>().toList();
+      final raw = data
+          .whereType<Map<String, dynamic>>()
+          .take(_maxRecetasPorBusqueda)
+          .toList();
       return _traducirResultadosBusqueda(raw);
     } on DioException catch (e) {
       throw _mapearErrorRemoto(e);
@@ -70,13 +75,6 @@ class RecetasBusquedaRemoteDataSource {
         .map((item) => item['title']?.toString() ?? '')
         .where((title) => title.trim().isNotEmpty)
         .toList();
-
-    final translatedTitles = titles.isEmpty
-        ? const <String>[]
-        : await _translator.translateTermsToSpanish(
-            titles,
-            context: 'Recipe titles for mobile app UI',
-          );
 
     final ingredientNames = <String>{};
 
@@ -94,12 +92,15 @@ class RecetasBusquedaRemoteDataSource {
     }
 
     final ingredientList = ingredientNames.toList();
-    final translatedIngredients = ingredientList.isEmpty
-        ? const <String>[]
-        : await _translator.translateTermsToSpanish(
-            ingredientList,
-            context: 'Food ingredient names for mobile app UI',
-          );
+
+    final translatedSections = await _translator
+        .translateRecipeSectionsToSpanish(
+          titles: titles,
+          ingredients: ingredientList,
+        );
+
+    final translatedTitles = translatedSections.titles;
+    final translatedIngredients = translatedSections.ingredients;
 
     final ingredientMap = <String, String>{};
     for (var i = 0; i < ingredientList.length; i++) {

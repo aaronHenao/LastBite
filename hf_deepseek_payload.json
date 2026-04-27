@@ -1,0 +1,8 @@
+﻿{
+  "model": "deepseek-ai/DeepSeek-V3.2:fastest",
+  "messages": [
+    {"role":"user","content":"Translate to Spanish and return only JSON array: [\"baby spinach stems removed\",\"pine nuts\"]"}
+  ],
+  "stream": false,
+  "temperature": 0.1
+}

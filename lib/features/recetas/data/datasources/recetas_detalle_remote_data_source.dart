@@ -27,30 +27,24 @@ class RecetasDetalleRemoteDataSource {
     _translator.clearWarning();
 
     try {
-      final respuestas = await Future.wait([
-        _dio.get<Map<String, dynamic>>(
-          '$_recipesBaseUrl/$recetaId/information',
-          queryParameters: {'apiKey': _apiKey},
-        ),
-        _dio.get<Map<String, dynamic>>(
-          '$_recipesBaseUrl/$recetaId/equipmentWidget.json',
-          queryParameters: {'apiKey': _apiKey},
-        ),
-      ]);
+      final response = await _dio.get<Map<String, dynamic>>(
+        '$_recipesBaseUrl/$recetaId/information',
+        queryParameters: {'apiKey': _apiKey},
+      );
 
-      final infoData = respuestas[0].data;
-      final equipmentData = respuestas[1].data;
+      final infoData = response.data;
 
-      if (infoData == null || equipmentData == null) {
+      if (infoData == null) {
         throw const RecetasRemoteException(
           message: 'Respuesta vacia de Spoonacular',
         );
       }
 
       final translatedInfo = await _traducirInfo(infoData);
-      final translatedEquipment = await _traducirEquipamiento(equipmentData);
-
-      return {'information': translatedInfo, 'equipment': translatedEquipment};
+      return {
+        'information': translatedInfo,
+        'equipment': {'equipment': <Map<String, dynamic>>[]},
+      };
     } on DioException catch (e) {
       throw _mapearErrorRemoto(e);
     }
@@ -60,43 +54,46 @@ class RecetasDetalleRemoteDataSource {
     final copy = Map<String, dynamic>.from(info);
 
     final title = copy['title']?.toString() ?? '';
-    if (title.trim().isNotEmpty) {
-      final translated = await _translator.translateTermsToSpanish([
-        title,
-      ], context: 'Recipe title for app UI');
-      copy['title'] = translated.first;
-    }
-
     final instructions = copy['instructions']?.toString() ?? '';
-    if (instructions.trim().isNotEmpty) {
-      copy['instructions'] = await _translator.translateTextToSpanish(
-        instructions,
-        context: 'Recipe instructions for app UI',
-      );
-    }
 
     final extendedIngredients = copy['extendedIngredients'];
+    final names = extendedIngredients is List
+        ? extendedIngredients
+              .whereType<Map<String, dynamic>>()
+              .map((item) => item['name']?.toString() ?? '')
+              .where((name) => name.trim().isNotEmpty)
+              .toList()
+        : <String>[];
+
+    final translatedSections = await _translator
+        .translateRecipeSectionsToSpanish(
+          titles: title.trim().isEmpty ? const <String>[] : [title],
+          ingredients: names,
+          instructions: instructions.trim().isEmpty
+              ? const <String>[]
+              : [instructions],
+        );
+
+    if (translatedSections.titles.isNotEmpty) {
+      copy['title'] = translatedSections.titles.first;
+    }
+
+    if (translatedSections.instructions.isNotEmpty) {
+      final translatedInstructions = translatedSections.instructions.first;
+      copy['instructions'] = _esInstruccionPlaceholder(translatedInstructions)
+          ? instructions
+          : translatedInstructions;
+    }
+
     if (extendedIngredients is List && extendedIngredients.isNotEmpty) {
-      final names = extendedIngredients
-          .whereType<Map<String, dynamic>>()
-          .map((item) => item['name']?.toString() ?? '')
-          .where((name) => name.trim().isNotEmpty)
-          .toList();
-
-      final translatedNames = names.isEmpty
-          ? const <String>[]
-          : await _translator.translateTermsToSpanish(
-              names,
-              context: 'Recipe ingredient names for app UI',
-            );
-
       var idx = 0;
       copy['extendedIngredients'] = extendedIngredients.map((item) {
         if (item is! Map<String, dynamic>) return item;
         final itemCopy = Map<String, dynamic>.from(item);
         final originalName = itemCopy['name']?.toString() ?? '';
-        if (originalName.trim().isNotEmpty && idx < translatedNames.length) {
-          itemCopy['name'] = translatedNames[idx];
+        if (originalName.trim().isNotEmpty &&
+            idx < translatedSections.ingredients.length) {
+          itemCopy['name'] = translatedSections.ingredients[idx];
           idx++;
         }
         return itemCopy;
@@ -106,39 +103,11 @@ class RecetasDetalleRemoteDataSource {
     return copy;
   }
 
-  Future<Map<String, dynamic>> _traducirEquipamiento(
-    Map<String, dynamic> equipment,
-  ) async {
-    final copy = Map<String, dynamic>.from(equipment);
-    final raw = copy['equipment'];
-    if (raw is! List || raw.isEmpty) return copy;
-
-    final names = raw
-        .whereType<Map<String, dynamic>>()
-        .map((item) => item['name']?.toString() ?? '')
-        .where((name) => name.trim().isNotEmpty)
-        .toList();
-
-    final translatedNames = names.isEmpty
-        ? const <String>[]
-        : await _translator.translateTermsToSpanish(
-            names,
-            context: 'Kitchen equipment names for app UI',
-          );
-
-    var idx = 0;
-    copy['equipment'] = raw.map((item) {
-      if (item is! Map<String, dynamic>) return item;
-      final itemCopy = Map<String, dynamic>.from(item);
-      final originalName = itemCopy['name']?.toString() ?? '';
-      if (originalName.trim().isNotEmpty && idx < translatedNames.length) {
-        itemCopy['name'] = translatedNames[idx];
-        idx++;
-      }
-      return itemCopy;
-    }).toList();
-
-    return copy;
+  bool _esInstruccionPlaceholder(String texto) {
+    final t = texto.toLowerCase().trim();
+    return t.contains('interfaz de la app') ||
+        t == 'instrucciones de la receta para la interfaz de la app' ||
+        t == 'recipe instructions for app ui';
   }
 
   void _validarApiKey() {

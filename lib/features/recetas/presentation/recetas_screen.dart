@@ -16,9 +16,11 @@ class RecetasScreen extends StatefulWidget {
 }
 
 class _RecetasScreenState extends State<RecetasScreen> {
-  final _busquedaDataSource = RecetasBusquedaRemoteDataSource();
-  final _detalleDataSource = RecetasDetalleRemoteDataSource();
+  late final AiTranslationDataSource _translator;
+  late final RecetasBusquedaRemoteDataSource _busquedaDataSource;
+  late final RecetasDetalleRemoteDataSource _detalleDataSource;
   final _searchCtrl = TextEditingController();
+  final Map<int, Receta> _detallesCache = {};
 
   List<Receta> _recetas = const [];
   bool _cargandoRecetas = true;
@@ -29,6 +31,13 @@ class _RecetasScreenState extends State<RecetasScreen> {
   @override
   void initState() {
     super.initState();
+    _translator = AiTranslationDataSource();
+    _busquedaDataSource = RecetasBusquedaRemoteDataSource(
+      translator: _translator,
+    );
+    _detalleDataSource = RecetasDetalleRemoteDataSource(
+      translator: _translator,
+    );
     _cargarRecetasDesdeApi();
   }
 
@@ -73,7 +82,7 @@ class _RecetasScreenState extends State<RecetasScreen> {
       final productosDespensa = productosEjemplo.map((p) => p.nombre).toList();
       final raw = await _busquedaDataSource.buscarRecetasPorDespensaRaw(
         productosDespensa: productosDespensa,
-        number: 20,
+        number: 3,
         ignorePantry: false,
       );
 
@@ -355,42 +364,37 @@ class _RecetasScreenState extends State<RecetasScreen> {
     );
   }
 
-  Future<void> _abrirDetalle(Receta receta) async {
-    var recetaConDetalle = receta;
-    final messenger = ScaffoldMessenger.of(context);
-
-    try {
-      final raw = await _detalleDataSource.obtenerDetalleRecetaRaw(
-        recetaId: receta.id,
-      );
-      final detalle = RecetaDetalleRemoteModel.fromApiRaw(raw);
-      recetaConDetalle = _fusionarDetalle(receta, detalle);
-
-      final aviso = _detalleDataSource.lastTranslationWarning;
-      if (aviso != null && mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(aviso, style: const TextStyle(fontSize: 12))),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'No se pudo cargar detalle completo: $e',
-            style: const TextStyle(fontSize: 12),
-          ),
-        ),
-      );
-    }
-
-    if (!mounted) return;
+  void _abrirDetalle(Receta receta) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => RecetaDetalleSheet(receta: recetaConDetalle),
+      builder: (_) => RecetaDetalleSheet(
+        receta: receta,
+        detalleFuture: _cargarDetalleReceta(receta),
+      ),
     );
+  }
+
+  Future<Receta> _cargarDetalleReceta(Receta receta) async {
+    final cached = _detallesCache[receta.id];
+    if (cached != null) return cached;
+
+    final raw = await _detalleDataSource.obtenerDetalleRecetaRaw(
+      recetaId: receta.id,
+    );
+    final detalle = RecetaDetalleRemoteModel.fromApiRaw(raw);
+    final recetaConDetalle = _fusionarDetalle(receta, detalle);
+    _detallesCache[receta.id] = recetaConDetalle;
+
+    final aviso = _detalleDataSource.lastTranslationWarning;
+    if (aviso != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(aviso, style: const TextStyle(fontSize: 12))),
+      );
+    }
+
+    return recetaConDetalle;
   }
 
   Receta _fusionarDetalle(Receta base, RecetaDetalleRemoteModel detalle) {

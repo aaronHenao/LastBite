@@ -1,0 +1,9 @@
+﻿{
+  "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+  "messages": [
+    {"role":"system","content":"You are a translation assistant. Output must be JSON array of strings only."},
+    {"role":"user","content":"Translate from English to Spanish. Return ONLY valid JSON array, same length and order. Input: [\"Hello\",\"Tomato\"]"}
+  ],
+  "temperature": 0.1,
+  "stream": false
+}
