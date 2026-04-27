@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import '../recetas_remote_exception.dart';
+import '../datasources/recetas_remote_exception.dart';
 
 const String _recipesBaseUrl = 'https://api.spoonacular.com/recipes';
 

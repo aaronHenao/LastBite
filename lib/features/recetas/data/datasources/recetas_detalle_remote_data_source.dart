@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 
 import 'ai_translation_data_source.dart';
-import 'services/recetas_microservice.dart';
-import 'services/spoon_microservice.dart';
-import 'services/translation_microservice.dart';
+import '../services/recetas_service.dart';
+import '../services/spoon_service.dart';
+import '../services/translation_service.dart';
 
 class RecetasDetalleRemoteDataSource {
   RecetasDetalleRemoteDataSource({

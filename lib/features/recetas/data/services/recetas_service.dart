@@ -1,6 +1,6 @@
-import '../recetas_remote_exception.dart';
-import 'spoon_microservice.dart';
-import 'translation_microservice.dart';
+import '../datasources/recetas_remote_exception.dart';
+import 'spoon_service.dart';
+import 'translation_service.dart';
 
 class RecetasService {
   RecetasService({SpoonService? spoon, TranslationService? translation})

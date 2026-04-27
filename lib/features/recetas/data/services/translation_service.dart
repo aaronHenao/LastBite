@@ -1,4 +1,4 @@
-import '../ai_translation_data_source.dart';
+import '../datasources/ai_translation_data_source.dart';
 
 class TranslationService {
   TranslationService({AiTranslationDataSource? translator})
