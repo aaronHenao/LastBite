@@ -1,9 +1,0 @@
-﻿{
-  "model": "tencent/HY-MT1.5-1.8B:fastest",
-  "messages": [
-    {"role":"system","content":"You are a translation assistant. Output JSON array only."},
-    {"role":"user","content":"Translate from English to Spanish. Return only JSON array for this input: [\"Hello\",\"Tomato\"]"}
-  ],
-  "temperature": 0.1,
-  "stream": false
-}

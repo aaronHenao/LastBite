@@ -1,7 +1,0 @@
-﻿{
-  "model": "Qwen/Qwen3-0.6B:fastest",
-  "messages": [
-    {"role":"user","content":"Translate to Spanish: Hello world"}
-  ],
-  "stream": false
-}
