@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../domain/info_nutricional.dart';
 import '../domain/producto.dart';
+import '../data/datasources/open_food_facts_remote_data_source.dart';
 
 class DespensaNotifier extends Notifier<List<Producto>> {
-
   @override
   List<Producto> build() {
-    //por ahora inicializamos con los datos de ejemplo, cambia cuando empecemos a usar firebase
-    return [...productosEjemplo];
+    return <Producto>[];
   }
 
   void agregar(Producto producto) {
@@ -29,8 +29,18 @@ class DespensaNotifier extends Notifier<List<Producto>> {
   }
 }
 
+final _openFoodFactsProvider = Provider<OpenFoodFactsRemoteDataSource>((ref) {
+  return OpenFoodFactsRemoteDataSource();
+});
+
+final infoNutricionalProvider = FutureProvider.family<InfoNutricional?, String>(
+  (ref, codigo) async {
+    final dataSource = ref.read(_openFoodFactsProvider);
+    return dataSource.obtenerNutricionPorCodigo(codigo: codigo);
+  },
+);
+
 //provider global para acceder a la despensa desde cualquier parte de la app, se puede usar para escuchar cambios o para modificar el estado de la despensa
-final despensaProvider =
-    NotifierProvider<DespensaNotifier, List<Producto>>(
+final despensaProvider = NotifierProvider<DespensaNotifier, List<Producto>>(
   DespensaNotifier.new,
 );

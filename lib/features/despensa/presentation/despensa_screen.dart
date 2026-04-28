@@ -5,9 +5,22 @@ import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/producto.dart';
 import 'widgets/producto_card.dart';
+import 'widgets/nutricion_bottom_sheet.dart';
 
 class DespensaScreen extends ConsumerWidget {
   const DespensaScreen({super.key});
+
+  void _mostrarNutricion(BuildContext context, Producto producto) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => NutricionBottomSheet(producto: producto),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -115,21 +128,24 @@ class DespensaScreen extends ConsumerWidget {
                       Text(
                         'PRÓXIMOS A VENCER',
                         style: textTheme.titleSmall?.copyWith(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1,
-                        color: AppColors.danger,
-                    ),
-                  ),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
+                          color: AppColors.danger,
+                        ),
+                      ),
                     ],
-                  )
+                  ),
                 ),
               ),
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) => Padding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                    child: ProductoCard(producto: urgentes[index]),
+                    child: ProductoCard(
+                      producto: urgentes[index],
+                      onTap: () => _mostrarNutricion(context, urgentes[index]),
+                    ),
                   ),
                   childCount: urgentes.length,
                 ),
@@ -143,31 +159,33 @@ class DespensaScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Icon(
-                      CupertinoIcons.cube_box_fill, 
-                      size: 16, 
-                      color: AppColors.green
+                      CupertinoIcons.cube_box_fill,
+                      size: 16,
+                      color: AppColors.green,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       'EN BUEN ESTADO',
                       style: textTheme.titleSmall?.copyWith(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                      color: AppColors.textMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                        color: AppColors.textMuted,
                       ),
                     ),
-
                   ],
-
-                )
+                ),
               ),
             ),
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) => Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                  child: ProductoCard(producto: enBuenEstado[index]),
+                  child: ProductoCard(
+                    producto: enBuenEstado[index],
+                    onTap: () =>
+                        _mostrarNutricion(context, enBuenEstado[index]),
+                  ),
                 ),
                 childCount: enBuenEstado.length,
               ),

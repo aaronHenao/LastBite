@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
+import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import 'package:lastbite/features/recetas/data/datasources/recetas_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
@@ -8,14 +10,14 @@ import '../../../core/theme/app_theme.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
 
-class RecetasScreen extends StatefulWidget {
+class RecetasScreen extends ConsumerStatefulWidget {
   const RecetasScreen({super.key});
 
   @override
-  State<RecetasScreen> createState() => _RecetasScreenState();
+  ConsumerState<RecetasScreen> createState() => _RecetasScreenState();
 }
 
-class _RecetasScreenState extends State<RecetasScreen> {
+class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   late final AiTranslationDataSource _translator;
   late final RecetasBusquedaRemoteDataSource _busquedaDataSource;
   late final RecetasDetalleRemoteDataSource _detalleDataSource;
@@ -39,6 +41,11 @@ class _RecetasScreenState extends State<RecetasScreen> {
       translator: _translator,
     );
     _cargarRecetasDesdeApi();
+
+    ref.listen<List<Producto>>(despensaProvider, (previous, next) {
+      if (previous == null) return;
+      _cargarRecetasDesdeApi();
+    });
   }
 
   @override
@@ -58,8 +65,12 @@ class _RecetasScreenState extends State<RecetasScreen> {
         .toList();
   }
 
-  String get _urgentesLabel {
-    final urgentes = [...productosEjemplo]
+  String _urgentesLabel(List<Producto> productos) {
+    if (productos.isEmpty) {
+      return 'No hay productos en tu despensa';
+    }
+
+    final urgentes = [...productos]
       ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
 
     final topUrgentes = urgentes.where((p) => p.urgente).take(5).toList();
@@ -79,9 +90,23 @@ class _RecetasScreenState extends State<RecetasScreen> {
     });
 
     try {
-      final productosDespensa = productosEjemplo.map((p) => p.nombre).toList();
+      final productosDespensa = ref.read(despensaProvider);
+      if (productosDespensa.isEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _recetas = const [];
+          _cargandoRecetas = false;
+          _errorCarga = null;
+          _avisoTraduccion = null;
+        });
+        return;
+      }
+
+      final productosDespensaNombres = productosDespensa
+          .map((p) => p.nombre)
+          .toList();
       final raw = await _busquedaDataSource.buscarRecetasPorDespensaRaw(
-        productosDespensa: productosDespensa,
+        productosDespensa: productosDespensaNombres,
         number: 3,
         ignorePantry: false,
       );
@@ -111,6 +136,7 @@ class _RecetasScreenState extends State<RecetasScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final productosDespensa = ref.watch(despensaProvider);
     return SafeArea(
       child: CustomScrollView(
         slivers: [
@@ -223,7 +249,7 @@ class _RecetasScreenState extends State<RecetasScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _urgentesLabel,
+                                _urgentesLabel(productosDespensa),
                                 style: textTheme.bodyMedium?.copyWith(
                                   fontSize: 12,
                                   color: AppColors.textMuted,

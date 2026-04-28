@@ -7,6 +7,7 @@ import 'package:lastbite/core/constants/vida_util.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
+import 'scan_producto_screen.dart';
 
 enum _EntryMode { scan, manual }
 
@@ -20,6 +21,21 @@ class AgregarScreen extends ConsumerStatefulWidget {
 
 class _AgregarScreenState extends ConsumerState<AgregarScreen> {
   _EntryMode _mode = _EntryMode.scan;
+  String? _ultimoCodigoEscaneado;
+
+  Future<void> _abrirEscaner() async {
+    final codigo = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const ScanProductoScreen()),
+    );
+
+    if (!mounted) return;
+    if (codigo == null || codigo.trim().isEmpty) return;
+
+    setState(() => _ultimoCodigoEscaneado = codigo.trim());
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Codigo escaneado: ${codigo.trim()}')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,18 +89,24 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
               switchInCurve: Curves.easeOut,
               switchOutCurve: Curves.easeIn,
               child: _mode == _EntryMode.scan
-                  ? const _ScanEntryCard(key: ValueKey('scan'))
+                  ? _ScanEntryCard(
+                      key: const ValueKey('scan'),
+                      onTap: _abrirEscaner,
+                      ultimoCodigo: _ultimoCodigoEscaneado,
+                    )
                   : _ManualEntryForm(
-                    key: ValueKey('manual'),
-                    onGuardar: (producto){
-                      ref.read(despensaProvider.notifier).agregar(producto);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${producto.nombre} agregado a la despensa.'),
-                          backgroundColor: AppColors.green,
-                        )
-                      );
-                    }
+                      key: ValueKey('manual'),
+                      onGuardar: (producto) {
+                        ref.read(despensaProvider.notifier).agregar(producto);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${producto.nombre} agregado a la despensa.',
+                            ),
+                            backgroundColor: AppColors.green,
+                          ),
+                        );
+                      },
                     ),
             ),
           ],
@@ -116,7 +138,7 @@ class _HybridModeSwitch extends StatelessWidget {
           _modeButton(
             textTheme: textTheme,
             label: 'Escanear',
-            icon: CupertinoIcons.photo_camera_solid, 
+            icon: CupertinoIcons.photo_camera_solid,
             selected: mode == _EntryMode.scan,
             onTap: () => onChanged(_EntryMode.scan),
           ),
@@ -175,50 +197,68 @@ class _HybridModeSwitch extends StatelessWidget {
 }
 
 class _ScanEntryCard extends StatelessWidget {
-  const _ScanEntryCard({super.key});
+  final VoidCallback onTap;
+  final String? ultimoCodigo;
+
+  const _ScanEntryCard({super.key, required this.onTap, this.ultimoCodigo});
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return CustomPaint(
-      painter: _DashedRoundedRectPainter(color: AppColors.accent, radius: 24),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(20, 50, 20, 50),
-        child: Column(
-          children: [
-            Icon(
-              CupertinoIcons.camera_viewfinder,
-              size: 56,
-              color: AppColors.textMuted.withValues(alpha: 0.85),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              'Apunta al codigo de barras',
-              style: textTheme.titleLarge?.copyWith(
-                color: AppColors.textMain.withValues(alpha: 0.9),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: CustomPaint(
+        painter: _DashedRoundedRectPainter(color: AppColors.accent, radius: 24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(20, 50, 20, 50),
+          child: Column(
+            children: [
+              Icon(
+                CupertinoIcons.camera_viewfinder,
+                size: 56,
+                color: AppColors.textMuted.withValues(alpha: 0.85),
               ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Toca para simular escaneo',
-              style: textTheme.titleMedium?.copyWith(
-                color: AppColors.textMuted.withValues(alpha: 0.9),
+              const SizedBox(height: 18),
+              Text(
+                'Apunta al codigo de barras',
+                style: textTheme.titleLarge?.copyWith(
+                  color: AppColors.textMain.withValues(alpha: 0.9),
+                ),
               ),
-            ),
-            const SizedBox(height: 18),
-            Container(
-              width: 190,
-              height: 92,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.danger, width: 1),
-                color: AppColors.surface,
+              const SizedBox(height: 10),
+              Text(
+                'Toca para abrir la camara',
+                style: textTheme.titleMedium?.copyWith(
+                  color: AppColors.textMuted.withValues(alpha: 0.9),
+                ),
               ),
-              child: const Center(child: _FakeBarcode()),
-            ),
-          ],
+              if (ultimoCodigo != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Ultimo codigo: $ultimoCodigo',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.textMuted.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 18),
+              Container(
+                width: 190,
+                height: 92,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.danger, width: 1),
+                  color: AppColors.surface,
+                ),
+                child: const Center(child: _FakeBarcode()),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -418,24 +458,28 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Completa nombre y fecha.')),
                 );
-                return;    
+                return;
               }
 
               final partesFecha = _fechaCtrl.text.split('/');
               final fecha = DateTime(
                 int.parse(partesFecha[2]),
                 int.parse(partesFecha[1]),
-                int.parse(partesFecha[0])
+                int.parse(partesFecha[0]),
               );
 
               final producto = Producto(
-                id: DateTime.now().millisecondsSinceEpoch.toString(), 
-                nombre: _nombreCtrl.text.trim(), 
-                emoji: _emojiParaCategoria(_categoriaSeleccionada ?? ''), 
-                categoria: _categoriaSeleccionada ?? 'otro', 
-                cantidad: _cantidadCtrl.text.trim().isEmpty ? '1 unidad': '${_cantidadCtrl.text.trim()} ${_unidadSeleccionada?.abreviatura ?? ''}', 
-                fechaCaducidad: fecha, 
-                esFresco: _categoriaSeleccionada == 'fruta' || _categoriaSeleccionada == 'verdura'
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                nombre: _nombreCtrl.text.trim(),
+                emoji: _emojiParaCategoria(_categoriaSeleccionada ?? ''),
+                categoria: _categoriaSeleccionada ?? 'otro',
+                cantidad: _cantidadCtrl.text.trim().isEmpty
+                    ? '1 unidad'
+                    : '${_cantidadCtrl.text.trim()} ${_unidadSeleccionada?.abreviatura ?? ''}',
+                fechaCaducidad: fecha,
+                esFresco:
+                    _categoriaSeleccionada == 'fruta' ||
+                    _categoriaSeleccionada == 'verdura',
               );
 
               widget.onGuardar(producto);
@@ -447,24 +491,39 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
   }
 
   String _emojiParaCategoria(String categoria) {
-  switch (categoria) {
-    case 'verdura':     return '🥦';
-    case 'fruta':       return '🍎';
-    case 'pollo':       return '🍗';
-    case 'carne':       return '🥩';
-    case 'pescado':     return '🐟';
-    case 'huevo':       return '🥚';
-    case 'leche':       return '🥛';
-    case 'yogur':       return '🥛';
-    case 'queso':       return '🧀';
-    case 'pan':         return '🍞';
-    case 'grano':       return '🍝';
-    case 'jugo':        return '🧃';
-    case 'embutido':    return '🌭';
-    case 'conserva':    return '🥫';
-    default:            return '🥫';
+    switch (categoria) {
+      case 'verdura':
+        return '🥦';
+      case 'fruta':
+        return '🍎';
+      case 'pollo':
+        return '🍗';
+      case 'carne':
+        return '🥩';
+      case 'pescado':
+        return '🐟';
+      case 'huevo':
+        return '🥚';
+      case 'leche':
+        return '🥛';
+      case 'yogur':
+        return '🥛';
+      case 'queso':
+        return '🧀';
+      case 'pan':
+        return '🍞';
+      case 'grano':
+        return '🍝';
+      case 'jugo':
+        return '🧃';
+      case 'embutido':
+        return '🌭';
+      case 'conserva':
+        return '🥫';
+      default:
+        return '🥫';
+    }
   }
-}
 }
 
 class _InputField extends StatelessWidget {
