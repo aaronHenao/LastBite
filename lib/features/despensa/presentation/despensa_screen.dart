@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../domain/producto.dart';
 import 'widgets/producto_card.dart';
 import 'widgets/nutricion_bottom_sheet.dart';
+import '../../auth/presentation/auth_provider.dart';
 
 class DespensaScreen extends ConsumerWidget {
   const DespensaScreen({super.key});
@@ -25,6 +26,12 @@ class DespensaScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
+    final authState = ref.watch(authStateProvider);
+    final nombreUsuario = authState.when(
+      data: (user) => user?.nombre?.trim().isNotEmpty == true ? user!.nombre! : 'Mi cuenta',
+      loading: () => 'Mi cuenta',
+      error: (_, __) => 'Mi cuenta',
+    );
 
     final productos = [...ref.watch(despensaProvider)]
       ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
@@ -67,10 +74,16 @@ class DespensaScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: AppColors.surface,
-                          child: Icon(Icons.person, color: AppColors.textMain),
+                        GestureDetector(
+                          onTap: () => _mostrarMenuPerfil(context, ref, nombreUsuario),
+                          child: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: AppColors.surface,
+                            child: Icon(
+                              Icons.person,
+                              color: AppColors.textMain,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -192,6 +205,79 @@ class DespensaScreen extends ConsumerWidget {
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _mostrarMenuPerfil(BuildContext context, WidgetRef ref, String nombreUsuario) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Header perfil
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: AppColors.accent.withValues(alpha: 0.15),
+                    child: const Icon(Icons.person, color: AppColors.accent),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    nombreUsuario,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textMain,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: AppColors.border),
+            // Cerrar sesión
+            ListTile(
+              leading: const Icon(
+                Icons.logout_rounded,
+                color: AppColors.danger,
+              ),
+              title: const Text(
+                'Cerrar sesión',
+                style: TextStyle(
+                  color: AppColors.danger,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                await ref.read(authServiceProvider).cerrarSesion();
+              },
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
