@@ -39,6 +39,7 @@ dependencies:
   flutter_riverpod: ^2.5.0
   dio: ^5.9.0
   mobile_scanner: ^5.1.1
+  firebase_core: ^4.8.0
 
 dev_dependencies:
   flutter_test:

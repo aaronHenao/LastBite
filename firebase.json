@@ -1,0 +1,28 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "lastbite-641cf",
+          "appId": "1:941305327047:android:630662d1b424db6b58bde2",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "lastbite-641cf",
+          "configurations": {
+            "android": "1:941305327047:android:630662d1b424db6b58bde2",
+            "web": "1:941305327047:web:b42c230d814c4ac258bde2"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "database": "(default)",
+    "location": "nam5",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

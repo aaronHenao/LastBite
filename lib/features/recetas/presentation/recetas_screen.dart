@@ -42,10 +42,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     );
     _cargarRecetasDesdeApi();
 
-    ref.listen<List<Producto>>(despensaProvider, (previous, next) {
-      if (previous == null) return;
-      _cargarRecetasDesdeApi();
-    });
   }
 
   @override
@@ -135,6 +131,11 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<List<Producto>>(despensaProvider, (previous, next) {
+    if (previous != null && previous != next) {
+      _cargarRecetasDesdeApi();
+    }
+  });
     final textTheme = Theme.of(context).textTheme;
     final productosDespensa = ref.watch(despensaProvider);
     return SafeArea(
