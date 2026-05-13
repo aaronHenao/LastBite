@@ -1,46 +1,61 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../domain/info_nutricional.dart';
+import 'package:lastbite/features/auth/presentation/auth_provider.dart';
+import '../data/despensa_repository.dart';
 import '../domain/producto.dart';
-import '../data/datasources/open_food_facts_remote_data_source.dart';
 
-class DespensaNotifier extends Notifier<List<Producto>> {
+class DespensaNotifier extends AsyncNotifier<List<Producto>> {
+
+  late DespensaRepository _repo;
+  int _salvados = 0;
+  int get salvados => _salvados;
+
   @override
-  List<Producto> build() {
-    return <Producto>[];
+  Future<List<Producto>> build() async {
+    final user = await ref.watch(firebaseUserProvider.future);
+    if (user == null) return [];
+
+    _repo = DespensaRepository(userId: user.uid);
+    
+    final resultados = await Future.wait([
+      _repo.cargarProductos(),
+      _repo.cargarSalvados(),
+    ]);
+
+    _salvados = resultados[1] as int;
+    return resultados[0] as List<Producto>;
+
   }
 
-  void agregar(Producto producto) {
-    state = [...state, producto];
+  Future<void> agregar(Producto producto) async {
+    await _repo.guardar(producto);
+    state = AsyncData([...state.value ?? [], producto]);
   }
 
-  void consumir(String id) {
-    //elimina el producto y eventualmente sumará a "salvados"
-    state = state.where((p) => p.id != id).toList();
+  Future<void> consumir(String id) async {
+    await _repo.eliminar(id);
+    await _repo.incrementarSalvados();    // ← incrementa en Firestore
+    _salvados++;
+    state = AsyncData(
+      (state.value ?? []).where((p) => p.id != id).toList(),
+    );
   }
 
-  void eliminar(String id) {
-    state = state.where((p) => p.id != id).toList();
+  Future<void> eliminar(String id) async {
+    await _repo.eliminar(id);
+    state = AsyncData(
+      (state.value ?? []).where((p) => p.id != id).toList(),
+    );
   }
 
-  //devuelve los productos ordenados por urgencia, será usado por el moto de recetas
   List<Producto> get urgentes {
-    return [...state]
+    return [...(state.value ?? [])]
       ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
   }
 }
 
-final _openFoodFactsProvider = Provider<OpenFoodFactsRemoteDataSource>((ref) {
-  return OpenFoodFactsRemoteDataSource();
-});
-
-final infoNutricionalProvider = FutureProvider.family<InfoNutricional?, String>(
-  (ref, codigo) async {
-    final dataSource = ref.read(_openFoodFactsProvider);
-    return dataSource.obtenerNutricionPorCodigo(codigo: codigo);
-  },
-);
-
-//provider global para acceder a la despensa desde cualquier parte de la app, se puede usar para escuchar cambios o para modificar el estado de la despensa
-final despensaProvider = NotifierProvider<DespensaNotifier, List<Producto>>(
+final despensaProvider =
+    AsyncNotifierProvider<DespensaNotifier, List<Producto>>(
   DespensaNotifier.new,
 );

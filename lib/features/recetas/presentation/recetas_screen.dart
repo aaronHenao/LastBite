@@ -29,6 +29,16 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   String? _errorCarga;
   String? _avisoTraduccion;
   String _query = '';
+  bool _cargaInicial = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_cargaInicial) {
+      _cargaInicial = true;
+      _cargarRecetasDesdeApi();
+    }
+  }
 
   @override
   void initState() {
@@ -40,8 +50,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     _detalleDataSource = RecetasDetalleRemoteDataSource(
       translator: _translator,
     );
-    _cargarRecetasDesdeApi();
-
   }
 
   @override
@@ -86,7 +94,8 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     });
 
     try {
-      final productosDespensa = ref.read(despensaProvider);
+      final asyncDespensa = ref.watch(despensaProvider);
+      final productosDespensa = ref.watch(despensaProvider).value ?? [];
       if (productosDespensa.isEmpty) {
         if (!mounted) return;
         setState(() {
@@ -131,13 +140,15 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<List<Producto>>(despensaProvider, (previous, next) {
-    if (previous != null && previous != next) {
-      _cargarRecetasDesdeApi();
-    }
-  });
+    ref.listen<AsyncValue<List<Producto>>>(despensaProvider, (previous, next) {
+      final prevList = previous?.value;
+      final nextList = next.value;
+      if (prevList != null && nextList != null && prevList != nextList) {
+        _cargarRecetasDesdeApi();
+      }
+    });
     final textTheme = Theme.of(context).textTheme;
-    final productosDespensa = ref.watch(despensaProvider);
+    final productosDespensa = ref.read(despensaProvider).value ?? [];
     return SafeArea(
       child: CustomScrollView(
         slivers: [
@@ -361,7 +372,9 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                         const Text('🍽️', style: TextStyle(fontSize: 48)),
                         const SizedBox(height: 12),
                         Text(
-                          'No encontramos recetas\ncon "$_query"',
+                          _query.isEmpty
+                              ? 'No hay recetas sugeridas\npara tu despensa actual'
+                              : 'No encontramos recetas\ncon "$_query"',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 14,

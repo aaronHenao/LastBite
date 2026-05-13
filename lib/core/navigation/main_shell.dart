@@ -17,7 +17,7 @@ class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
 
   late final List<Widget> _pages = [
-    const DespensaScreen(),
+    DespensaScreen(onAgregar: () => _onItemTapped(1)),
     AgregarScreen(onBackToPantry: () => _onItemTapped(0)),
     const RecetasScreen(),
     const _ComingSoonScreen(

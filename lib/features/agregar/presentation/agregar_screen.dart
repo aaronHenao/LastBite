@@ -52,13 +52,6 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
               borderRadius: BorderRadius.circular(10),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                child: Text(
-                  '← Volver',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: AppColors.textMuted.withValues(alpha: 0.9),
-                  ),
-                ),
               ),
             ),
             const SizedBox(height: 11),
@@ -96,8 +89,11 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
                     )
                   : _ManualEntryForm(
                       key: ValueKey('manual'),
-                      onGuardar: (producto) {
-                        ref.read(despensaProvider.notifier).agregar(producto);
+                      onGuardar: (producto) async {
+                        await ref
+                            .read(despensaProvider.notifier)
+                            .agregar(producto);
+                        widget.onBackToPantry?.call();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
@@ -492,33 +488,33 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
 
   String _emojiParaCategoria(String categoria) {
     switch (categoria) {
-      case 'verdura':
+      case 'Verdura':
         return '🥦';
-      case 'fruta':
+      case 'Fruta':
         return '🍎';
-      case 'pollo':
+      case 'Pollo':
         return '🍗';
-      case 'carne':
+      case 'Carne':
         return '🥩';
-      case 'pescado':
+      case 'Pescado':
         return '🐟';
-      case 'huevo':
+      case 'Huevo':
         return '🥚';
-      case 'leche':
+      case 'Leche':
         return '🥛';
-      case 'yogur':
+      case 'Yogur':
         return '🥛';
-      case 'queso':
+      case 'Queso':
         return '🧀';
-      case 'pan':
+      case 'Pan':
         return '🍞';
-      case 'grano':
+      case 'Grano':
         return '🍝';
-      case 'jugo':
+      case 'Jugo':
         return '🧃';
-      case 'embutido':
+      case 'Embutido':
         return '🌭';
-      case 'conserva':
+      case 'Conserva':
         return '🥫';
       default:
         return '🥫';
