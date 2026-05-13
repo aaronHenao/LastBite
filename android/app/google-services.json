@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "941305327047-2uhf3jjmecpibvehanb4agqqj6difuqr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.lastbite",
+            "certificate_hash": "b2a5fd4e014622ac1b2d69f21441c1fbb5423489"
+          }
+        },
+        {
           "client_id": "941305327047-uao17g8t9t4fi83nfo400tmab6fujde8.apps.googleusercontent.com",
           "client_type": 3
         }
