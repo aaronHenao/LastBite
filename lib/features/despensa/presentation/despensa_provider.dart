@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
+import 'package:lastbite/features/alertas/presentation/alertas_provider.dart';
 import '../data/despensa_repository.dart';
 import '../domain/producto.dart';
 
@@ -13,8 +14,12 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
 
   @override
   Future<List<Producto>> build() async {
-    final user = await ref.watch(firebaseUserProvider.future);
-    if (user == null) return [];
+    final auth = ref.watch(firebaseUserProvider);
+    final user = auth.value;
+    if (user == null) {
+      _salvados = 0;
+      return [];
+    }
 
     _repo = DespensaRepository(userId: user.uid);
     
@@ -31,6 +36,7 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
   Future<void> agregar(Producto producto) async {
     await _repo.guardar(producto);
     state = AsyncData([...state.value ?? [], producto]);
+    await ref.read(alertasProvider.notifier).refrescar();
   }
 
   Future<void> consumir(String id) async {
@@ -40,6 +46,7 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
     state = AsyncData(
       (state.value ?? []).where((p) => p.id != id).toList(),
     );
+    await ref.read(alertasProvider.notifier).refrescar();
   }
 
   Future<void> eliminar(String id) async {
@@ -47,6 +54,7 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
     state = AsyncData(
       (state.value ?? []).where((p) => p.id != id).toList(),
     );
+    await ref.read(alertasProvider.notifier).refrescar();
   }
 
   List<Producto> get urgentes {

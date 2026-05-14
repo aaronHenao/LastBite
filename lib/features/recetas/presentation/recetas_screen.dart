@@ -139,7 +139,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
-      _prefetchTitulos(recetas);
+      _prefetchTraducciones(recetas);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -176,7 +176,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
-      _prefetchTitulos(recetas);
+      _prefetchTraducciones(recetas);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -207,14 +207,28 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     );
   }
 
-  void _prefetchTitulos(List<Receta> recetas) {
+  void _prefetchTraducciones(List<Receta> recetas) {
     if (recetas.isEmpty) return;
+
     unawaited(
       Future.wait(
         recetas.map((receta) =>
             _translationService.translateRecipeTitle(receta.titulo)),
       ),
     );
+
+    unawaited(
+      Future.wait(
+        recetas.map((receta) => _translationService.translateIngredients(
+            _ingredientesUsados(receta))),
+      ),
+    );
+  }
+
+  List<String> _ingredientesUsados(Receta receta) {
+    final base = receta.ingredientes ?? const <String>[];
+    if (base.isEmpty) return const <String>[];
+    return base.take(receta.ingredientesUsados).toList();
   }
 
   @override

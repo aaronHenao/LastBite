@@ -27,7 +27,7 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
   }
 
   Future<void> borrarTodas() async {
-    final user = await ref.read(firebaseUserProvider.future);
+    final user = ref.read(firebaseUserProvider).value;
     if (user == null) {
       state = const AsyncData([]);
       return;
@@ -39,7 +39,7 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
   }
 
   Future<void> eliminar(String id) async {
-    final user = await ref.read(firebaseUserProvider.future);
+    final user = ref.read(firebaseUserProvider).value;
     if (user == null) return;
 
     _repo = AlertasRepository(userId: user.uid);
@@ -48,7 +48,8 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
   }
 
   Future<List<Alerta>> _cargarAlertas() async {
-    final user = await ref.watch(firebaseUserProvider.future);
+    final auth = ref.watch(firebaseUserProvider);
+    final user = auth.value;
     if (user == null) return [];
 
     _repo = AlertasRepository(userId: user.uid);

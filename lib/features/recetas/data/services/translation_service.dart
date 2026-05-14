@@ -19,7 +19,49 @@ class TranslationService {
   }
 
   Future<List<String>> translateIngredientsToEnglish(List<String> ingredients) {
-    return _translator.translateIngredientsToEnglish(ingredients);
+    if (ingredients.isEmpty) return Future.value(ingredients);
+
+    final trimmed = ingredients.map((item) => item.trim()).toList();
+    final allCached = trimmed.every(
+      (item) => _cache.containsKey(_cacheKey('es-en', item)),
+    );
+
+    if (allCached) {
+      return Future.value(
+        trimmed.map((item) => _cache[_cacheKey('es-en', item)] ?? item)
+            .toList(),
+      );
+    }
+
+    final listKey = _cacheKey('es-en-list', trimmed.join('|'));
+    final inFlight = _inFlightList[listKey];
+    if (inFlight != null) return inFlight;
+
+    final future = _translator
+        .translateIngredientsToEnglish(trimmed)
+        .then((translated) {
+          if (translated.length != trimmed.length) {
+            _inFlightList.remove(listKey);
+            return trimmed;
+          }
+
+          for (var i = 0; i < trimmed.length; i++) {
+            final original = trimmed[i];
+            final result = translated[i].trim().isEmpty
+                ? original
+                : translated[i];
+            _cache[_cacheKey('es-en', original)] = result;
+          }
+          _inFlightList.remove(listKey);
+          return translated;
+        })
+        .catchError((_) {
+          _inFlightList.remove(listKey);
+          return trimmed;
+        });
+
+    _inFlightList[listKey] = future;
+    return future;
   }
 
   Future<String> translateRecipeTitle(String title) {

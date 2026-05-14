@@ -69,10 +69,14 @@ class _RecetaCardState extends State<RecetaCard> {
 
     final ingredientesUsados = _ingredientesUsados(widget.receta);
 
-    Future.wait([
-      _translationService.translateRecipeTitle(widget.receta.titulo),
-      _translationService.translateIngredients(ingredientesUsados),
-    ]).then((results) {
+    final tituloFuture = _translationService
+        .translateRecipeTitle(widget.receta.titulo)
+        .catchError((_) => widget.receta.titulo);
+    final ingredientesFuture = _translationService
+        .translateIngredients(ingredientesUsados)
+        .catchError((_) => ingredientesUsados);
+
+    Future.wait([tituloFuture, ingredientesFuture]).then((results) {
       if (!mounted) return;
       setState(() {
         _titulo = results[0] as String;
@@ -80,7 +84,8 @@ class _RecetaCardState extends State<RecetaCard> {
         _traduciendo = false;
       });
     }).catchError((_) {
-      _traduciendo = false;
+      if (!mounted) return;
+      setState(() => _traduciendo = false);
     });
   }
 
