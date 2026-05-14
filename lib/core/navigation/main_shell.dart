@@ -4,6 +4,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/agregar/presentation/agregar_screen.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_screen.dart';
+import 'package:lastbite/features/alertas/presentation/alertas_screen.dart';
 import 'package:lastbite/features/recetas/presentation/recetas_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -20,11 +21,7 @@ class _MainShellState extends State<MainShell> {
     DespensaScreen(onAgregar: () => _onItemTapped(1)),
     AgregarScreen(onBackToPantry: () => _onItemTapped(0)),
     const RecetasScreen(),
-    const _ComingSoonScreen(
-      icon: Icons.notifications_outlined,
-      title: 'Alertas',
-      subtitle: 'Aqui veras alertas de productos por vencer.',
-    ),
+    const AlertasScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -143,54 +140,6 @@ class _MenuItem extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ComingSoonScreen extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _ComingSoonScreen({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 42, color: AppColors.textMuted),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textMain,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 15,
-                  height: 1.4,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
