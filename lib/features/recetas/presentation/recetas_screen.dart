@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -6,9 +8,12 @@ import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import 'package:lastbite/features/recetas/data/datasources/recetas_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
+import 'package:lastbite/features/recetas/data/services/translation_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../data/receta_cache_repository.dart';
 
 class RecetasScreen extends ConsumerStatefulWidget {
   const RecetasScreen({super.key});
@@ -21,8 +26,10 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   late final AiTranslationDataSource _translator;
   late final RecetasBusquedaRemoteDataSource _busquedaDataSource;
   late final RecetasDetalleRemoteDataSource _detalleDataSource;
+  late final TranslationService _translationService;
   final _searchCtrl = TextEditingController();
   final Map<int, Receta> _detallesCache = {};
+  Timer? _searchDebounce;
 
   List<Receta> _recetas = const [];
   bool _cargandoRecetas = true;
@@ -30,13 +37,19 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   String? _avisoTraduccion;
   String _query = '';
   bool _cargaInicial = false;
+  bool _busquedaPorProducto = false;
+
+  RecetaCacheRepository? _cacheRepo;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_cargaInicial) {
       _cargaInicial = true;
-      _cargarRecetasDesdeApi();
+      ref.listenManual(despensaProvider, (_, next) {
+        if (next.value != null && !_cargaInicial) return;
+        if (next.value != null) _cargarRecetasDesdeApi();
+      }, fireImmediately: true);
     }
   }
 
@@ -50,20 +63,27 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     _detalleDataSource = RecetasDetalleRemoteDataSource(
       translator: _translator,
     );
+    _translationService = TranslationService();
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _cacheRepo = RecetaCacheRepository(userId: user.uid);
+    }
   }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _searchDebounce?.cancel();
     super.dispose();
   }
 
   List<Receta> get _recetasFiltradas {
-    // Ordenamiento por porcentaje de match descendente
+    //ordenamiento por porcentaje de match descendente
     final lista = [..._recetas]
       ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
 
-    if (_query.isEmpty) return lista;
+    if (_query.isEmpty || _busquedaPorProducto) return lista;
     return lista
         .where((r) => r.titulo.toLowerCase().contains(_query.toLowerCase()))
         .toList();
@@ -87,15 +107,16 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         .join(' · ');
   }
 
-  Future<void> _cargarRecetasDesdeApi() async {
+  Future<void> _cargarRecetasDesdeApi({bool forzar = false}) async {
+    _searchDebounce?.cancel();
     setState(() {
       _cargandoRecetas = true;
       _errorCarga = null;
+      _busquedaPorProducto = false;
     });
 
     try {
-      final asyncDespensa = ref.watch(despensaProvider);
-      final productosDespensa = ref.watch(despensaProvider).value ?? [];
+      final productosDespensa = ref.read(despensaProvider).value ?? [];
       if (productosDespensa.isEmpty) {
         if (!mounted) return;
         setState(() {
@@ -107,11 +128,83 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         return;
       }
 
-      final productosDespensaNombres = productosDespensa
-          .map((p) => p.nombre)
+      //ingredientes actuales urg
+      final urgentes = productosDespensa
+          .where((p) => p.urgente)
+          .map((p) => p.nombre.toLowerCase().trim())
           .toList();
+
+      //intentar caché
+      if (!forzar && _cacheRepo != null) {
+        final valido = await _cacheRepo!.cacheEsValido(urgentes);
+        if (valido) {
+          final recetasCache = await _cacheRepo!.cargarRecetas();
+          if (recetasCache.isNotEmpty && mounted) {
+            setState(() {
+              _recetas = recetasCache
+                ..sort(
+                  (a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch),
+                );
+              _cargandoRecetas = false;
+              _avisoTraduccion = null;
+            });
+            return;
+          }
+        }
+      }
+
+      //caché inválido o vacío - Llama a spoonacular
+      final productosOrdenados = [...productosDespensa]
+        ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
+      final nombres = productosOrdenados.map((p) => p.nombre).toList();
+
       final raw = await _busquedaDataSource.buscarRecetasPorDespensaRaw(
-        productosDespensa: productosDespensaNombres,
+        productosDespensa: nombres,
+        number: 3,
+        ignorePantry: false,
+      );
+
+      final recetas =
+          RecetaBusquedaRemoteModel.fromApiRawList(
+              raw,
+            ).map((m) => m.toDomain()).toList()
+            ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
+
+      // guarda en caché
+      if (_cacheRepo != null && recetas.isNotEmpty) {
+        await _cacheRepo!.guardarRecetas(
+          recetas: recetas,
+          ingredientesUrgentes: urgentes,
+        );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _recetas = recetas;
+        _cargandoRecetas = false;
+        _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
+      });
+      _prefetchTitulos(recetas);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorCarga = e.toString();
+        _cargandoRecetas = false;
+        _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
+      });
+    }
+  }
+
+  Future<void> _buscarRecetasPorProducto(String query) async {
+    setState(() {
+      _cargandoRecetas = true;
+      _errorCarga = null;
+      _busquedaPorProducto = true;
+    });
+
+    try {
+      final raw = await _busquedaDataSource.buscarRecetasPorDespensaRaw(
+        productosDespensa: [query],
         number: 3,
         ignorePantry: false,
       );
@@ -128,6 +221,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
+      _prefetchTitulos(recetas);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -136,6 +230,37 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
     }
+  }
+
+  void _onQueryChanged(String value) {
+    final trimmed = value.trim();
+    setState(() {
+      _query = value;
+      _busquedaPorProducto = trimmed.isNotEmpty;
+    });
+
+    _searchDebounce?.cancel();
+
+    if (trimmed.isEmpty) {
+      _cargarRecetasDesdeApi();
+      return;
+    }
+
+    _searchDebounce = Timer(
+      const Duration(milliseconds: 350),
+      () => _buscarRecetasPorProducto(trimmed),
+    );
+  }
+
+  void _prefetchTitulos(List<Receta> recetas) {
+    if (recetas.isEmpty) return;
+    unawaited(
+      Future.wait(
+        recetas.map(
+          (receta) => _translationService.translateRecipeTitle(receta.titulo),
+        ),
+      ),
+    );
   }
 
   @override
@@ -179,7 +304,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                   //Buscador
                   TextField(
                     controller: _searchCtrl,
-                    onChanged: (v) => setState(() => _query = v),
+                    onChanged: _onQueryChanged,
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w500,
                       color: AppColors.textMuted,
@@ -298,12 +423,25 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                           color: AppColors.yellow.withValues(alpha: 0.4),
                         ),
                       ),
-                      child: Text(
-                        _avisoTraduccion!,
-                        style: textTheme.bodySmall?.copyWith(
-                          fontSize: 11,
-                          color: AppColors.textMain,
-                        ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.translate,
+                            size: 14,
+                            color: AppColors.textMain,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _avisoTraduccion!,
+                              style: textTheme.bodySmall?.copyWith(
+                                fontSize: 11,
+                                color: AppColors.textMain,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -355,7 +493,8 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                           ),
                           const SizedBox(height: 12),
                           FilledButton(
-                            onPressed: _cargarRecetasDesdeApi,
+                            onPressed: () =>
+                                _cargarRecetasDesdeApi(forzar: true),
                             child: const Text('Reintentar'),
                           ),
                         ],
