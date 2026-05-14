@@ -1,21 +1,14 @@
 import 'package:dio/dio.dart';
-
-import 'ai_translation_data_source.dart';
 import '../services/recetas_service.dart';
 import '../services/spoon_service.dart';
-import '../services/translation_service.dart';
-
-const int _maxRecetasPorBusqueda = RecetasService.maxRecetasPorBusqueda;
+import '../datasources/my_memory_translate_service.dart';
 
 class RecetasBusquedaRemoteDataSource {
-  RecetasBusquedaRemoteDataSource({
-    Dio? dio,
-    String? apiKey,
-    AiTranslationDataSource? translator,
-  }) : _service = RecetasService(
-         spoon: SpoonService(dio: dio, apiKey: apiKey),
-         translation: TranslationService(translator: translator),
-       );
+  RecetasBusquedaRemoteDataSource({Dio? dio, String? apiKey})
+      : _service = RecetasService(
+          spoon: SpoonService(dio: dio, apiKey: apiKey),
+          translator: MyMemoryTranslateService(dio: dio),
+        );
 
   final RecetasService _service;
 
@@ -25,13 +18,11 @@ class RecetasBusquedaRemoteDataSource {
     required List<String> productosDespensa,
     int number = 3,
     bool ignorePantry = false,
-  }) async {
-    final raw = await _service.buscarRecetasPorDespensaRaw(
+  }) {
+    return _service.buscarRecetasPorDespensaRaw(
       productosDespensa: productosDespensa,
       number: number,
       ignorePantry: ignorePantry,
     );
-
-    return raw.take(_maxRecetasPorBusqueda).toList();
   }
 }

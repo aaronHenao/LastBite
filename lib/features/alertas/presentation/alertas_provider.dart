@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
-import 'package:lastbite/features/recetas/data/datasources/ai_translation_data_source.dart';
+//import 'package:lastbite/features/recetas/data/datasources/ai_translation_data_source.dart';
 import 'package:lastbite/features/recetas/data/datasources/recetas_busqueda_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/domain/receta.dart';
@@ -10,7 +10,7 @@ import '../domain/alerta.dart';
 
 class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
   late AlertasRepository _repo;
-  late AiTranslationDataSource _translator;
+  //late AiTranslationDataSource _translator;
   late RecetasBusquedaRemoteDataSource _busquedaDataSource;
 
   String? _avisoTraduccion;
@@ -52,9 +52,9 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     if (user == null) return [];
 
     _repo = AlertasRepository(userId: user.uid);
-    _translator = AiTranslationDataSource();
+    //_translator = //AiTranslationDataSource();
     _busquedaDataSource = RecetasBusquedaRemoteDataSource(
-      translator: _translator,
+      //translator: _translator,
     );
     _avisoTraduccion = null;
 
