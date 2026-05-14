@@ -154,6 +154,7 @@ class RecetasService {
     final copy = Map<String, dynamic>.from(info);
 
     final title = copy['title']?.toString() ?? '';
+    final instructions = copy['instructions']?.toString() ?? '';
 
     final extendedIngredients = copy['extendedIngredients'];
     final names = extendedIngredients is List
@@ -168,12 +169,20 @@ class RecetasService {
         ? ''
         : await _translation.translateRecipeTitle(title.trim());
 
+    final translatedInstructions = instructions.trim().isEmpty
+      ? ''
+      : await _translation.translateInstructions(instructions.trim());
+
     final translatedIngredientNames = names.isEmpty
         ? <String>[]
         : await _translation.translateIngredients(names);
 
     if (translatedTitle.trim().isNotEmpty) {
       copy['title'] = translatedTitle;
+    }
+
+    if (translatedInstructions.trim().isNotEmpty) {
+      copy['instructions'] = translatedInstructions;
     }
 
     if (extendedIngredients is List && extendedIngredients.isNotEmpty) {

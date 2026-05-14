@@ -1,11 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/recetas/domain/receta.dart';
-import 'package:lastbite/providers/translation_provider.dart';
 
 String _urlImagenOptimizada(String originalUrl) {
   if (originalUrl.isEmpty) return originalUrl;
@@ -18,7 +14,7 @@ String _urlImagenOptimizada(String originalUrl) {
   return 'https://images.weserv.nl/?url=$encoded&w=1200&fit=cover&output=jpg&q=90';
 }
 
-class RecetaCard extends ConsumerWidget {
+class RecetaCard extends StatelessWidget {
   final Receta receta;
   final VoidCallback onTap;
 
@@ -39,9 +35,8 @@ class RecetaCard extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final ingredientes = _ingredientesUsados(receta);
-    final ingredientesKey = jsonEncode(ingredientes);
     final match = receta.porcentajeMatch;
     final matchColor = match >= 80
         ? AppColors.green
@@ -111,28 +106,12 @@ class RecetaCard extends ConsumerWidget {
                           height: _tituloHeight,
                           child: Align(
                             alignment: Alignment.centerLeft,
-                            child: ref
-                                .watch(recipeTitleProvider(receta.titulo))
-                                .when(
-                                  data: (t) => Text(
-                                    t,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: _tituloStyle,
-                                  ),
-                                  loading: () => Text(
-                                    receta.titulo,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: _tituloStyle,
-                                  ),
-                                  error: (e, s) => Text(
-                                    receta.titulo,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: _tituloStyle,
-                                  ),
-                                ),
+                            child: Text(
+                              receta.titulo,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: _tituloStyle,
+                            ),
                           ),
                         ),
                       ),
@@ -194,58 +173,22 @@ class RecetaCard extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  ref.watch(recipeIngredientsProvider(ingredientesKey)).when(
-                    data: (translated) => Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        ...translated.map(
-                          (label) => _IngredientTag(
-                            label: label,
-                            tienes: true,
-                          ),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      ...ingredientes.map(
+                        (label) => _IngredientTag(
+                          label: label,
+                          tienes: true,
                         ),
-                        if (receta.ingredientesFaltantes > 0)
-                          _IngredientTag(
-                            label: '+${receta.ingredientesFaltantes} más',
-                            tienes: false,
-                          ),
-                      ],
-                    ),
-                    loading: () => Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        ...ingredientes.map(
-                          (label) => _IngredientTag(
-                            label: label,
-                            tienes: true,
-                          ),
+                      ),
+                      if (receta.ingredientesFaltantes > 0)
+                        _IngredientTag(
+                          label: '+${receta.ingredientesFaltantes} más',
+                          tienes: false,
                         ),
-                        if (receta.ingredientesFaltantes > 0)
-                          _IngredientTag(
-                            label: '+${receta.ingredientesFaltantes} más',
-                            tienes: false,
-                          ),
-                      ],
-                    ),
-                    error: (e, s) => Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        ...ingredientes.map(
-                          (label) => _IngredientTag(
-                            label: label,
-                            tienes: true,
-                          ),
-                        ),
-                        if (receta.ingredientesFaltantes > 0)
-                          _IngredientTag(
-                            label: '+${receta.ingredientesFaltantes} más',
-                            tienes: false,
-                          ),
-                      ],
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -296,7 +239,7 @@ class _IngredientTag extends StatelessWidget {
   }
 }
 
-class RecetaDetalleSheet extends ConsumerStatefulWidget {
+class RecetaDetalleSheet extends StatefulWidget {
   final Receta receta;
   final Future<Receta>? detalleFuture;
 
@@ -307,11 +250,10 @@ class RecetaDetalleSheet extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<RecetaDetalleSheet> createState() =>
-      _RecetaDetalleSheetState();
+  State<RecetaDetalleSheet> createState() => _RecetaDetalleSheetState();
 }
 
-class _RecetaDetalleSheetState extends ConsumerState<RecetaDetalleSheet> {
+class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
   late Receta _receta;
   bool _cargandoDetalle = false;
 
@@ -424,28 +366,12 @@ class _RecetaDetalleSheetState extends ConsumerState<RecetaDetalleSheet> {
                       constraints: const BoxConstraints(minHeight: 56),
                       child: Align(
                         alignment: Alignment.centerLeft,
-                        child: ref
-                            .watch(recipeTitleProvider(receta.titulo))
-                            .when(
-                              data: (t) => Text(
-                                t,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: _tituloDetalleStyle,
-                              ),
-                              loading: () => Text(
-                                receta.titulo,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: _tituloDetalleStyle,
-                              ),
-                              error: (e, s) => Text(
-                                receta.titulo,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: _tituloDetalleStyle,
-                              ),
-                            ),
+                        child: Text(
+                          receta.titulo,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: _tituloDetalleStyle,
+                        ),
                       ),
                     ),
                   ),
@@ -580,43 +506,15 @@ class _RecetaDetalleSheetState extends ConsumerState<RecetaDetalleSheet> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                ref
-                    .watch(recipeInstructionsProvider(instruccionesRaw))
-                    .when(
-                      data: (t) => Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.card,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(t, style: _instruccionesStyle),
-                      ),
-                      loading: () => Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.card,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(
-                          instruccionesRaw,
-                          style: _instruccionesStyle,
-                        ),
-                      ),
-                      error: (e, s) => Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.card,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(
-                          instruccionesRaw,
-                          style: _instruccionesStyle,
-                        ),
-                      ),
-                    ),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Text(instruccionesRaw, style: _instruccionesStyle),
+                ),
                 const SizedBox(height: 20),
               ],
               SizedBox(
