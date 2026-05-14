@@ -94,7 +94,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     });
 
     try {
-      final asyncDespensa = ref.watch(despensaProvider);
       final productosDespensa = ref.watch(despensaProvider).value ?? [];
       if (productosDespensa.isEmpty) {
         if (!mounted) return;
@@ -107,7 +106,9 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         return;
       }
 
-      final productosDespensaNombres = productosDespensa
+      final productosOrdenados = [...productosDespensa]
+        ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
+      final productosDespensaNombres = productosOrdenados
           .map((p) => p.nombre)
           .toList();
       final raw = await _busquedaDataSource.buscarRecetasPorDespensaRaw(
@@ -298,12 +299,25 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                           color: AppColors.yellow.withValues(alpha: 0.4),
                         ),
                       ),
-                      child: Text(
-                        _avisoTraduccion!,
-                        style: textTheme.bodySmall?.copyWith(
-                          fontSize: 11,
-                          color: AppColors.textMain,
-                        ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.translate,
+                            size: 14,
+                            color: AppColors.textMain,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _avisoTraduccion!,
+                              style: textTheme.bodySmall?.copyWith(
+                                fontSize: 11,
+                                color: AppColors.textMain,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

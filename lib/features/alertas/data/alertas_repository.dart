@@ -49,6 +49,12 @@ class AlertasRepository {
     await batch.commit();
   }
 
+  Future<void> marcarAlertaBorrada(String id, DateTime momento) async {
+    await _alertasCol.doc(id).set({
+      'dismissedAt': momento.toIso8601String(),
+    }, SetOptions(merge: true));
+  }
+
   Future<void> borrarTodasAlertas(DateTime momento) async {
     final snapshot = await _alertasCol.get();
     final batch = _db.batch();

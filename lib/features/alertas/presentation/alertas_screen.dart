@@ -99,19 +99,14 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                               ],
                             ),
                             if (alertas.isNotEmpty)
-                              TextButton.icon(
+                              TextButton(
                                 onPressed: () => _confirmarBorrado(context),
-                                icon: const Icon(
-                                  CupertinoIcons.trash,
-                                  size: 18,
-                                  color: AppColors.danger,
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.danger,
                                 ),
-                                label: const Text(
+                                child: const Text(
                                   'Borrar todo',
-                                  style: TextStyle(
-                                    color: AppColors.danger,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                                  style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                               ),
                           ],
@@ -138,12 +133,25 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                                 color: AppColors.yellow.withValues(alpha: 0.4),
                               ),
                             ),
-                            child: Text(
-                              avisoTraduccion,
-                              style: textTheme.bodySmall?.copyWith(
-                                fontSize: 11,
-                                color: AppColors.textMain,
-                              ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.translate,
+                                  size: 14,
+                                  color: AppColors.textMain,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    avisoTraduccion,
+                                    style: textTheme.bodySmall?.copyWith(
+                                      fontSize: 11,
+                                      color: AppColors.textMain,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -186,11 +194,21 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                         final alerta = alertas[index];
                         return Padding(
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                          child: AlertaCard(
-                            alerta: alerta,
-                            onVerReceta: alerta.recetaSugerida == null
-                                ? null
-                                : (receta) => _abrirDetalle(receta),
+                          child: GestureDetector(
+                            onHorizontalDragEnd: (details) {
+                              final velocity = details.primaryVelocity ?? 0;
+                              if (velocity < -250) {
+                                ref
+                                    .read(alertasProvider.notifier)
+                                    .eliminar(alerta.id);
+                              }
+                            },
+                            child: AlertaCard(
+                              alerta: alerta,
+                              onVerReceta: alerta.recetaSugerida == null
+                                  ? null
+                                  : (receta) => _abrirDetalle(receta),
+                            ),
                           ),
                         );
                       },

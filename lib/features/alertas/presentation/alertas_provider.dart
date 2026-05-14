@@ -38,6 +38,15 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     state = const AsyncData([]);
   }
 
+  Future<void> eliminar(String id) async {
+    final user = await ref.read(firebaseUserProvider.future);
+    if (user == null) return;
+
+    _repo = AlertasRepository(userId: user.uid);
+    await _repo.marcarAlertaBorrada(id, DateTime.now());
+    state = AsyncData((state.value ?? []).where((a) => a.id != id).toList());
+  }
+
   Future<List<Alerta>> _cargarAlertas() async {
     final user = await ref.watch(firebaseUserProvider.future);
     if (user == null) return [];
@@ -70,8 +79,11 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
       alertasExistentes.addAll(nuevas);
     }
 
-    alertasExistentes.sort((a, b) => b.creadaEn.compareTo(a.creadaEn));
-    return alertasExistentes;
+    final visibles = alertasExistentes
+      .where((alerta) => !alerta.estaOculta)
+      .toList();
+    visibles.sort((a, b) => b.creadaEn.compareTo(a.creadaEn));
+    return visibles;
   }
 
   Future<List<Alerta>> _generarAlertas({
@@ -80,7 +92,8 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     required DateTime? lastClearAt,
   }) async {
     final existentesIds = alertasExistentes.map((a) => a.id).toSet();
-    final productosNoVencidos = productos.where((p) => !p.vencido).toList();
+    final productosNoVencidos = productos.where((p) => !p.vencido).toList()
+      ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
     final ingredientesDespensa = productosNoVencidos
         .map((p) => p.nombre)
         .where((name) => name.trim().isNotEmpty)

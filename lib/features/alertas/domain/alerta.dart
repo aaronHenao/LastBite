@@ -10,6 +10,7 @@ class Alerta {
   final DateTime fechaCaducidad;
   final AlertaTipo tipo;
   final DateTime creadaEn;
+  final DateTime? dismissedAt;
   final Receta? recetaSugerida;
 
   const Alerta({
@@ -20,10 +21,12 @@ class Alerta {
     required this.fechaCaducidad,
     required this.tipo,
     required this.creadaEn,
+    this.dismissedAt,
     this.recetaSugerida,
   });
 
   bool get tieneReceta => recetaSugerida != null;
+  bool get estaOculta => dismissedAt != null;
 
   int get prioridad {
     switch (tipo) {
@@ -86,12 +89,18 @@ class Alerta {
       'fechaCaducidad': fechaCaducidad.toIso8601String(),
       'tipo': tipo.name,
       'creadaEn': creadaEn.toIso8601String(),
+      'dismissedAt': dismissedAt?.toIso8601String(),
       'receta': recetaSugerida == null ? null : _recetaToMap(recetaSugerida!),
     };
   }
 
   factory Alerta.fromMap(Map<String, dynamic> map) {
     final receta = _recetaFromMap(map['receta']);
+    final dismissedRaw = map['dismissedAt']?.toString();
+    final dismissedAt = dismissedRaw == null || dismissedRaw.trim().isEmpty
+      ? null
+      : DateTime.tryParse(dismissedRaw);
+
     return Alerta(
       id: map['id']?.toString() ?? '',
       productoId: map['productoId']?.toString() ?? '',
@@ -104,6 +113,7 @@ class Alerta {
       tipo: _parseTipo(map['tipo']?.toString()),
       creadaEn: DateTime.tryParse(map['creadaEn']?.toString() ?? '') ??
           DateTime.now(),
+      dismissedAt: dismissedAt,
       recetaSugerida: receta,
     );
   }
