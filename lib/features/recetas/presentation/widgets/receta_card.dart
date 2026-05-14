@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
-import 'package:lastbite/features/recetas/data/services/translation_service.dart';
+//import 'package:lastbite/features/recetas/data/services/translation_service.dart';
 import 'package:lastbite/features/recetas/domain/receta.dart';
 
 String _urlImagenOptimizada(String originalUrl) {
@@ -26,7 +26,7 @@ class RecetaCard extends StatefulWidget {
 }
 
 class _RecetaCardState extends State<RecetaCard> {
-  static final TranslationService _translationService = TranslationService();
+  //static final TranslationService _translationService = TranslationService();
   static const double _tituloHeight = 42;
 
   late String _titulo;
@@ -70,8 +70,8 @@ class _RecetaCardState extends State<RecetaCard> {
     final ingredientesUsados = _ingredientesUsados(widget.receta);
 
     Future.wait([
-      _translationService.translateRecipeTitle(widget.receta.titulo),
-      _translationService.translateIngredients(ingredientesUsados),
+      //_translationService.translateRecipeTitle(widget.receta.titulo),
+      //_translationService.translateIngredients(ingredientesUsados),
     ]).then((results) {
       if (!mounted) return;
       setState(() {

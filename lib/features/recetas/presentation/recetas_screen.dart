@@ -8,7 +8,7 @@ import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import 'package:lastbite/features/recetas/data/datasources/recetas_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
-import 'package:lastbite/features/recetas/data/services/translation_service.dart';
+//import 'package:lastbite/features/recetas/data/services/translation_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
@@ -23,10 +23,9 @@ class RecetasScreen extends ConsumerStatefulWidget {
 }
 
 class _RecetasScreenState extends ConsumerState<RecetasScreen> {
-  late final AiTranslationDataSource _translator;
+  
   late final RecetasBusquedaRemoteDataSource _busquedaDataSource;
   late final RecetasDetalleRemoteDataSource _detalleDataSource;
-  late final TranslationService _translationService;
   final _searchCtrl = TextEditingController();
   final Map<int, Receta> _detallesCache = {};
   Timer? _searchDebounce;
@@ -56,14 +55,8 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   @override
   void initState() {
     super.initState();
-    _translator = AiTranslationDataSource();
-    _busquedaDataSource = RecetasBusquedaRemoteDataSource(
-      translator: _translator,
-    );
-    _detalleDataSource = RecetasDetalleRemoteDataSource(
-      translator: _translator,
-    );
-    _translationService = TranslationService();
+    _busquedaDataSource = RecetasBusquedaRemoteDataSource();
+    _detalleDataSource = RecetasDetalleRemoteDataSource();
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -184,7 +177,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
-      _prefetchTitulos(recetas);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -221,7 +213,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
-      _prefetchTitulos(recetas);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -249,17 +240,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     _searchDebounce = Timer(
       const Duration(milliseconds: 350),
       () => _buscarRecetasPorProducto(trimmed),
-    );
-  }
-
-  void _prefetchTitulos(List<Receta> recetas) {
-    if (recetas.isEmpty) return;
-    unawaited(
-      Future.wait(
-        recetas.map(
-          (receta) => _translationService.translateRecipeTitle(receta.titulo),
-        ),
-      ),
     );
   }
 

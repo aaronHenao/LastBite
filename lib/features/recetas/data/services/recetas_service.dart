@@ -1,184 +1,183 @@
+import '../datasources/my_memory_translate_service.dart';
 import '../datasources/recetas_remote_exception.dart';
 import 'spoon_service.dart';
-import 'translation_service.dart';
 
 class RecetasService {
-  RecetasService({SpoonService? spoon, TranslationService? translation})
-    : _spoon = spoon ?? SpoonService(),
-      _translation = translation ?? TranslationService();
+  RecetasService({
+    SpoonService? spoon,
+    MyMemoryTranslateService? translator,
+  })  : _spoon = spoon ?? SpoonService(),
+        _translator = translator ?? MyMemoryTranslateService();
 
   static const int maxRecetasPorBusqueda = 3;
 
   final SpoonService _spoon;
-  final TranslationService _translation;
+  final MyMemoryTranslateService _translator;
 
-  String? get lastTranslationWarning => _translation.lastWarning;
+  // Ya no hay warnings de traducción pero mantenemos el getter
+  // para no romper código que lo use
+  String? get lastTranslationWarning => null;
 
   Future<List<Map<String, dynamic>>> buscarRecetasPorDespensaRaw({
     required List<String> productosDespensa,
     int number = 3,
     bool ignorePantry = false,
   }) async {
-    _translation.clearWarning();
     final numberLimitado = number.clamp(1, maxRecetasPorBusqueda).toInt();
+    final normalizados = _normalizarIngredientes(productosDespensa);
 
-    final ingredientesNormalizados = _normalizarIngredientes(productosDespensa);
-    final ingredientes = await _translation.translateIngredientsToEnglish(
-      ingredientesNormalizados,
-    );
+    // ES → EN para Spoonacular
+    final ingredientesEn =
+        await _translator.ingredientesEsAEn(normalizados);
 
-    if (ingredientes.isEmpty) {
+    if (ingredientesEn.isEmpty) {
       throw const RecetasRemoteException(
-        message: 'No hay ingredientes validos en despensa para buscar recetas',
+        message: 'No hay ingredientes válidos para buscar recetas',
       );
     }
 
     final raw = await _spoon.findByIngredients(
-      ingredients: ingredientes,
+      ingredients: ingredientesEn,
       number: numberLimitado,
       ignorePantry: ignorePantry,
       ranking: 1,
     );
 
     final capped = raw.take(maxRecetasPorBusqueda).toList();
-    return _traducirResultadosBusqueda(capped);
+    return _traducirResultados(capped);
   }
 
   Future<Map<String, dynamic>> obtenerDetalleRecetaRaw({
     required int recetaId,
   }) async {
-    _translation.clearWarning();
-
-    final infoData = await _spoon.getRecipeInformation(recipeId: recetaId);
-    final translatedInfo = await _traducirInfo(infoData);
-
+    final info = await _spoon.getRecipeInformation(recipeId: recetaId);
+    final traducido = await _traducirDetalle(info);
     return {
-      'information': translatedInfo,
+      'information': traducido,
       'equipment': {'equipment': <Map<String, dynamic>>[]},
     };
   }
 
-  Future<List<Map<String, dynamic>>> _traducirResultadosBusqueda(
+  // ── Traducción de resultados de búsqueda ──────────────
+
+  Future<List<Map<String, dynamic>>> _traducirResultados(
     List<Map<String, dynamic>> raw,
   ) async {
     if (raw.isEmpty) return raw;
 
-    final titles = raw
-        .map((item) => item['title']?.toString() ?? '')
-        .where((title) => title.trim().isNotEmpty)
+    // Recolecta títulos e ingredientes únicos
+    final titulos = raw
+        .map((r) => r['title']?.toString() ?? '')
+        .where((t) => t.isNotEmpty)
         .toList();
 
-    final ingredientNames = <String>{};
-
+    final todosIngredientes = <String>{};
     for (final recipe in raw) {
-      for (final key in const ['usedIngredients', 'missedIngredients']) {
+      for (final key in ['usedIngredients', 'missedIngredients']) {
         final list = recipe[key];
         if (list is! List) continue;
-
         for (final item in list) {
-          if (item is! Map<String, dynamic>) continue;
-          final name = item['name']?.toString() ?? '';
-          if (name.trim().isNotEmpty) ingredientNames.add(name);
+          if (item is Map<String, dynamic>) {
+            final name = item['name']?.toString() ?? '';
+            if (name.isNotEmpty) todosIngredientes.add(name);
+          }
         }
       }
     }
 
-    final ingredientList = ingredientNames.toList();
+    // Dos llamadas en paralelo — títulos e ingredientes al mismo tiempo
+    final resultados = await Future.wait([
+      _translator.traducirLista(
+        textos: titulos,
+        de: 'en',
+        a: 'es',
+        contexto: 'recipe title latin american cooking',
+      ),
+      _translator.ingredientesEnAEs(todosIngredientes.toList()),
+    ]);
 
-    final translatedSections = await _translation
-        .translateRecipeSectionsToSpanish(
-          titles: titles,
-          ingredients: ingredientList,
-        );
+    final titulosEs = resultados[0];
+    final ingredientesEs = resultados[1];
 
-    final translatedTitles = translatedSections.titles;
-    final translatedIngredients = translatedSections.ingredients;
+    final tituloMap = Map.fromIterables(titulos, titulosEs);
+    final ingredienteMap = Map.fromIterables(
+      todosIngredientes.toList(),
+      ingredientesEs,
+    );
 
-    final ingredientMap = <String, String>{};
-    for (var i = 0; i < ingredientList.length; i++) {
-      ingredientMap[ingredientList[i]] = translatedIngredients[i];
-    }
-
-    final translated = <Map<String, dynamic>>[];
-    var titleIndex = 0;
-
-    for (final recipe in raw) {
+    return raw.map((recipe) {
       final copy = Map<String, dynamic>.from(recipe);
 
-      final originalTitle = copy['title']?.toString() ?? '';
-      if (originalTitle.trim().isNotEmpty &&
-          titleIndex < translatedTitles.length) {
-        copy['title'] = translatedTitles[titleIndex];
-        titleIndex++;
-      }
+      final titulo = copy['title']?.toString() ?? '';
+      if (titulo.isNotEmpty) copy['title'] = tituloMap[titulo] ?? titulo;
 
-      for (final key in const ['usedIngredients', 'missedIngredients']) {
+      for (final key in ['usedIngredients', 'missedIngredients']) {
         final list = copy[key];
         if (list is! List) continue;
-
         copy[key] = list.map((item) {
           if (item is! Map<String, dynamic>) return item;
           final itemCopy = Map<String, dynamic>.from(item);
-          final original = itemCopy['name']?.toString() ?? '';
-          final translatedName = ingredientMap[original];
-          if (translatedName != null && translatedName.trim().isNotEmpty) {
-            itemCopy['name'] = translatedName;
+          final name = itemCopy['name']?.toString() ?? '';
+          if (name.isNotEmpty) {
+            itemCopy['name'] = ingredienteMap[name] ?? name;
           }
           return itemCopy;
         }).toList();
       }
 
-      translated.add(copy);
-    }
-
-    return translated;
+      return copy;
+    }).toList();
   }
 
-  Future<Map<String, dynamic>> _traducirInfo(Map<String, dynamic> info) async {
+  // ── Traducción del detalle ────────────────────────────
+
+  Future<Map<String, dynamic>> _traducirDetalle(
+    Map<String, dynamic> info,
+  ) async {
     final copy = Map<String, dynamic>.from(info);
 
-    final title = copy['title']?.toString() ?? '';
-    final instructions = copy['instructions']?.toString() ?? '';
-
+    // Recolecta nombres de ingredientes
     final extendedIngredients = copy['extendedIngredients'];
-    final names = extendedIngredients is List
+    final nombres = extendedIngredients is List
         ? extendedIngredients
-              .whereType<Map<String, dynamic>>()
-              .map((item) => item['name']?.toString() ?? '')
-              .where((name) => name.trim().isNotEmpty)
-              .toList()
+            .whereType<Map<String, dynamic>>()
+            .map((item) => item['name']?.toString() ?? '')
+            .where((n) => n.isNotEmpty)
+            .toList()
         : <String>[];
 
-    final translatedSections = await _translation
-        .translateRecipeSectionsToSpanish(
-          titles: title.trim().isEmpty ? const <String>[] : [title],
-          ingredients: names,
-          instructions: instructions.trim().isEmpty
-              ? const <String>[]
-              : [instructions],
-        );
+    // Título e ingredientes en paralelo, instrucciones aparte
+    // (instrucciones puede ser texto largo, mejor separado)
+    final titulo = copy['title']?.toString() ?? '';
+    final instrucciones = copy['instructions']?.toString() ?? '';
 
-    if (translatedSections.titles.isNotEmpty) {
-      copy['title'] = translatedSections.titles.first;
+    final resultadosParalelos = await Future.wait([
+      titulo.isNotEmpty
+          ? _translator.tituloEnAEs(titulo)
+          : Future.value(titulo),
+      nombres.isNotEmpty
+          ? _translator.ingredientesEnAEs(nombres)
+          : Future.value(<String>[]),
+    ]);
+
+    if (titulo.isNotEmpty) copy['title'] = resultadosParalelos[0];
+
+    // Traduce instrucciones separado porque es texto largo
+    if (instrucciones.isNotEmpty) {
+      copy['instructions'] =
+          await _translator.instruccionesEnAEs(instrucciones);
     }
 
-    if (translatedSections.instructions.isNotEmpty) {
-      final translatedInstructions = translatedSections.instructions.first;
-      copy['instructions'] = _esInstruccionPlaceholder(translatedInstructions)
-          ? instructions
-          : translatedInstructions;
-    }
-
-    if (extendedIngredients is List && extendedIngredients.isNotEmpty) {
-      var idx = 0;
+    // Actualiza ingredientes traducidos
+    final nombresEs = resultadosParalelos[1] as List<String>;
+    if (extendedIngredients is List && nombresEs.isNotEmpty) {
+      final nombreMap = Map.fromIterables(nombres, nombresEs);
       copy['extendedIngredients'] = extendedIngredients.map((item) {
         if (item is! Map<String, dynamic>) return item;
         final itemCopy = Map<String, dynamic>.from(item);
-        final originalName = itemCopy['name']?.toString() ?? '';
-        if (originalName.trim().isNotEmpty &&
-            idx < translatedSections.ingredients.length) {
-          itemCopy['name'] = translatedSections.ingredients[idx];
-          idx++;
+        final name = itemCopy['name']?.toString() ?? '';
+        if (name.isNotEmpty) {
+          itemCopy['name'] = nombreMap[name] ?? name;
         }
         return itemCopy;
       }).toList();
@@ -187,18 +186,11 @@ class RecetasService {
     return copy;
   }
 
-  List<String> _normalizarIngredientes(List<String> productosDespensa) {
-    return productosDespensa
-        .map((producto) => producto.trim().toLowerCase())
-        .where((producto) => producto.isNotEmpty)
+  List<String> _normalizarIngredientes(List<String> productos) {
+    return productos
+        .map((p) => p.trim().toLowerCase())
+        .where((p) => p.isNotEmpty)
         .toSet()
         .toList();
-  }
-
-  bool _esInstruccionPlaceholder(String texto) {
-    final t = texto.toLowerCase().trim();
-    return t.contains('interfaz de la app') ||
-        t == 'instrucciones de la receta para la interfaz de la app' ||
-        t == 'recipe instructions for app ui';
   }
 }

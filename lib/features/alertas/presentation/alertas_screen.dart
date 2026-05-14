@@ -6,7 +6,7 @@ import 'package:lastbite/features/alertas/presentation/alertas_provider.dart';
 import 'package:lastbite/features/alertas/presentation/widgets/alerta_card.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
-import 'package:lastbite/features/recetas/data/datasources/ai_translation_data_source.dart';
+//import 'package:lastbite/features/recetas/data/datasources/ai_translation_data_source.dart';
 import 'package:lastbite/features/recetas/data/datasources/recetas_detalle_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
 import 'package:lastbite/features/recetas/domain/receta.dart';
@@ -20,16 +20,16 @@ class AlertasScreen extends ConsumerStatefulWidget {
 }
 
 class _AlertasScreenState extends ConsumerState<AlertasScreen> {
-  late final AiTranslationDataSource _translator;
+  //late final AiTranslationDataSource _translator;
   late final RecetasDetalleRemoteDataSource _detalleDataSource;
   final Map<int, Receta> _detallesCache = {};
 
   @override
   void initState() {
     super.initState();
-    _translator = AiTranslationDataSource();
+    //_translator = AiTranslationDataSource();
     _detalleDataSource = RecetasDetalleRemoteDataSource(
-      translator: _translator,
+      //translator: _translator,
     );
   }
 
