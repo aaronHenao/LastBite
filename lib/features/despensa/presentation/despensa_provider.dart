@@ -35,7 +35,7 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
 
   Future<void> consumir(String id) async {
     await _repo.eliminar(id);
-    await _repo.incrementarSalvados();    // ← incrementa en Firestore
+    await _repo.incrementarSalvados();
     _salvados++;
     state = AsyncData(
       (state.value ?? []).where((p) => p.id != id).toList(),
