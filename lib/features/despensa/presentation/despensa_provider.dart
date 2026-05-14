@@ -6,7 +6,6 @@ import '../data/despensa_repository.dart';
 import '../domain/producto.dart';
 
 class DespensaNotifier extends AsyncNotifier<List<Producto>> {
-
   late DespensaRepository _repo;
   int _salvados = 0;
   int get salvados => _salvados;
@@ -17,7 +16,7 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
     if (user == null) return [];
 
     _repo = DespensaRepository(userId: user.uid);
-    
+
     final resultados = await Future.wait([
       _repo.cargarProductos(),
       _repo.cargarSalvados(),
@@ -25,7 +24,6 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
 
     _salvados = resultados[1] as int;
     return resultados[0] as List<Producto>;
-
   }
 
   Future<void> agregar(Producto producto) async {
@@ -34,19 +32,22 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
   }
 
   Future<void> consumir(String id) async {
+    final producto = (state.value ?? []).firstWhere((p) => p.id == id);
+
     await _repo.eliminar(id);
     await _repo.incrementarSalvados();
+
+    if (producto.urgente) {
+      await _repo.invalidarRecetasPorIngrediente(producto.nombre);
+    }
+
     _salvados++;
-    state = AsyncData(
-      (state.value ?? []).where((p) => p.id != id).toList(),
-    );
+    state = AsyncData((state.value ?? []).where((p) => p.id != id).toList());
   }
 
   Future<void> eliminar(String id) async {
     await _repo.eliminar(id);
-    state = AsyncData(
-      (state.value ?? []).where((p) => p.id != id).toList(),
-    );
+    state = AsyncData((state.value ?? []).where((p) => p.id != id).toList());
   }
 
   List<Producto> get urgentes {
@@ -57,5 +58,5 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
 
 final despensaProvider =
     AsyncNotifierProvider<DespensaNotifier, List<Producto>>(
-  DespensaNotifier.new,
-);
+      DespensaNotifier.new,
+    );

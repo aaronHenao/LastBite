@@ -31,52 +31,45 @@ class Receta {
     if (total == 0) return 0;
     return ((ingredientesUsados / total) * 100).round();
   }
+
+  Map<String, dynamic> toMap({List<String> ingredientesUrgentesUsados = const []}) {
+  return {
+    'id': id,
+    'titulo': titulo,
+    'imagenUrl': imagenUrl,
+    'ingredientesUsados': ingredientesUsados,
+    'ingredientesFaltantes': ingredientesFaltantes,
+    'likes': likes,
+    'minutosPreparacion': minutosPreparacion,
+    'porciones': porciones,
+    'ingredientes': ingredientes,
+    'instrucciones': instrucciones,
+    'ingredientesUrgentesUsados': ingredientesUrgentesUsados,
+    'creadoEn': DateTime.now().toIso8601String(),
+  };
 }
 
-//datos hardcodeados para pruebas
-final recetasEjemplo = [
-  Receta(
-    id: 1,
-    titulo: 'Crema de Espinacas',
-    imagenUrl: '',
-    ingredientesUsados: 3,
-    ingredientesFaltantes: 0,
-    likes: 142,
-    minutosPreparacion: 20,
-    ingredientes: ['Espinacas', 'Cebolla', 'Ajo', 'Crema'],
-    instrucciones: 'Saltea la cebolla y el ajo. Agrega las espinacas...',
-  ),
-  Receta(
-    id: 2,
-    titulo: 'Pollo al Tomate',
-    imagenUrl: '',
-    ingredientesUsados: 3,
-    ingredientesFaltantes: 1,
-    likes: 89,
-    minutosPreparacion: 35,
-    ingredientes: ['Pollo', 'Tomates', 'Cebolla', 'Pimentón'],
-    instrucciones: 'Sella el pollo. Agrega los tomates y cebolla...',
-  ),
-  Receta(
-    id: 3,
-    titulo: 'Ensalada Fresca',
-    imagenUrl: '',
-    ingredientesUsados: 2,
-    ingredientesFaltantes: 1,
-    likes: 56,
-    minutosPreparacion: 10,
-    ingredientes: ['Espinacas', 'Tomates', 'Manzana'],
-    instrucciones: 'Mezcla todos los ingredientes...',
-  ),
-  Receta(
-    id: 4,
-    titulo: 'Pasta con Pollo',
-    imagenUrl: '',
-    ingredientesUsados: 2,
-    ingredientesFaltantes: 2,
-    likes: 201,
-    minutosPreparacion: 30,
-    ingredientes: ['Pasta', 'Pollo', 'Tomates', 'Queso'],
-    instrucciones: 'Cocina la pasta. Prepara la salsa de pollo...',
-  ),
-];
+factory Receta.fromMap(Map<String, dynamic> map) {
+  return Receta(
+    id: map['id'] as int,
+    titulo: map['titulo'] as String,
+    imagenUrl: map['imagenUrl'] as String,
+    ingredientesUsados: map['ingredientesUsados'] as int,
+    ingredientesFaltantes: map['ingredientesFaltantes'] as int,
+    likes: map['likes'] as int,
+    minutosPreparacion: map['minutosPreparacion'] as int?,
+    porciones: map['porciones'] as int?,
+    ingredientes: (map['ingredientes'] as List?)
+        ?.map((e) => e.toString())
+        .toList(),
+    instrucciones: map['instrucciones'] as String?,
+  );
+}
+
+// Lista de ingredientes urgentes usados — para invalidación del caché
+List<String> ingredientesUrgentesFromMap(Map<String, dynamic> map) {
+  return (map['ingredientesUrgentesUsados'] as List?)
+      ?.map((e) => e.toString())
+      .toList() ?? [];
+}
+}

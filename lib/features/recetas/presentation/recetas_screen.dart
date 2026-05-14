@@ -12,6 +12,8 @@ import 'package:lastbite/features/recetas/data/services/translation_service.dart
 import '../../../core/theme/app_theme.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../data/receta_cache_repository.dart';
 
 class RecetasScreen extends ConsumerStatefulWidget {
   const RecetasScreen({super.key});
@@ -37,12 +39,17 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   bool _cargaInicial = false;
   bool _busquedaPorProducto = false;
 
+  RecetaCacheRepository? _cacheRepo;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_cargaInicial) {
       _cargaInicial = true;
-      _cargarRecetasDesdeApi();
+      ref.listenManual(despensaProvider, (_, next) {
+        if (next.value != null && !_cargaInicial) return;
+        if (next.value != null) _cargarRecetasDesdeApi();
+      }, fireImmediately: true);
     }
   }
 
@@ -57,6 +64,11 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       translator: _translator,
     );
     _translationService = TranslationService();
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _cacheRepo = RecetaCacheRepository(userId: user.uid);
+    }
   }
 
   @override
@@ -67,7 +79,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   }
 
   List<Receta> get _recetasFiltradas {
-    // Ordenamiento por porcentaje de match descendente
+    //ordenamiento por porcentaje de match descendente
     final lista = [..._recetas]
       ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
 
@@ -95,7 +107,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         .join(' · ');
   }
 
-  Future<void> _cargarRecetasDesdeApi() async {
+  Future<void> _cargarRecetasDesdeApi({bool forzar = false}) async {
     _searchDebounce?.cancel();
     setState(() {
       _cargandoRecetas = true;
@@ -104,7 +116,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     });
 
     try {
-      final productosDespensa = ref.watch(despensaProvider).value ?? [];
+      final productosDespensa = ref.read(despensaProvider).value ?? [];
       if (productosDespensa.isEmpty) {
         if (!mounted) return;
         setState(() {
@@ -116,13 +128,38 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         return;
       }
 
+      //ingredientes actuales urg
+      final urgentes = productosDespensa
+          .where((p) => p.urgente)
+          .map((p) => p.nombre.toLowerCase().trim())
+          .toList();
+
+      //intentar caché
+      if (!forzar && _cacheRepo != null) {
+        final valido = await _cacheRepo!.cacheEsValido(urgentes);
+        if (valido) {
+          final recetasCache = await _cacheRepo!.cargarRecetas();
+          if (recetasCache.isNotEmpty && mounted) {
+            setState(() {
+              _recetas = recetasCache
+                ..sort(
+                  (a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch),
+                );
+              _cargandoRecetas = false;
+              _avisoTraduccion = null;
+            });
+            return;
+          }
+        }
+      }
+
+      //caché inválido o vacío - Llama a spoonacular
       final productosOrdenados = [...productosDespensa]
         ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
-      final productosDespensaNombres = productosOrdenados
-          .map((p) => p.nombre)
-          .toList();
+      final nombres = productosOrdenados.map((p) => p.nombre).toList();
+
       final raw = await _busquedaDataSource.buscarRecetasPorDespensaRaw(
-        productosDespensa: productosDespensaNombres,
+        productosDespensa: nombres,
         number: 3,
         ignorePantry: false,
       );
@@ -132,6 +169,14 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
               raw,
             ).map((m) => m.toDomain()).toList()
             ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
+
+      // guarda en caché
+      if (_cacheRepo != null && recetas.isNotEmpty) {
+        await _cacheRepo!.guardarRecetas(
+          recetas: recetas,
+          ingredientesUrgentes: urgentes,
+        );
+      }
 
       if (!mounted) return;
       setState(() {
@@ -211,8 +256,9 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     if (recetas.isEmpty) return;
     unawaited(
       Future.wait(
-        recetas.map((receta) =>
-            _translationService.translateRecipeTitle(receta.titulo)),
+        recetas.map(
+          (receta) => _translationService.translateRecipeTitle(receta.titulo),
+        ),
       ),
     );
   }
@@ -447,7 +493,8 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                           ),
                           const SizedBox(height: 12),
                           FilledButton(
-                            onPressed: _cargarRecetasDesdeApi,
+                            onPressed: () =>
+                                _cargarRecetasDesdeApi(forzar: true),
                             child: const Text('Reintentar'),
                           ),
                         ],
