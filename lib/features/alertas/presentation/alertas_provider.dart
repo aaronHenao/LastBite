@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
-import 'package:lastbite/features/recetas/data/datasources/ai_translation_data_source.dart';
 import 'package:lastbite/features/recetas/data/datasources/recetas_busqueda_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/domain/receta.dart';
@@ -10,11 +9,7 @@ import '../domain/alerta.dart';
 
 class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
   late AlertasRepository _repo;
-  late AiTranslationDataSource _translator;
   late RecetasBusquedaRemoteDataSource _busquedaDataSource;
-
-  String? _avisoTraduccion;
-  String? get avisoTraduccion => _avisoTraduccion;
 
   @override
   Future<List<Alerta>> build() async {
@@ -54,11 +49,7 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     if (user == null) return [];
 
     _repo = AlertasRepository(userId: user.uid);
-    _translator = AiTranslationDataSource();
-    _busquedaDataSource = RecetasBusquedaRemoteDataSource(
-      translator: _translator,
-    );
-    _avisoTraduccion = null;
+    _busquedaDataSource = RecetasBusquedaRemoteDataSource();
 
     final resultados = await Future.wait([
       _repo.cargarProductos(),
@@ -143,6 +134,21 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
         }
       }
 
+      if (producto.diasRestantes <= 4) {
+        final alerta = await _crearAlerta(
+          producto: producto,
+          tipo: AlertaTipo.aviso4,
+          existentesIds: existentesIds,
+          lastClearAt: lastClearAt,
+          umbralDias: 4,
+          ingredientesDespensa: ingredientesDespensa,
+        );
+        if (alerta != null) {
+          nuevas.add(alerta);
+          existentesIds.add(alerta.id);
+        }
+      }
+
       if (producto.diasRestantes <= 3) {
         final alerta = await _crearAlerta(
           producto: producto,
@@ -150,6 +156,21 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
           existentesIds: existentesIds,
           lastClearAt: lastClearAt,
           umbralDias: 3,
+          ingredientesDespensa: ingredientesDespensa,
+        );
+        if (alerta != null) {
+          nuevas.add(alerta);
+          existentesIds.add(alerta.id);
+        }
+      }
+
+      if (producto.diasRestantes <= 2) {
+        final alerta = await _crearAlerta(
+          producto: producto,
+          tipo: AlertaTipo.aviso2,
+          existentesIds: existentesIds,
+          lastClearAt: lastClearAt,
+          umbralDias: 2,
           ingredientesDespensa: ingredientesDespensa,
         );
         if (alerta != null) {
@@ -329,7 +350,6 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
       raw,
     ).map((model) => model.toDomain()).toList();
 
-    _capturarAvisoTraduccion();
     return recetas;
   }
 
@@ -388,13 +408,6 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
   }
 
   String _normalizar(String texto) => texto.toLowerCase().trim();
-
-  void _capturarAvisoTraduccion() {
-    final aviso = _busquedaDataSource.lastTranslationWarning;
-    if (aviso != null && _avisoTraduccion == null) {
-      _avisoTraduccion = aviso;
-    }
-  }
 }
 
 final alertasProvider = AsyncNotifierProvider<AlertasNotifier, List<Alerta>>(

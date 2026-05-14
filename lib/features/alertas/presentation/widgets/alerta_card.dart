@@ -110,7 +110,11 @@ class AlertaCard extends StatelessWidget {
     switch (tipo) {
       case AlertaTipo.aviso5:
         return AppColors.yellow;
+      case AlertaTipo.aviso4:
+        return AppColors.yellow;
       case AlertaTipo.aviso3:
+        return AppColors.accent;
+      case AlertaTipo.aviso2:
         return AppColors.accent;
       case AlertaTipo.aviso1:
         return AppColors.danger;

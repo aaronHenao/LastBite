@@ -6,7 +6,8 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
-import 'package:lastbite/features/recetas/data/datasources/recetas_remote_data_source.dart';
+import 'package:lastbite/features/recetas/data/datasources/recetas_busqueda_remote_data_source.dart';
+import 'package:lastbite/features/recetas/data/datasources/recetas_detalle_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
 import '../../../core/theme/app_theme.dart';
@@ -21,7 +22,6 @@ class RecetasScreen extends ConsumerStatefulWidget {
 }
 
 class _RecetasScreenState extends ConsumerState<RecetasScreen> {
-  late final AiTranslationDataSource _translator;
   late final RecetasBusquedaRemoteDataSource _busquedaDataSource;
   late final RecetasDetalleRemoteDataSource _detalleDataSource;
   final _searchCtrl = TextEditingController();
@@ -31,7 +31,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   List<Receta> _recetas = const [];
   bool _cargandoRecetas = true;
   String? _errorCarga;
-  String? _avisoTraduccion;
   String _query = '';
   bool _cargaInicial = false;
   bool _busquedaPorProducto = false;
@@ -51,13 +50,8 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   @override
   void initState() {
     super.initState();
-    _translator = AiTranslationDataSource();
-    _busquedaDataSource = RecetasBusquedaRemoteDataSource(
-      translator: _translator,
-    );
-    _detalleDataSource = RecetasDetalleRemoteDataSource(
-      translator: _translator,
-    );
+    _busquedaDataSource = RecetasBusquedaRemoteDataSource();
+    _detalleDataSource = RecetasDetalleRemoteDataSource();
   }
 
   @override
@@ -113,7 +107,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
           _recetas = const [];
           _cargandoRecetas = false;
           _errorCarga = null;
-          _avisoTraduccion = null;
         });
         return;
       }
@@ -126,7 +119,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
           _recetas = const [];
           _cargandoRecetas = false;
           _errorCarga = null;
-          _avisoTraduccion = null;
         });
         return;
       }
@@ -154,7 +146,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       setState(() {
         _recetas = recetas;
         _cargandoRecetas = false;
-        _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
     } catch (e) {
       if (!mounted) return;
@@ -162,7 +153,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       setState(() {
         _errorCarga = e.toString();
         _cargandoRecetas = false;
-        _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
     }
   }
@@ -194,7 +184,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       setState(() {
         _recetas = recetas;
         _cargandoRecetas = false;
-        _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
     } catch (e) {
       if (!mounted) return;
@@ -202,7 +191,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       setState(() {
         _errorCarga = e.toString();
         _cargandoRecetas = false;
-        _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
     }
   }
@@ -378,43 +366,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                       color: AppColors.textMuted,
                     ),
                   ),
-                  if (_avisoTraduccion != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.yellow.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: AppColors.yellow.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            Icons.translate,
-                            size: 14,
-                            color: AppColors.textMain,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              _avisoTraduccion!,
-                              style: textTheme.bodySmall?.copyWith(
-                                fontSize: 11,
-                                color: AppColors.textMain,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                   const SizedBox(height: 12),
                 ],
               ),
@@ -540,13 +491,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     final detalle = RecetaDetalleRemoteModel.fromApiRaw(raw);
     final recetaConDetalle = _fusionarDetalle(receta, detalle);
     _detallesCache[receta.id] = recetaConDetalle;
-
-    final aviso = _detalleDataSource.lastTranslationWarning;
-    if (aviso != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(aviso, style: const TextStyle(fontSize: 12))),
-      );
-    }
 
     return recetaConDetalle;
   }

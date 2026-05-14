@@ -1,6 +1,6 @@
 import 'package:lastbite/features/recetas/domain/receta.dart';
 
-enum AlertaTipo { aviso5, aviso3, aviso1, vencido }
+enum AlertaTipo { aviso5, aviso4, aviso3, aviso2, aviso1, vencido }
 
 class Alerta {
   final String id;
@@ -31,10 +31,14 @@ class Alerta {
   int get prioridad {
     switch (tipo) {
       case AlertaTipo.vencido:
-        return 4;
+        return 6;
       case AlertaTipo.aviso1:
-        return 3;
+        return 5;
+      case AlertaTipo.aviso2:
+        return 4;
       case AlertaTipo.aviso3:
+        return 3;
+      case AlertaTipo.aviso4:
         return 2;
       case AlertaTipo.aviso5:
         return 1;
@@ -45,8 +49,12 @@ class Alerta {
     switch (tipo) {
       case AlertaTipo.aviso5:
         return '5d';
+      case AlertaTipo.aviso4:
+        return '4d';
       case AlertaTipo.aviso3:
         return '3d';
+      case AlertaTipo.aviso2:
+        return '2d';
       case AlertaTipo.aviso1:
         return '1d';
       case AlertaTipo.vencido:
@@ -58,8 +66,12 @@ class Alerta {
     switch (tipo) {
       case AlertaTipo.aviso5:
         return 'Primer aviso';
+      case AlertaTipo.aviso4:
+        return 'Recordatorio';
       case AlertaTipo.aviso3:
         return 'Aviso critico';
+      case AlertaTipo.aviso2:
+        return 'Recordatorio';
       case AlertaTipo.aviso1:
         return 'Ultimo dia';
       case AlertaTipo.vencido:
@@ -71,8 +83,12 @@ class Alerta {
     switch (tipo) {
       case AlertaTipo.aviso5:
         return 'Tu $nombreProducto vencera en 5 dias. Ten cuidado.';
+      case AlertaTipo.aviso4:
+        return 'Tu $nombreProducto vence en 4 dias. Planifica su uso.';
       case AlertaTipo.aviso3:
         return 'Tu $nombreProducto vence en 3 dias. Te sugerimos una receta.';
+      case AlertaTipo.aviso2:
+        return 'Tu $nombreProducto vence en 2 dias. No lo dejes pasar.';
       case AlertaTipo.aviso1:
         return 'Tu $nombreProducto vence manana. Aprovechalo hoy.';
       case AlertaTipo.vencido:
@@ -98,8 +114,8 @@ class Alerta {
     final receta = _recetaFromMap(map['receta']);
     final dismissedRaw = map['dismissedAt']?.toString();
     final dismissedAt = dismissedRaw == null || dismissedRaw.trim().isEmpty
-      ? null
-      : DateTime.tryParse(dismissedRaw);
+        ? null
+        : DateTime.tryParse(dismissedRaw);
 
     return Alerta(
       id: map['id']?.toString() ?? '',
@@ -146,7 +162,7 @@ class Alerta {
 
   static Receta? _recetaFromMap(dynamic raw) {
     if (raw is! Map) return null;
-    final map = Map<String, dynamic>.from(raw as Map);
+    final map = Map<String, dynamic>.from(raw);
     final ingredientes = (map['ingredientes'] as List?)
         ?.whereType<String>()
         .toList();

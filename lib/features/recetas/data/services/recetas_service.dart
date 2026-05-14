@@ -1,6 +1,7 @@
+import 'package:lastbite/services/translation_service.dart';
+
 import '../datasources/recetas_remote_exception.dart';
 import 'spoon_service.dart';
-import 'translation_service.dart';
 
 class RecetasService {
   RecetasService({SpoonService? spoon, TranslationService? translation})
@@ -12,18 +13,15 @@ class RecetasService {
   final SpoonService _spoon;
   final TranslationService _translation;
 
-  String? get lastTranslationWarning => _translation.lastWarning;
-
   Future<List<Map<String, dynamic>>> buscarRecetasPorDespensaRaw({
     required List<String> productosDespensa,
     int number = 3,
     bool ignorePantry = false,
   }) async {
-    _translation.clearWarning();
     final numberLimitado = number.clamp(1, maxRecetasPorBusqueda).toInt();
 
     final ingredientesNormalizados = _normalizarIngredientes(productosDespensa);
-    final ingredientes = await _translation.translateIngredientsToEnglish(
+    final ingredientes = await _translation.translatePantryToEnglish(
       ingredientesNormalizados,
     );
 
@@ -41,14 +39,24 @@ class RecetasService {
     );
 
     final capped = raw.take(maxRecetasPorBusqueda).toList();
-    final pantryLower = ingredientes
+    final pantryEn = ingredientes
         .map((e) => e.toLowerCase().trim())
         .where((e) => e.length >= 2)
         .toList();
-    final ajustado = pantryLower.isEmpty
+    final pantryEs = ingredientesNormalizados
+        .map((e) => e.toLowerCase().trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final ajustado = pantryEn.isEmpty
         ? capped
         : capped
-              .map((r) => _corregirUsadosContraDespensa(pantryLower, r))
+              .map(
+                (r) => _corregirUsadosContraDespensa(
+                  pantryEn: pantryEn,
+                  pantryEs: pantryEs,
+                  recipe: r,
+                ),
+              )
               .toList();
     return _traducirResultadosBusqueda(ajustado);
   }
@@ -56,8 +64,6 @@ class RecetasService {
   Future<Map<String, dynamic>> obtenerDetalleRecetaRaw({
     required int recetaId,
   }) async {
-    _translation.clearWarning();
-
     final infoData = await _spoon.getRecipeInformation(recipeId: recetaId);
     final translatedInfo = await _traducirInfo(infoData);
 
@@ -94,14 +100,15 @@ class RecetasService {
 
     final ingredientList = ingredientNames.toList();
 
-    final translatedSections = await _translation
-        .translateRecipeSectionsToSpanish(
-          titles: titles,
-          ingredients: ingredientList,
-        );
+    final translatedTitles = titles.isEmpty
+        ? <String>[]
+        : await Future.wait(
+            titles.map(_translation.translateRecipeTitle),
+          );
 
-    final translatedTitles = translatedSections.titles;
-    final translatedIngredients = translatedSections.ingredients;
+    final translatedIngredients = ingredientList.isEmpty
+        ? <String>[]
+        : await _translation.translateIngredients(ingredientList);
 
     final ingredientMap = <String, String>{};
     for (var i = 0; i < ingredientList.length; i++) {
@@ -147,7 +154,6 @@ class RecetasService {
     final copy = Map<String, dynamic>.from(info);
 
     final title = copy['title']?.toString() ?? '';
-    final instructions = copy['instructions']?.toString() ?? '';
 
     final extendedIngredients = copy['extendedIngredients'];
     final names = extendedIngredients is List
@@ -158,24 +164,16 @@ class RecetasService {
               .toList()
         : <String>[];
 
-    final translatedSections = await _translation
-        .translateRecipeSectionsToSpanish(
-          titles: title.trim().isEmpty ? const <String>[] : [title],
-          ingredients: names,
-          instructions: instructions.trim().isEmpty
-              ? const <String>[]
-              : [instructions],
-        );
+    final translatedTitle = title.trim().isEmpty
+        ? ''
+        : await _translation.translateRecipeTitle(title.trim());
 
-    if (translatedSections.titles.isNotEmpty) {
-      copy['title'] = translatedSections.titles.first;
-    }
+    final translatedIngredientNames = names.isEmpty
+        ? <String>[]
+        : await _translation.translateIngredients(names);
 
-    if (translatedSections.instructions.isNotEmpty) {
-      final translatedInstructions = translatedSections.instructions.first;
-      copy['instructions'] = _esInstruccionPlaceholder(translatedInstructions)
-          ? instructions
-          : translatedInstructions;
+    if (translatedTitle.trim().isNotEmpty) {
+      copy['title'] = translatedTitle;
     }
 
     if (extendedIngredients is List && extendedIngredients.isNotEmpty) {
@@ -185,8 +183,8 @@ class RecetasService {
         final itemCopy = Map<String, dynamic>.from(item);
         final originalName = itemCopy['name']?.toString() ?? '';
         if (originalName.trim().isNotEmpty &&
-            idx < translatedSections.ingredients.length) {
-          itemCopy['name'] = translatedSections.ingredients[idx];
+            idx < translatedIngredientNames.length) {
+          itemCopy['name'] = translatedIngredientNames[idx];
           idx++;
         }
         return itemCopy;
@@ -205,8 +203,6 @@ class RecetasService {
         .toList();
   }
 
-  /// Reduce ruido de etiquetas largas (Open Food Facts, etc.) que confunden a
-  /// Spoonacular y disparan coincidencias laxas.
   String _condensarNombreParaBusqueda(String raw) {
     var s = raw.split(',').first.trim();
     s = s.replaceAll(RegExp(r'\s+'), ' ');
@@ -216,12 +212,11 @@ class RecetasService {
     return s;
   }
 
-  /// Spoonacular puede marcar como "used" ingredientes que no están en la
-  /// despensa enviada. Reclasificamos solo con lo que realmente mandamos.
-  Map<String, dynamic> _corregirUsadosContraDespensa(
-    List<String> despensaInglesLower,
-    Map<String, dynamic> recipe,
-  ) {
+  Map<String, dynamic> _corregirUsadosContraDespensa({
+    required List<String> pantryEn,
+    required List<String> pantryEs,
+    required Map<String, dynamic> recipe,
+  }) {
     final copy = Map<String, dynamic>.from(recipe);
     final used = _asIngredientMapList(copy['usedIngredients']);
     final missed = _asIngredientMapList(copy['missedIngredients']);
@@ -230,7 +225,7 @@ class RecetasService {
     final falsosPositivos = <Map<String, dynamic>>[];
 
     for (final item in used) {
-      if (_ingredienteCoincideConDespensa(item, despensaInglesLower)) {
+      if (_ingredienteCoincideConDespensa(item, pantryEn, pantryEs)) {
         usedReal.add(item);
       } else {
         falsosPositivos.add(item);
@@ -255,7 +250,8 @@ class RecetasService {
 
   bool _ingredienteCoincideConDespensa(
     Map<String, dynamic> item,
-    List<String> despensaInglesLower,
+    List<String> pantryEn,
+    List<String> pantryEs,
   ) {
     final nombres = <String?>[
       item['name']?.toString(),
@@ -264,16 +260,31 @@ class RecetasService {
     ];
     for (final n in nombres) {
       if (n == null || n.trim().isEmpty) continue;
-      for (final p in despensaInglesLower) {
+      for (final p in pantryEn) {
+        if (_coincidenciaFlexibleDespensa(n, p)) return true;
+      }
+      for (final p in pantryEs) {
         if (_coincidenciaFlexibleDespensa(n, p)) return true;
       }
     }
     return false;
   }
 
+  String _asciiFold(String s) {
+    var o = s.toLowerCase();
+    const pairs = {
+      'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u', 'ñ': 'n',
+      'à': 'a', 'è': 'e', 'ì': 'i', 'ò': 'o', 'ù': 'u',
+    };
+    for (final e in pairs.entries) {
+      o = o.replaceAll(e.key, e.value);
+    }
+    return o;
+  }
+
   bool _coincidenciaFlexibleDespensa(String ingredienteApi, String pantry) {
-    final ing = ingredienteApi.toLowerCase().trim();
-    final p = pantry.toLowerCase().trim();
+    final ing = _asciiFold(ingredienteApi.trim());
+    final p = _asciiFold(pantry.trim());
     if (ing.isEmpty || p.length < 2) return false;
     if (ing == p) return true;
     try {
@@ -284,13 +295,9 @@ class RecetasService {
       if (ing == '${p}s' || ing == '${p}es') return true;
       if (p == '${ing}s' || p == '${ing}es') return true;
     }
+    if (p.length >= 3 && ing.length >= 3) {
+      if (ing.contains(p) || p.contains(ing)) return true;
+    }
     return false;
-  }
-
-  bool _esInstruccionPlaceholder(String texto) {
-    final t = texto.toLowerCase().trim();
-    return t.contains('interfaz de la app') ||
-        t == 'instrucciones de la receta para la interfaz de la app' ||
-        t == 'recipe instructions for app ui';
   }
 }

@@ -6,7 +6,6 @@ import 'package:lastbite/features/alertas/presentation/alertas_provider.dart';
 import 'package:lastbite/features/alertas/presentation/widgets/alerta_card.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
-import 'package:lastbite/features/recetas/data/datasources/ai_translation_data_source.dart';
 import 'package:lastbite/features/recetas/data/datasources/recetas_detalle_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
 import 'package:lastbite/features/recetas/domain/receta.dart';
@@ -20,17 +19,13 @@ class AlertasScreen extends ConsumerStatefulWidget {
 }
 
 class _AlertasScreenState extends ConsumerState<AlertasScreen> {
-  late final AiTranslationDataSource _translator;
   late final RecetasDetalleRemoteDataSource _detalleDataSource;
   final Map<int, Receta> _detallesCache = {};
 
   @override
   void initState() {
     super.initState();
-    _translator = AiTranslationDataSource();
-    _detalleDataSource = RecetasDetalleRemoteDataSource(
-      translator: _translator,
-    );
+    _detalleDataSource = RecetasDetalleRemoteDataSource();
   }
 
   @override
@@ -61,9 +56,6 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
         ),
       ),
       data: (alertas) {
-        final avisoTraduccion =
-            ref.read(alertasProvider.notifier).avisoTraduccion;
-
         return Scaffold(
           body: SafeArea(
             child: CustomScrollView(
@@ -118,43 +110,6 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                             color: AppColors.textMuted,
                           ),
                         ),
-                        if (avisoTraduccion != null) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.yellow.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: AppColors.yellow.withValues(alpha: 0.4),
-                              ),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Icon(
-                                  Icons.translate,
-                                  size: 14,
-                                  color: AppColors.textMain,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    avisoTraduccion,
-                                    style: textTheme.bodySmall?.copyWith(
-                                      fontSize: 11,
-                                      color: AppColors.textMain,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
                         const SizedBox(height: 16),
                       ],
                     ),
@@ -325,13 +280,6 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
     final detalle = RecetaDetalleRemoteModel.fromApiRaw(raw);
     final recetaConDetalle = _fusionarDetalle(receta, detalle);
     _detallesCache[receta.id] = recetaConDetalle;
-
-    final aviso = _detalleDataSource.lastTranslationWarning;
-    if (aviso != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(aviso, style: const TextStyle(fontSize: 12))),
-      );
-    }
 
     return recetaConDetalle;
   }

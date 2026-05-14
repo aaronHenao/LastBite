@@ -61,7 +61,9 @@ class _MainShellState extends ConsumerState<MainShell> {
             .where(
               (a) =>
                   a.tipo == AlertaTipo.aviso5 ||
+                  a.tipo == AlertaTipo.aviso4 ||
                   a.tipo == AlertaTipo.aviso3 ||
+                  a.tipo == AlertaTipo.aviso2 ||
                   a.tipo == AlertaTipo.aviso1 ||
                   a.tipo == AlertaTipo.vencido,
             )
