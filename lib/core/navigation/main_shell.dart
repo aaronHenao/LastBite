@@ -1,21 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/agregar/presentation/agregar_screen.dart';
+import 'package:lastbite/features/alertas/domain/alerta.dart';
+import 'package:lastbite/features/alertas/presentation/alertas_provider.dart';
 import 'package:lastbite/features/alertas/presentation/alertas_screen.dart';
+import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_screen.dart';
 import 'package:lastbite/features/recetas/presentation/recetas_screen.dart';
 
-class MainShell extends StatefulWidget {
+class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends ConsumerState<MainShell> {
   int _selectedIndex = 0;
+  final Set<String> _idsAlertasConocidas = {};
+  /// Evita SnackBar al cargar alertas de otro usuario o al re-sincronizar.
+  String? _uidUltimaSyncAlertas;
 
   late final List<Widget> _pages = [
     DespensaScreen(onAgregar: () => _onItemTapped(1)),
@@ -32,6 +39,56 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<List<Alerta>>>(alertasProvider, (previous, next) {
+      next.whenData((alertas) {
+        final uid = ref.read(firebaseUserProvider).value?.uid;
+        if (uid != _uidUltimaSyncAlertas) {
+          _uidUltimaSyncAlertas = uid;
+          _idsAlertasConocidas
+            ..clear()
+            ..addAll(alertas.map((a) => a.id));
+          return;
+        }
+
+        final recien = alertas
+            .where((a) => !_idsAlertasConocidas.contains(a.id))
+            .toList();
+        _idsAlertasConocidas.addAll(recien.map((a) => a.id));
+
+        if (recien.isEmpty || !mounted) return;
+
+        final caducidad = recien
+            .where(
+              (a) =>
+                  a.tipo == AlertaTipo.aviso5 ||
+                  a.tipo == AlertaTipo.aviso3 ||
+                  a.tipo == AlertaTipo.aviso1 ||
+                  a.tipo == AlertaTipo.vencido,
+            )
+            .toList();
+        if (caducidad.isEmpty) return;
+
+        final texto = caducidad.length == 1
+            ? 'Alerta: ${caducidad.first.nombreProducto} — ${caducidad.first.mensaje}'
+            : '${caducidad.length} alertas nuevas de caducidad en la campana.';
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              content: Text(texto, style: const TextStyle(fontSize: 13)),
+              action: SnackBarAction(
+                label: 'Ver',
+                textColor: Colors.white,
+                onPressed: () => _onItemTapped(3),
+              ),
+            ),
+          );
+        });
+      });
+    });
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Stack(
@@ -140,54 +197,6 @@ class _MenuItem extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ComingSoonScreen extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _ComingSoonScreen({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 42, color: AppColors.textMuted),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textMain,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 15,
-                  height: 1.4,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

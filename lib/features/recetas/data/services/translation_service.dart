@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import '../datasources/ai_translation_data_source.dart';
 
 class TranslationService {
@@ -181,37 +179,11 @@ class TranslationService {
     List<String> ingredients = const [],
     List<String> instructions = const [],
   }) {
-    if (instructions.isEmpty) {
-      _prefetchTitlesAndIngredients(titles, ingredients);
-      return Future.value(
-        RecipeSectionsTranslation(
-          titles: List<String>.from(titles),
-          ingredients: List<String>.from(ingredients),
-          instructions: const [],
-        ),
-      );
-    }
-
     return _translator.translateRecipeSectionsToSpanish(
       titles: titles,
       ingredients: ingredients,
       instructions: instructions,
     );
-  }
-
-  void _prefetchTitlesAndIngredients(
-    List<String> titles,
-    List<String> ingredients,
-  ) {
-    if (titles.isNotEmpty) {
-      unawaited(
-        Future.wait(titles.map(translateRecipeTitle)),
-      );
-    }
-
-    if (ingredients.isNotEmpty) {
-      unawaited(translateIngredients(ingredients));
-    }
   }
 
   static String _cacheKey(String prefix, String value) {

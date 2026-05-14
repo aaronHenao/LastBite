@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import 'package:lastbite/features/recetas/data/datasources/recetas_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
-import 'package:lastbite/features/recetas/data/services/translation_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
@@ -24,7 +24,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   late final AiTranslationDataSource _translator;
   late final RecetasBusquedaRemoteDataSource _busquedaDataSource;
   late final RecetasDetalleRemoteDataSource _detalleDataSource;
-  late final TranslationService _translationService;
   final _searchCtrl = TextEditingController();
   final Map<int, Receta> _detallesCache = {};
   Timer? _searchDebounce;
@@ -46,6 +45,9 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     }
   }
 
+  bool _mismaSesion(String? uidAntes) =>
+      ref.read(firebaseUserProvider).value?.uid == uidAntes;
+
   @override
   void initState() {
     super.initState();
@@ -56,7 +58,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     _detalleDataSource = RecetasDetalleRemoteDataSource(
       translator: _translator,
     );
-    _translationService = TranslationService();
   }
 
   @override
@@ -97,6 +98,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
 
   Future<void> _cargarRecetasDesdeApi() async {
     _searchDebounce?.cancel();
+    final uidAntes = ref.read(firebaseUserProvider).value?.uid;
     setState(() {
       _cargandoRecetas = true;
       _errorCarga = null;
@@ -104,7 +106,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     });
 
     try {
-      final productosDespensa = ref.watch(despensaProvider).value ?? [];
+      final productosDespensa = ref.read(despensaProvider).value ?? [];
       if (productosDespensa.isEmpty) {
         if (!mounted) return;
         setState(() {
@@ -116,7 +118,20 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         return;
       }
 
-      final productosOrdenados = [...productosDespensa]
+      final vigentes =
+          productosDespensa.where((p) => !p.vencido).toList();
+      if (vigentes.isEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _recetas = const [];
+          _cargandoRecetas = false;
+          _errorCarga = null;
+          _avisoTraduccion = null;
+        });
+        return;
+      }
+
+      final productosOrdenados = [...vigentes]
         ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
       final productosDespensaNombres = productosOrdenados
           .map((p) => p.nombre)
@@ -127,21 +142,23 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         ignorePantry: false,
       );
 
+      if (!mounted || !_mismaSesion(uidAntes)) return;
+
       final recetas =
           RecetaBusquedaRemoteModel.fromApiRawList(
               raw,
             ).map((m) => m.toDomain()).toList()
             ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
 
-      if (!mounted) return;
+      if (!mounted || !_mismaSesion(uidAntes)) return;
       setState(() {
         _recetas = recetas;
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
-      _prefetchTraducciones(recetas);
     } catch (e) {
       if (!mounted) return;
+      if (!_mismaSesion(uidAntes)) return;
       setState(() {
         _errorCarga = e.toString();
         _cargandoRecetas = false;
@@ -151,6 +168,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   }
 
   Future<void> _buscarRecetasPorProducto(String query) async {
+    final uidAntes = ref.read(firebaseUserProvider).value?.uid;
     setState(() {
       _cargandoRecetas = true;
       _errorCarga = null;
@@ -164,21 +182,23 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         ignorePantry: false,
       );
 
+      if (!mounted || !_mismaSesion(uidAntes)) return;
+
       final recetas =
           RecetaBusquedaRemoteModel.fromApiRawList(
               raw,
             ).map((m) => m.toDomain()).toList()
             ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
 
-      if (!mounted) return;
+      if (!mounted || !_mismaSesion(uidAntes)) return;
       setState(() {
         _recetas = recetas;
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
-      _prefetchTraducciones(recetas);
     } catch (e) {
       if (!mounted) return;
+      if (!_mismaSesion(uidAntes)) return;
       setState(() {
         _errorCarga = e.toString();
         _cargandoRecetas = false;
@@ -207,30 +227,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     );
   }
 
-  void _prefetchTraducciones(List<Receta> recetas) {
-    if (recetas.isEmpty) return;
-
-    unawaited(
-      Future.wait(
-        recetas.map((receta) =>
-            _translationService.translateRecipeTitle(receta.titulo)),
-      ),
-    );
-
-    unawaited(
-      Future.wait(
-        recetas.map((receta) => _translationService.translateIngredients(
-            _ingredientesUsados(receta))),
-      ),
-    );
-  }
-
-  List<String> _ingredientesUsados(Receta receta) {
-    final base = receta.ingredientes ?? const <String>[];
-    if (base.isEmpty) return const <String>[];
-    return base.take(receta.ingredientesUsados).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     ref.listen<AsyncValue<List<Producto>>>(despensaProvider, (previous, next) {
@@ -239,6 +235,12 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       if (prevList != null && nextList != null && prevList != nextList) {
         _cargarRecetasDesdeApi();
       }
+    });
+    ref.listen(firebaseUserProvider, (previous, next) {
+      final a = previous?.value?.uid;
+      final b = next.value?.uid;
+      if (a == b) return;
+      _detallesCache.clear();
     });
     final textTheme = Theme.of(context).textTheme;
     final productosDespensa = ref.read(despensaProvider).value ?? [];
@@ -526,9 +528,15 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     final cached = _detallesCache[receta.id];
     if (cached != null) return cached;
 
+    final uidAntes = ref.read(firebaseUserProvider).value?.uid;
+
     final raw = await _detalleDataSource.obtenerDetalleRecetaRaw(
       recetaId: receta.id,
     );
+    if (!mounted || !_mismaSesion(uidAntes)) {
+      return receta;
+    }
+
     final detalle = RecetaDetalleRemoteModel.fromApiRaw(raw);
     final recetaConDetalle = _fusionarDetalle(receta, detalle);
     _detallesCache[receta.id] = recetaConDetalle;

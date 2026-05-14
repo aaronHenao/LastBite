@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/alertas/presentation/alertas_provider.dart';
@@ -36,7 +34,11 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
   Future<void> agregar(Producto producto) async {
     await _repo.guardar(producto);
     state = AsyncData([...state.value ?? [], producto]);
-    await ref.read(alertasProvider.notifier).refrescar();
+    try {
+      await ref.read(alertasProvider.notifier).refrescar();
+    } catch (_) {
+      ref.invalidate(alertasProvider);
+    }
   }
 
   Future<void> consumir(String id) async {
@@ -46,7 +48,11 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
     state = AsyncData(
       (state.value ?? []).where((p) => p.id != id).toList(),
     );
-    await ref.read(alertasProvider.notifier).refrescar();
+    try {
+      await ref.read(alertasProvider.notifier).refrescar();
+    } catch (_) {
+      ref.invalidate(alertasProvider);
+    }
   }
 
   Future<void> eliminar(String id) async {
@@ -54,7 +60,11 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
     state = AsyncData(
       (state.value ?? []).where((p) => p.id != id).toList(),
     );
-    await ref.read(alertasProvider.notifier).refrescar();
+    try {
+      await ref.read(alertasProvider.notifier).refrescar();
+    } catch (_) {
+      ref.invalidate(alertasProvider);
+    }
   }
 
   List<Producto> get urgentes {

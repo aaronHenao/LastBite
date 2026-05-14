@@ -41,7 +41,16 @@ class RecetasService {
     );
 
     final capped = raw.take(maxRecetasPorBusqueda).toList();
-    return _traducirResultadosBusqueda(capped);
+    final pantryLower = ingredientes
+        .map((e) => e.toLowerCase().trim())
+        .where((e) => e.length >= 2)
+        .toList();
+    final ajustado = pantryLower.isEmpty
+        ? capped
+        : capped
+              .map((r) => _corregirUsadosContraDespensa(pantryLower, r))
+              .toList();
+    return _traducirResultadosBusqueda(ajustado);
   }
 
   Future<Map<String, dynamic>> obtenerDetalleRecetaRaw({
@@ -189,10 +198,93 @@ class RecetasService {
 
   List<String> _normalizarIngredientes(List<String> productosDespensa) {
     return productosDespensa
+        .map(_condensarNombreParaBusqueda)
         .map((producto) => producto.trim().toLowerCase())
         .where((producto) => producto.isNotEmpty)
         .toSet()
         .toList();
+  }
+
+  /// Reduce ruido de etiquetas largas (Open Food Facts, etc.) que confunden a
+  /// Spoonacular y disparan coincidencias laxas.
+  String _condensarNombreParaBusqueda(String raw) {
+    var s = raw.split(',').first.trim();
+    s = s.replaceAll(RegExp(r'\s+'), ' ');
+    if (s.length > 72) {
+      s = s.substring(0, 72).trim();
+    }
+    return s;
+  }
+
+  /// Spoonacular puede marcar como "used" ingredientes que no están en la
+  /// despensa enviada. Reclasificamos solo con lo que realmente mandamos.
+  Map<String, dynamic> _corregirUsadosContraDespensa(
+    List<String> despensaInglesLower,
+    Map<String, dynamic> recipe,
+  ) {
+    final copy = Map<String, dynamic>.from(recipe);
+    final used = _asIngredientMapList(copy['usedIngredients']);
+    final missed = _asIngredientMapList(copy['missedIngredients']);
+
+    final usedReal = <Map<String, dynamic>>[];
+    final falsosPositivos = <Map<String, dynamic>>[];
+
+    for (final item in used) {
+      if (_ingredienteCoincideConDespensa(item, despensaInglesLower)) {
+        usedReal.add(item);
+      } else {
+        falsosPositivos.add(item);
+      }
+    }
+
+    final missedNuevo = [...missed, ...falsosPositivos];
+    copy['usedIngredients'] = usedReal;
+    copy['missedIngredients'] = missedNuevo;
+    copy['usedIngredientCount'] = usedReal.length;
+    copy['missedIngredientCount'] = missedNuevo.length;
+    return copy;
+  }
+
+  List<Map<String, dynamic>> _asIngredientMapList(dynamic raw) {
+    if (raw is! List) return [];
+    return raw
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  bool _ingredienteCoincideConDespensa(
+    Map<String, dynamic> item,
+    List<String> despensaInglesLower,
+  ) {
+    final nombres = <String?>[
+      item['name']?.toString(),
+      item['originalName']?.toString(),
+      item['original']?.toString(),
+    ];
+    for (final n in nombres) {
+      if (n == null || n.trim().isEmpty) continue;
+      for (final p in despensaInglesLower) {
+        if (_coincidenciaFlexibleDespensa(n, p)) return true;
+      }
+    }
+    return false;
+  }
+
+  bool _coincidenciaFlexibleDespensa(String ingredienteApi, String pantry) {
+    final ing = ingredienteApi.toLowerCase().trim();
+    final p = pantry.toLowerCase().trim();
+    if (ing.isEmpty || p.length < 2) return false;
+    if (ing == p) return true;
+    try {
+      if (RegExp(r'\b' + RegExp.escape(p) + r'\b').hasMatch(ing)) return true;
+      if (RegExp(r'\b' + RegExp.escape(ing) + r'\b').hasMatch(p)) return true;
+    } catch (_) {}
+    if (p.length >= 3) {
+      if (ing == '${p}s' || ing == '${p}es') return true;
+      if (p == '${ing}s' || p == '${ing}es') return true;
+    }
+    return false;
   }
 
   bool _esInstruccionPlaceholder(String texto) {

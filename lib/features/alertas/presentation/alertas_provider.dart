@@ -18,6 +18,7 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
 
   @override
   Future<List<Alerta>> build() async {
+    ref.watch(firebaseUserProvider);
     return _cargarAlertas();
   }
 
@@ -120,7 +121,10 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
           umbralDias: 0,
           ingredientesDespensa: ingredientesDespensa,
         );
-        if (alerta != null) nuevas.add(alerta);
+        if (alerta != null) {
+          nuevas.add(alerta);
+          existentesIds.add(alerta.id);
+        }
         continue;
       }
 
@@ -133,7 +137,10 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
           umbralDias: 5,
           ingredientesDespensa: ingredientesDespensa,
         );
-        if (alerta != null) nuevas.add(alerta);
+        if (alerta != null) {
+          nuevas.add(alerta);
+          existentesIds.add(alerta.id);
+        }
       }
 
       if (producto.diasRestantes <= 3) {
@@ -145,7 +152,10 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
           umbralDias: 3,
           ingredientesDespensa: ingredientesDespensa,
         );
-        if (alerta != null) nuevas.add(alerta);
+        if (alerta != null) {
+          nuevas.add(alerta);
+          existentesIds.add(alerta.id);
+        }
       }
 
       if (producto.diasRestantes <= 1) {
@@ -157,7 +167,10 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
           umbralDias: 1,
           ingredientesDespensa: ingredientesDespensa,
         );
-        if (alerta != null) nuevas.add(alerta);
+        if (alerta != null) {
+          nuevas.add(alerta);
+          existentesIds.add(alerta.id);
+        }
       }
     }
 
@@ -233,10 +246,19 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     final alertaId = Alerta.buildId(productoId: producto.id, tipo: tipo);
     if (existentesIds.contains(alertaId)) return null;
 
-    final fechaDisparo = producto.fechaCaducidad
-        .subtract(Duration(days: umbralDias));
+    // Inicio nominal de la ventana de este aviso (caducidad − umbral).
+    // Si el producto ya está dentro de la ventana al crearse (p. ej. se agrega
+    // con 4 días y aviso5), esa fecha queda en el pasado y chocaba con
+    // lastClearAt de "Borrar todo", bloqueando alertas nuevas incorrectamente.
+    final fechaDisparo = producto.fechaCaducidad.subtract(
+      Duration(days: umbralDias),
+    );
+    final referenciaContraBorrado = DateTime.now().isAfter(fechaDisparo)
+        ? DateTime.now()
+        : fechaDisparo;
 
-    if (lastClearAt != null && !fechaDisparo.isAfter(lastClearAt)) {
+    if (lastClearAt != null &&
+        !referenciaContraBorrado.isAfter(lastClearAt)) {
       return null;
     }
 

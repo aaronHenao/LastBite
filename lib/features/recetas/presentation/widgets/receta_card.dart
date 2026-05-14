@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
-import 'package:lastbite/features/recetas/data/services/translation_service.dart';
 import 'package:lastbite/features/recetas/domain/receta.dart';
 
 String _urlImagenOptimizada(String originalUrl) {
@@ -15,89 +14,24 @@ String _urlImagenOptimizada(String originalUrl) {
   return 'https://images.weserv.nl/?url=$encoded&w=1200&fit=cover&output=jpg&q=90';
 }
 
-class RecetaCard extends StatefulWidget {
+class RecetaCard extends StatelessWidget {
   final Receta receta;
   final VoidCallback onTap;
 
   const RecetaCard({super.key, required this.receta, required this.onTap});
 
-  @override
-  State<RecetaCard> createState() => _RecetaCardState();
-}
-
-class _RecetaCardState extends State<RecetaCard> {
-  static final TranslationService _translationService = TranslationService();
   static const double _tituloHeight = 42;
 
-  late String _titulo;
-  late List<String> _ingredientes;
-  bool _traduciendo = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _titulo = widget.receta.titulo;
-    _ingredientes = _ingredientesUsados(widget.receta);
-    _traducirSiHaceFalta();
-  }
-
-  @override
-  void didUpdateWidget(RecetaCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (_debeActualizar(oldWidget.receta, widget.receta)) {
-      _titulo = widget.receta.titulo;
-      _ingredientes = _ingredientesUsados(widget.receta);
-      _traduciendo = false;
-      _traducirSiHaceFalta();
-    }
-  }
-
-  bool _debeActualizar(Receta anterior, Receta actual) {
-    if (anterior.id != actual.id) return true;
-    if (anterior.titulo != actual.titulo) return true;
-
-    final anteriorIngredientes = anterior.ingredientes ?? const <String>[];
-    final actualIngredientes = actual.ingredientes ?? const <String>[];
-    if (!listEquals(anteriorIngredientes, actualIngredientes)) return true;
-
-    return false;
-  }
-
-  void _traducirSiHaceFalta() {
-    if (_traduciendo) return;
-    _traduciendo = true;
-
-    final ingredientesUsados = _ingredientesUsados(widget.receta);
-
-    final tituloFuture = _translationService
-        .translateRecipeTitle(widget.receta.titulo)
-        .catchError((_) => widget.receta.titulo);
-    final ingredientesFuture = _translationService
-        .translateIngredients(ingredientesUsados)
-        .catchError((_) => ingredientesUsados);
-
-    Future.wait([tituloFuture, ingredientesFuture]).then((results) {
-      if (!mounted) return;
-      setState(() {
-        _titulo = results[0] as String;
-        _ingredientes = results[1] as List<String>;
-        _traduciendo = false;
-      });
-    }).catchError((_) {
-      if (!mounted) return;
-      setState(() => _traduciendo = false);
-    });
-  }
-
-  List<String> _ingredientesUsados(Receta receta) {
-    final base = receta.ingredientes ?? const <String>[];
+  List<String> _ingredientesUsados(Receta r) {
+    final base = r.ingredientes ?? const <String>[];
     if (base.isEmpty) return const <String>[];
-    return base.take(receta.ingredientesUsados).toList();
+    return base.take(r.ingredientesUsados).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final receta = widget.receta;
+    final titulo = receta.titulo;
+    final ingredientes = _ingredientesUsados(receta);
     final match = receta.porcentajeMatch;
     final matchColor = match >= 80
         ? AppColors.green
@@ -106,7 +40,7 @@ class _RecetaCardState extends State<RecetaCard> {
         : AppColors.textMuted;
 
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.card,
@@ -169,7 +103,7 @@ class _RecetaCardState extends State<RecetaCard> {
                         child: SizedBox(
                           height: _tituloHeight,
                           child: Text(
-                            _titulo,
+                            titulo,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -247,9 +181,9 @@ class _RecetaCardState extends State<RecetaCard> {
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      ...List.generate(_ingredientes.length, (i) {
+                      ...List.generate(ingredientes.length, (i) {
                         return _IngredientTag(
-                          label: _ingredientes[i],
+                          label: ingredientes[i],
                           tienes: true,
                         );
                       }),
