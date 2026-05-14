@@ -27,6 +27,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   late final TranslationService _translationService;
   final _searchCtrl = TextEditingController();
   final Map<int, Receta> _detallesCache = {};
+  Timer? _searchDebounce;
 
   List<Receta> _recetas = const [];
   bool _cargandoRecetas = true;
@@ -34,6 +35,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   String? _avisoTraduccion;
   String _query = '';
   bool _cargaInicial = false;
+  bool _busquedaPorProducto = false;
 
   @override
   void didChangeDependencies() {
@@ -60,6 +62,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _searchDebounce?.cancel();
     super.dispose();
   }
 
@@ -68,7 +71,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     final lista = [..._recetas]
       ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
 
-    if (_query.isEmpty) return lista;
+    if (_query.isEmpty || _busquedaPorProducto) return lista;
     return lista
         .where((r) => r.titulo.toLowerCase().contains(_query.toLowerCase()))
         .toList();
@@ -93,9 +96,11 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   }
 
   Future<void> _cargarRecetasDesdeApi() async {
+    _searchDebounce?.cancel();
     setState(() {
       _cargandoRecetas = true;
       _errorCarga = null;
+      _busquedaPorProducto = false;
     });
 
     try {
@@ -143,6 +148,63 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
     }
+  }
+
+  Future<void> _buscarRecetasPorProducto(String query) async {
+    setState(() {
+      _cargandoRecetas = true;
+      _errorCarga = null;
+      _busquedaPorProducto = true;
+    });
+
+    try {
+      final raw = await _busquedaDataSource.buscarRecetasPorDespensaRaw(
+        productosDespensa: [query],
+        number: 3,
+        ignorePantry: false,
+      );
+
+      final recetas =
+          RecetaBusquedaRemoteModel.fromApiRawList(
+              raw,
+            ).map((m) => m.toDomain()).toList()
+            ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
+
+      if (!mounted) return;
+      setState(() {
+        _recetas = recetas;
+        _cargandoRecetas = false;
+        _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
+      });
+      _prefetchTitulos(recetas);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorCarga = e.toString();
+        _cargandoRecetas = false;
+        _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
+      });
+    }
+  }
+
+  void _onQueryChanged(String value) {
+    final trimmed = value.trim();
+    setState(() {
+      _query = value;
+      _busquedaPorProducto = trimmed.isNotEmpty;
+    });
+
+    _searchDebounce?.cancel();
+
+    if (trimmed.isEmpty) {
+      _cargarRecetasDesdeApi();
+      return;
+    }
+
+    _searchDebounce = Timer(
+      const Duration(milliseconds: 350),
+      () => _buscarRecetasPorProducto(trimmed),
+    );
   }
 
   void _prefetchTitulos(List<Receta> recetas) {
@@ -196,7 +258,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                   //Buscador
                   TextField(
                     controller: _searchCtrl,
-                    onChanged: (v) => setState(() => _query = v),
+                    onChanged: _onQueryChanged,
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w500,
                       color: AppColors.textMuted,

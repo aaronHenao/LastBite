@@ -79,6 +79,14 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
       alertasExistentes.addAll(nuevas);
     }
 
+    final completadas = await _completarAlertasSinReceta(
+      alertas: alertasExistentes,
+      productos: productos,
+    );
+    alertasExistentes
+      ..clear()
+      ..addAll(completadas);
+
     final visibles = alertasExistentes
       .where((alerta) => !alerta.estaOculta)
       .toList();
@@ -153,6 +161,64 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     }
 
     return nuevas;
+  }
+
+  Future<List<Alerta>> _completarAlertasSinReceta({
+    required List<Alerta> alertas,
+    required List<Producto> productos,
+  }) async {
+    final productosMap = {for (final p in productos) p.id: p};
+    final productosNoVencidos = productos.where((p) => !p.vencido).toList()
+      ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
+    final ingredientesDespensa = productosNoVencidos
+        .map((p) => p.nombre)
+        .where((name) => name.trim().isNotEmpty)
+        .toList();
+
+    final actualizaciones = <Alerta>[];
+
+    for (final alerta in alertas) {
+      if (alerta.estaOculta) continue;
+      if (alerta.recetaSugerida != null) continue;
+      if (alerta.tipo != AlertaTipo.aviso3 && alerta.tipo != AlertaTipo.aviso1) {
+        continue;
+      }
+
+      final producto = productosMap[alerta.productoId];
+      if (producto == null) continue;
+
+      final receta = await _buscarRecetaSugerida(
+        producto: producto,
+        ingredientesDespensa: ingredientesDespensa,
+        maximizarMatch: alerta.tipo == AlertaTipo.aviso1,
+      );
+
+      if (receta == null) continue;
+
+      actualizaciones.add(
+        Alerta(
+          id: alerta.id,
+          productoId: alerta.productoId,
+          nombreProducto: alerta.nombreProducto,
+          emoji: alerta.emoji,
+          fechaCaducidad: alerta.fechaCaducidad,
+          tipo: alerta.tipo,
+          creadaEn: alerta.creadaEn,
+          dismissedAt: alerta.dismissedAt,
+          recetaSugerida: receta,
+        ),
+      );
+    }
+
+    if (actualizaciones.isNotEmpty) {
+      await _repo.guardarAlertas(actualizaciones);
+      final actualizadasMap = {for (final a in actualizaciones) a.id: a};
+      return alertas
+          .map((alerta) => actualizadasMap[alerta.id] ?? alerta)
+          .toList();
+    }
+
+    return alertas;
   }
 
   Future<Alerta?> _crearAlerta({
