@@ -8,6 +8,7 @@ import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import 'scan_producto_screen.dart';
+import '../data/open_food_facts_service.dart';
 
 enum _EntryMode { scan, manual }
 
@@ -22,20 +23,64 @@ class AgregarScreen extends ConsumerStatefulWidget {
 class _AgregarScreenState extends ConsumerState<AgregarScreen> {
   _EntryMode _mode = _EntryMode.scan;
   String? _ultimoCodigoEscaneado;
+  final _openFoodFacts = OpenFoodFactsService();
+  bool _buscandoProducto = false;
 
   Future<void> _abrirEscaner() async {
     final codigo = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => const ScanProductoScreen()),
     );
 
-    if (!mounted) return;
-    if (codigo == null || codigo.trim().isEmpty) return;
+    if (!mounted || codigo == null || codigo.trim().isEmpty) return;
 
-    setState(() => _ultimoCodigoEscaneado = codigo.trim());
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Codigo escaneado: ${codigo.trim()}')),
-    );
+    setState(() {
+      _ultimoCodigoEscaneado = codigo.trim();
+      _buscandoProducto = true;
+    });
+
+    final producto = await _openFoodFacts.buscarPorCodigo(codigo.trim());
+
+    if (!mounted) return;
+    setState(() => _buscandoProducto = false);
+
+    if (producto == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Producto no encontrado. Ingrésalo manualmente.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      // Cambia al modo manual para que el usuario lo ingrese
+      setState(() => _mode = _EntryMode.manual);
+      return;
+    }
+
+    // Producto encontrado — confirmar antes de guardar
+    _mostrarConfirmacion(producto);
   }
+
+  void _mostrarConfirmacion(Producto producto) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (_) => _ConfirmacionProductoSheet(
+      producto: producto,
+      onConfirmar: (productoEditado) async {
+        await ref.read(despensaProvider.notifier).agregar(productoEditado);
+        widget.onBackToPantry?.call();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${productoEditado.nombre} agregado ✅'),
+              backgroundColor: AppColors.green,
+            ),
+          );
+        }
+      },
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -84,8 +129,9 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
               child: _mode == _EntryMode.scan
                   ? _ScanEntryCard(
                       key: const ValueKey('scan'),
-                      onTap: _abrirEscaner,
+                      onTap: _buscandoProducto ? null : () { _abrirEscaner(); },
                       ultimoCodigo: _ultimoCodigoEscaneado,
+                      cargando: _buscandoProducto,
                     )
                   : _ManualEntryForm(
                       key: ValueKey('manual'),
@@ -193,10 +239,16 @@ class _HybridModeSwitch extends StatelessWidget {
 }
 
 class _ScanEntryCard extends StatelessWidget {
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final String? ultimoCodigo;
+  final bool cargando;
 
-  const _ScanEntryCard({super.key, required this.onTap, this.ultimoCodigo});
+  const _ScanEntryCard({
+    super.key,
+    required this.onTap,
+    this.ultimoCodigo,
+    this.cargando = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -212,11 +264,13 @@ class _ScanEntryCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 50, 20, 50),
           child: Column(
             children: [
-              Icon(
-                CupertinoIcons.camera_viewfinder,
-                size: 56,
-                color: AppColors.textMuted.withValues(alpha: 0.85),
-              ),
+              cargando
+                  ? const CircularProgressIndicator(color: AppColors.accent)
+                  : Icon(
+                      CupertinoIcons.camera_viewfinder,
+                      size: 56,
+                      color: AppColors.textMuted.withValues(alpha: 0.85),
+                    ),
               const SizedBox(height: 18),
               Text(
                 'Apunta al codigo de barras',
@@ -751,5 +805,293 @@ class _DashedRoundedRectPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _DashedRoundedRectPainter oldDelegate) {
     return oldDelegate.color != color || oldDelegate.radius != radius;
+  }
+}
+
+class _ConfirmacionProductoSheet extends StatefulWidget {
+  final Producto producto;
+  final ValueChanged<Producto> onConfirmar;
+
+  const _ConfirmacionProductoSheet({
+    required this.producto,
+    required this.onConfirmar,
+  });
+
+  @override
+  State<_ConfirmacionProductoSheet> createState() =>
+      _ConfirmacionProductoSheetState();
+}
+
+class _ConfirmacionProductoSheetState
+    extends State<_ConfirmacionProductoSheet> {
+  late final TextEditingController _nombreCtrl;
+  late String _categoriaSeleccionada;
+  late DateTime _fechaSeleccionada;
+
+  @override
+  void initState() {
+    super.initState();
+    _nombreCtrl = TextEditingController(text: widget.producto.nombre);
+    _categoriaSeleccionada = widget.producto.categoria;
+    _fechaSeleccionada = widget.producto.fechaCaducidad;
+  }
+
+  @override
+  void dispose() {
+    _nombreCtrl.dispose();
+    super.dispose();
+  }
+
+  String get _fechaFormateada =>
+      '${_fechaSeleccionada.day.toString().padLeft(2, '0')}/'
+      '${_fechaSeleccionada.month.toString().padLeft(2, '0')}/'
+      '${_fechaSeleccionada.year}';
+
+  Future<void> _seleccionarFecha() async {
+    final hoy = DateTime.now();
+    final fecha = await showDatePicker(
+      context: context,
+      initialDate: _fechaSeleccionada,
+      firstDate: hoy,
+      lastDate: hoy.add(const Duration(days: 365 * 2)),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: AppColors.accent,
+            surface: AppColors.surface,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (fecha != null) setState(() => _fechaSeleccionada = fecha);
+  }
+
+  String _emojiParaCategoria(String categoria) {
+    switch (categoria) {
+      case 'Verdura':     return '🥦';
+      case 'Fruta':       return '🍎';
+      case 'Pollo':       return '🍗';
+      case 'Carne':       return '🥩';
+      case 'Pescado':     return '🐟';
+      case 'Huevo':       return '🥚';
+      case 'Leche':       return '🥛';
+      case 'Yogur':       return '🥛';
+      case 'Queso':       return '🧀';
+      case 'Mantequilla': return '🧈';
+      case 'Pan':         return '🍞';
+      case 'Grano':       return '🍝';
+      case 'Jugo':        return '🧃';
+      case 'Embutido':    return '🌭';
+      case 'Conserva':    return '🥫';
+      default:            return '🥫';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final categorias = vidaUtilPorCategoria.keys.toList();
+
+    return Padding(
+      // Sube el sheet cuando aparece el teclado
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
+              Text(
+                'CONFIRMAR PRODUCTO',
+                style: textTheme.titleSmall?.copyWith(
+                  letterSpacing: 2,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Nombre
+              TextField(
+                controller: _nombreCtrl,
+                style: textTheme.titleMedium?.copyWith(
+                  color: AppColors.textMain,
+                  fontWeight: FontWeight.w600,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Nombre',
+                  filled: true,
+                  fillColor: AppColors.card,
+                  labelStyle: TextStyle(color: AppColors.textMuted),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        const BorderSide(color: AppColors.accent, width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Categoría
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  underline: const SizedBox(),
+                  borderRadius: BorderRadius.circular(20),
+                  value: categorias.contains(_categoriaSeleccionada)
+                      ? _categoriaSeleccionada
+                      : categorias.first,
+                  items: categorias.map((cat) {
+                    return DropdownMenuItem<String>(
+                      value: cat,
+                      child: Text(
+                        cat,
+                        style: textTheme.titleMedium?.copyWith(
+                          color: AppColors.textMain,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (cat) {
+                    if (cat == null) return;
+                    setState(() {
+                      _categoriaSeleccionada = cat;
+                      // Actualiza la fecha sugerida al cambiar categoría
+                      final dias = vidaUtilPorCategoria[cat] ?? 7;
+                      _fechaSeleccionada =
+                          DateTime.now().add(Duration(days: dias));
+                    });
+                  },
+                  dropdownColor: AppColors.surface,
+                  icon: const Icon(
+                    CupertinoIcons.chevron_down,
+                    size: 16,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Fecha
+              GestureDetector(
+                onTap: _seleccionarFecha,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 16,
+                        color: AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        _fechaFormateada,
+                        style: textTheme.titleMedium?.copyWith(
+                          color: AppColors.textMain,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Botón confirmar
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    if (_nombreCtrl.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('El nombre no puede estar vacío.'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    final productoEditado = Producto(
+                      id: widget.producto.id,
+                      nombre: _nombreCtrl.text.trim(),
+                      emoji: _emojiParaCategoria(_categoriaSeleccionada),
+                      categoria: _categoriaSeleccionada,
+                      cantidad: widget.producto.cantidad,
+                      fechaCaducidad: _fechaSeleccionada,
+                      esFresco: _categoriaSeleccionada == 'fruta' ||
+                          _categoriaSeleccionada == 'verdura',
+                      imagenUrl: widget.producto.imagenUrl,
+                    );
+
+                    Navigator.pop(context);
+                    widget.onConfirmar(productoEditado);
+                  },
+                  icon: const Icon(Icons.check_rounded),
+                  label: const Text(
+                    'Agregar a mi despensa',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

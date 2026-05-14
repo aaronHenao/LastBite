@@ -7,6 +7,7 @@ class Producto {
   final DateTime fechaCaducidad;
   final bool esFresco;
   final String? codigoBarras;
+  final String? imagenUrl;
 
   Producto({
     required this.id,
@@ -17,6 +18,7 @@ class Producto {
     required this.fechaCaducidad,
     required this.esFresco,
     this.codigoBarras,
+    this.imagenUrl
   });
 
   int get diasRestantes => fechaCaducidad.difference(DateTime.now()).inDays;
@@ -35,6 +37,7 @@ class Producto {
       'fechaCaducidad': fechaCaducidad.toIso8601String(),
       'esFresco': esFresco,
       'codigoBarras': codigoBarras,
+      'imagenUrl': imagenUrl,
     };
   }
 
@@ -48,6 +51,7 @@ class Producto {
       fechaCaducidad: DateTime.parse(map['fechaCaducidad'] as String),
       esFresco: map['esFresco'] as bool,
       codigoBarras: map['codigoBarras'] as String?,
+      imagenUrl: map['imagenUrl'] as String?,
     );
   }
 }
