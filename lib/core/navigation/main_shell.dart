@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/agregar/presentation/agregar_screen.dart';
+import 'package:lastbite/features/alertas/presentation/alertas_screen.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_screen.dart';
 import 'package:lastbite/features/recetas/presentation/recetas_screen.dart';
 
@@ -20,11 +21,7 @@ class _MainShellState extends State<MainShell> {
     DespensaScreen(onAgregar: () => _onItemTapped(1)),
     AgregarScreen(onBackToPantry: () => _onItemTapped(0)),
     const RecetasScreen(),
-    const _ComingSoonScreen(
-      icon: Icons.notifications_outlined,
-      title: 'Alertas',
-      subtitle: 'Aqui veras alertas de productos por vencer.',
-    ),
+    const AlertasScreen(),
   ];
 
   void _onItemTapped(int index) {
