@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -6,6 +8,7 @@ import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import 'package:lastbite/features/recetas/data/datasources/recetas_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
+import 'package:lastbite/features/recetas/data/services/translation_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
@@ -21,6 +24,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   late final AiTranslationDataSource _translator;
   late final RecetasBusquedaRemoteDataSource _busquedaDataSource;
   late final RecetasDetalleRemoteDataSource _detalleDataSource;
+  late final TranslationService _translationService;
   final _searchCtrl = TextEditingController();
   final Map<int, Receta> _detallesCache = {};
 
@@ -50,6 +54,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     _detalleDataSource = RecetasDetalleRemoteDataSource(
       translator: _translator,
     );
+    _translationService = TranslationService();
   }
 
   @override
@@ -129,6 +134,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
+      _prefetchTitulos(recetas);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -137,6 +143,16 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
     }
+  }
+
+  void _prefetchTitulos(List<Receta> recetas) {
+    if (recetas.isEmpty) return;
+    unawaited(
+      Future.wait(
+        recetas.map((receta) =>
+            _translationService.translateRecipeTitle(receta.titulo)),
+      ),
+    );
   }
 
   @override
