@@ -5,6 +5,8 @@ import 'package:lastbite/core/navigation/main_shell.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/auth_provider.dart';
 import 'features/auth/presentation/login_screen.dart';
+import 'features/auth/presentation/blocked_screen.dart';
+import 'features/auth/presentation/pending_screen.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -27,7 +29,7 @@ class LastBiteApp extends StatelessWidget {
   }
 }
 
-// Decide qué mostrar según el estado de sesión
+
 class _AuthGate extends ConsumerWidget {
   const _AuthGate();
 
@@ -42,7 +44,21 @@ class _AuthGate extends ConsumerWidget {
         ),
       ),
       error: (_, __) => const LoginScreen(),
-      data: (user) => user != null ? const MainShell() : const LoginScreen(),
+      data: (user) {
+        if (user == null) return const LoginScreen();
+
+        // Redirigir según el status leído desde Firestore
+        switch (user.status) {
+          case 'blocked':
+            return const BlockedScreen();
+          case 'pendingApproval':
+            return const PendingScreen();
+          case 'active':
+          case 'admin':
+          default:
+            return const MainShell();
+        }
+      },
     );
   }
 }
