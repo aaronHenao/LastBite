@@ -1,3 +1,6 @@
+/// Posibles estados de sincronización de un producto con Firestore.
+enum SyncStatus { synced, pendingSync, failedSync }
+
 class Producto {
   final String id;
   final String nombre;
@@ -9,6 +12,10 @@ class Producto {
   final String? codigoBarras;
   final String? imagenUrl;
 
+  /// Estado de sincronización con Firestore (offline-first).
+  /// Por defecto es [SyncStatus.synced].
+  final SyncStatus syncStatus;
+
   Producto({
     required this.id,
     required this.nombre,
@@ -18,7 +25,8 @@ class Producto {
     required this.fechaCaducidad,
     required this.esFresco,
     this.codigoBarras,
-    this.imagenUrl
+    this.imagenUrl,
+    this.syncStatus = SyncStatus.synced,
   });
 
   int get diasRestantes => fechaCaducidad.difference(DateTime.now()).inDays;
@@ -26,6 +34,35 @@ class Producto {
   bool get urgente => diasRestantes <= 3;
   bool get critico => diasRestantes <= 1;
   bool get vencido => diasRestantes < 0;
+
+  /// Indica si el producto está pendiente de sincronizar con Firestore.
+  bool get isPendingSync => syncStatus == SyncStatus.pendingSync;
+
+  Producto copyWith({
+    String? id,
+    String? nombre,
+    String? emoji,
+    String? categoria,
+    String? cantidad,
+    DateTime? fechaCaducidad,
+    bool? esFresco,
+    String? codigoBarras,
+    String? imagenUrl,
+    SyncStatus? syncStatus,
+  }) {
+    return Producto(
+      id: id ?? this.id,
+      nombre: nombre ?? this.nombre,
+      emoji: emoji ?? this.emoji,
+      categoria: categoria ?? this.categoria,
+      cantidad: cantidad ?? this.cantidad,
+      fechaCaducidad: fechaCaducidad ?? this.fechaCaducidad,
+      esFresco: esFresco ?? this.esFresco,
+      codigoBarras: codigoBarras ?? this.codigoBarras,
+      imagenUrl: imagenUrl ?? this.imagenUrl,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -38,6 +75,7 @@ class Producto {
       'esFresco': esFresco,
       'codigoBarras': codigoBarras,
       'imagenUrl': imagenUrl,
+      'syncStatus': syncStatus.name,
     };
   }
 
@@ -52,6 +90,10 @@ class Producto {
       esFresco: map['esFresco'] as bool,
       codigoBarras: map['codigoBarras'] as String?,
       imagenUrl: map['imagenUrl'] as String?,
+      syncStatus: SyncStatus.values.firstWhere(
+        (s) => s.name == (map['syncStatus'] as String? ?? 'synced'),
+        orElse: () => SyncStatus.synced,
+      ),
     );
   }
 }
