@@ -60,10 +60,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCINTTnIHiSBDkciB6O1Fh_jCESYiVdX88',
-    appId: '1:941305327047:android:630662d1b424db6b58bde2',
-    messagingSenderId: '941305327047',
-    projectId: 'lastbite-641cf',
-    storageBucket: 'lastbite-641cf.firebasestorage.app',
+    apiKey: 'AIzaSyCY9nkVIFLvIzRS7qoA1t4zJxFAakTao9g',
+    appId: '1:824525046677:android:e5b081543f22d5a7612c9c',
+    messagingSenderId: '824525046677',
+    projectId: 'lastbite-54708',
+    storageBucket: 'lastbite-54708.firebasestorage.app',
   );
+
 }

@@ -1,44 +1,26 @@
 {
   "project_info": {
-    "project_number": "941305327047",
-    "project_id": "lastbite-641cf",
-    "storage_bucket": "lastbite-641cf.firebasestorage.app"
+    "project_number": "824525046677",
+    "project_id": "lastbite-54708",
+    "storage_bucket": "lastbite-54708.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:941305327047:android:630662d1b424db6b58bde2",
+        "mobilesdk_app_id": "1:824525046677:android:e5b081543f22d5a7612c9c",
         "android_client_info": {
           "package_name": "com.example.lastbite"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "941305327047-2uhf3jjmecpibvehanb4agqqj6difuqr.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.lastbite",
-            "certificate_hash": "b2a5fd4e014622ac1b2d69f21441c1fbb5423489"
-          }
-        },
-        {
-          "client_id": "941305327047-uao17g8t9t4fi83nfo400tmab6fujde8.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCINTTnIHiSBDkciB6O1Fh_jCESYiVdX88"
+          "current_key": "AIzaSyCY9nkVIFLvIzRS7qoA1t4zJxFAakTao9g"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "941305327047-uao17g8t9t4fi83nfo400tmab6fujde8.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }
