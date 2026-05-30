@@ -1,12 +1,20 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/producto.dart';
 import 'widgets/producto_card.dart';
-
+import 'widgets/ui_states.dart';
 import '../../auth/presentation/auth_provider.dart';
+
+// Provider de conectividad
+final conectividadProvider = StreamProvider<bool>((ref) {
+  return Connectivity().onConnectivityChanged.map(
+    (results) => !results.contains(ConnectivityResult.none),
+  );
+});
 
 class DespensaScreen extends ConsumerWidget {
   final VoidCallback? onAgregar;
@@ -23,17 +31,21 @@ class DespensaScreen extends ConsumerWidget {
       error: (_, __) => 'Mi cuenta',
     );
 
+    // Conectividad
+    final conectado = ref.watch(conectividadProvider).maybeWhen(
+      data: (value) => value,
+      orElse: () => true,
+    );
+
     final asyncProductos = ref.watch(despensaProvider);
     return asyncProductos.when(
       loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        body: DespensaLoadingState(),
       ),
       error: (e, _) => Scaffold(
-        body: Center(
-          child: Text(
-            'Error cargando despensa: $e',
-            style: const TextStyle(color: AppColors.danger),
-          ),
+        body: ErrorDespensaState(
+          mensaje: 'Error cargando despensa: $e',
+          onReintentar: () => ref.invalidate(despensaProvider),
         ),
       ),
       data: (productos) {
@@ -50,212 +62,194 @@ class DespensaScreen extends ConsumerWidget {
 
         return Scaffold(
           body: SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                //Header
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'MI DESPENSA',
-                                  style: textTheme.titleSmall?.copyWith(
-                                    letterSpacing: 2.4,
-                                    color: AppColors.textMuted,
+            child: Column(
+              children: [
+                // Banner sin conexión
+                if (!conectado) const OfflineBanner(),
+
+                Expanded(
+                  child: CustomScrollView(
+                    slivers: [
+                      // Header
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'MI DESPENSA',
+                                        style: textTheme.titleSmall?.copyWith(
+                                          letterSpacing: 2.4,
+                                          color: AppColors.textMuted,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'LastBite 🌿',
+                                        style: textTheme.bodyLarge?.copyWith(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.textMain,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'LastBite 🌿',
-                                  style: textTheme.bodyLarge?.copyWith(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w800,
+                                  GestureDetector(
+                                    onTap: () => _mostrarMenuPerfil(
+                                      context,
+                                      ref,
+                                      nombreUsuario,
+                                    ),
+                                    child: CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: AppColors.surface,
+                                      child: Icon(
+                                        Icons.person,
+                                        color: AppColors.textMain,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 25),
+
+                              // Stats bar
+                              Row(
+                                children: [
+                                  _StatCard(
+                                    icon: CupertinoIcons.archivebox,
+                                    value: '${productos.length}',
+                                    label: 'Productos',
                                     color: AppColors.textMain,
+                                    bg: AppColors.surface,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  _StatCard(
+                                    icon: CupertinoIcons.clock,
+                                    value: '${urgentes.length}',
+                                    label: 'Por vencer',
+                                    color: AppColors.danger,
+                                    bg: AppColors.danger.withValues(alpha: 0.15),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  _StatCard(
+                                    icon: CupertinoIcons.check_mark_circled,
+                                    value: '$salvados',
+                                    label: 'Salvados',
+                                    color: AppColors.green,
+                                    bg: AppColors.green.withValues(alpha: 0.15),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 24),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      if (productos.isEmpty) ...[
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: EmptyDespensaState(onAgregar: onAgregar),
+                        ),
+                      ] else ...[
+                        if (urgentes.isNotEmpty) ...[
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    CupertinoIcons.exclamationmark_triangle,
+                                    size: 16,
+                                    color: AppColors.danger,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'PRÓXIMOS A VENCER',
+                                    style: textTheme.titleSmall?.copyWith(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 1,
+                                      color: AppColors.danger,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) => Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                                child: ProductoCard(
+                                  producto: urgentes[index],
+                                  onTap: () => _mostrarAcciones(
+                                      context, ref, urgentes[index]),
+                                ),
+                              ),
+                              childCount: urgentes.length,
+                            ),
+                          ),
+                        ],
+
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  CupertinoIcons.cube_box_fill,
+                                  size: 16,
+                                  color: AppColors.green,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'EN BUEN ESTADO',
+                                  style: textTheme.titleSmall?.copyWith(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1,
+                                    color: AppColors.textMuted,
                                   ),
                                 ),
                               ],
                             ),
-                            GestureDetector(
-                              onTap: () => _mostrarMenuPerfil(
-                                context,
-                                ref,
-                                nombreUsuario,
-                              ),
-                              child: CircleAvatar(
-                                radius: 20,
-                                backgroundColor: AppColors.surface,
-                                child: Icon(
-                                  Icons.person,
-                                  color: AppColors.textMain,
-                                ),
+                          ),
+                        ),
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                              child: ProductoCard(
+                                producto: enBuenEstado[index],
+                                onTap: () => _mostrarAcciones(
+                                    context, ref, enBuenEstado[index]),
                               ),
                             ),
-                          ],
+                            childCount: enBuenEstado.length,
+                          ),
                         ),
 
-                        const SizedBox(height: 25),
-
-                        //Stats bar
-                        Row(
-                          children: [
-                            _StatCard(
-                              icon: CupertinoIcons.archivebox,
-                              value: '${productos.length}',
-                              label: 'Productos',
-                              color: AppColors.textMain,
-                              bg: AppColors.surface,
-                            ),
-                            const SizedBox(width: 10),
-                            _StatCard(
-                              icon: CupertinoIcons.clock,
-                              value: '${urgentes.length}',
-                              label: 'Por vencer',
-                              color: AppColors.danger,
-                              bg: AppColors.danger.withValues(alpha: 0.15),
-                            ),
-                            const SizedBox(width: 10),
-                            _StatCard(
-                              icon: CupertinoIcons.check_mark_circled,
-                              value: '$salvados',
-                              label: 'Salvados',
-                              color: AppColors.green,
-                              bg: AppColors.green.withValues(alpha: 0.15),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 24),
+                        const SliverToBoxAdapter(child: SizedBox(height: 100)),
                       ],
-                    ),
+                    ],
                   ),
                 ),
-
-                if (productos.isEmpty) ...[
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 40),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            GestureDetector(
-                              onTap: onAgregar,
-                              child: const Icon(
-                                CupertinoIcons.add_circled,
-                                size: 48,
-                                color: AppColors.green,
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-                            Text(
-                              'Aún no tienes productos agregados. \nAgrega uno.',
-                              textAlign: TextAlign.center,
-                              style: textTheme.bodyMedium?.copyWith(
-                                fontSize: 14,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  if (urgentes.isNotEmpty) ...[
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Icon(
-                              CupertinoIcons.exclamationmark_triangle,
-                              size: 16,
-                              color: AppColors.danger,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'PRÓXIMOS A VENCER',
-                              style: textTheme.titleSmall?.copyWith(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1,
-                                color: AppColors.danger,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                          child: ProductoCard(
-                            producto: urgentes[index],
-                            onTap: () =>
-                                _mostrarAcciones(context, ref, urgentes[index]),
-                          ),
-                        ),
-                        childCount: urgentes.length,
-                      ),
-                    ),
-                  ],
-
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Icon(
-                            CupertinoIcons.cube_box_fill,
-                            size: 16,
-                            color: AppColors.green,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'EN BUEN ESTADO',
-                            style: textTheme.titleSmall?.copyWith(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                        child: ProductoCard(
-                          producto: enBuenEstado[index],
-                          onTap: () => _mostrarAcciones(
-                            context,
-                            ref,
-                            enBuenEstado[index],
-                          ),
-                        ),
-                      ),
-                      childCount: enBuenEstado.length,
-                    ),
-                  ),
-
-                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
-                ],
               ],
             ),
           ),
@@ -282,7 +276,6 @@ class DespensaScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle
             Container(
               margin: const EdgeInsets.symmetric(vertical: 12),
               width: 40,
@@ -292,7 +285,6 @@ class DespensaScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            // Header perfil
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
               child: Row(
@@ -305,7 +297,7 @@ class DespensaScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Text(
                     nombreUsuario,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textMain,
@@ -315,12 +307,8 @@ class DespensaScreen extends ConsumerWidget {
               ),
             ),
             const Divider(color: AppColors.border),
-            // Cerrar sesión
             ListTile(
-              leading: const Icon(
-                Icons.logout_rounded,
-                color: AppColors.danger,
-              ),
+              leading: const Icon(Icons.logout_rounded, color: AppColors.danger),
               title: const Text(
                 'Cerrar sesión',
                 style: TextStyle(
@@ -407,12 +395,7 @@ class DespensaScreen extends ConsumerWidget {
                 Navigator.pop(context);
                 await ref.read(despensaProvider.notifier).consumir(producto.id);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('¡${producto.nombre} salvado! ✅'),
-                      backgroundColor: AppColors.green,
-                    ),
-                  );
+                  mostrarExitoSnackBar(context, '¡${producto.nombre} salvado!');
                 }
               },
             ),
@@ -477,17 +460,17 @@ class _StatCard extends StatelessWidget {
             Text(
               value,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontSize: 25,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
+                    fontSize: 25,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
             ),
             Text(
               label.toUpperCase(),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontSize: 10,
-                color: AppColors.textMuted,
-              ),
+                    fontSize: 10,
+                    color: AppColors.textMuted,
+                  ),
             ),
           ],
         ),

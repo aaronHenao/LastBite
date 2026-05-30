@@ -3,14 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import 'auth_provider.dart';
 
-/// Pantalla que se muestra cuando el usuario tiene status = 'blocked'.
 class BlockedScreen extends ConsumerWidget {
   const BlockedScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -18,7 +17,6 @@ class BlockedScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Icono principal
               Container(
                 width: 100,
                 height: 100,
@@ -32,10 +30,7 @@ class BlockedScreen extends ConsumerWidget {
                   color: AppColors.danger,
                 ),
               ),
-
               const SizedBox(height: 32),
-
-              // Título
               const Text(
                 'Acceso bloqueado',
                 textAlign: TextAlign.center,
@@ -45,10 +40,7 @@ class BlockedScreen extends ConsumerWidget {
                   color: AppColors.textMain,
                 ),
               ),
-
               const SizedBox(height: 12),
-
-              // Descripción
               const Text(
                 'Tu cuenta ha sido bloqueada.\nContacta al administrador para más información.',
                 textAlign: TextAlign.center,
@@ -58,10 +50,7 @@ class BlockedScreen extends ConsumerWidget {
                   height: 1.5,
                 ),
               ),
-
               const SizedBox(height: 48),
-
-              // Botón cerrar sesión
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(

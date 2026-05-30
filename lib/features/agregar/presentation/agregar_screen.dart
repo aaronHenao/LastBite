@@ -50,37 +50,35 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
           backgroundColor: AppColors.danger,
         ),
       );
-      // Cambia al modo manual para que el usuario lo ingrese
       setState(() => _mode = _EntryMode.manual);
       return;
     }
 
-    // Producto encontrado — confirmar antes de guardar
     _mostrarConfirmacion(producto);
   }
 
   void _mostrarConfirmacion(Producto producto) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    builder: (_) => _ConfirmacionProductoSheet(
-      producto: producto,
-      onConfirmar: (productoEditado) async {
-        await ref.read(despensaProvider.notifier).agregar(productoEditado);
-        widget.onBackToPantry?.call();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${productoEditado.nombre} agregado ✅'),
-              backgroundColor: AppColors.green,
-            ),
-          );
-        }
-      },
-    ),
-  );
-}
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _ConfirmacionProductoSheet(
+        producto: producto,
+        onConfirmar: (productoEditado) async {
+          await ref.read(despensaProvider.notifier).agregar(productoEditado);
+          widget.onBackToPantry?.call();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${productoEditado.nombre} agregado ✅'),
+                backgroundColor: AppColors.green,
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,8 +93,8 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
             InkWell(
               onTap: widget.onBackToPantry,
               borderRadius: BorderRadius.circular(10),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               ),
             ),
             const SizedBox(height: 11),
@@ -134,20 +132,22 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
                       cargando: _buscandoProducto,
                     )
                   : _ManualEntryForm(
-                      key: ValueKey('manual'),
+                      key: const ValueKey('manual'),
                       onGuardar: (producto) async {
                         await ref
                             .read(despensaProvider.notifier)
                             .agregar(producto);
                         widget.onBackToPantry?.call();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '${producto.nombre} agregado a la despensa.',
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${producto.nombre} agregado a la despensa.',
+                              ),
+                              backgroundColor: AppColors.green,
                             ),
-                            backgroundColor: AppColors.green,
-                          ),
-                        );
+                          );
+                        }
                       },
                     ),
             ),
@@ -376,6 +376,7 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
   bool _mostrarMensajeRecomendacion = false;
   String? _categoriaSeleccionada;
   UnidadMedida? _unidadSeleccionada;
+  bool _guardando = false;
 
   Future<void> _seleccionarFecha(BuildContext context) async {
     final hoy = DateTime.now();
@@ -443,7 +444,6 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
             onCategoriaChanged: (categoria) {
               setState(() {
                 _categoriaSeleccionada = categoria;
-
                 if (categoria != null) {
                   _mostrarMensajeRecomendacion = true;
                   _recomendarFechaParaCategoria(categoria);
@@ -468,9 +468,7 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
                 child: _UnidadDropdown(
                   unidadSeleccionada: _unidadSeleccionada,
                   onUnidadChanged: (unidad) {
-                    setState(() {
-                      _unidadSeleccionada = unidad;
-                    });
+                    setState(() => _unidadSeleccionada = unidad);
                   },
                 ),
               ),
@@ -503,37 +501,39 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
           ],
           const SizedBox(height: 16),
           _SaveButton(
-            onPressed: () {
-              if (_nombreCtrl.text.isEmpty || _fechaCtrl.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Completa nombre y fecha.')),
-                );
-                return;
-              }
-
-              final partesFecha = _fechaCtrl.text.split('/');
-              final fecha = DateTime(
-                int.parse(partesFecha[2]),
-                int.parse(partesFecha[1]),
-                int.parse(partesFecha[0]),
-              );
-
-              final producto = Producto(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                nombre: _nombreCtrl.text.trim(),
-                emoji: _emojiParaCategoria(_categoriaSeleccionada ?? ''),
-                categoria: _categoriaSeleccionada ?? 'otro',
-                cantidad: _cantidadCtrl.text.trim().isEmpty
-                    ? '1 unidad'
-                    : '${_cantidadCtrl.text.trim()} ${_unidadSeleccionada?.abreviatura ?? ''}',
-                fechaCaducidad: fecha,
-                esFresco:
-                    _categoriaSeleccionada == 'fruta' ||
-                    _categoriaSeleccionada == 'verdura',
-              );
-
-              widget.onGuardar(producto);
-            },
+            guardando: _guardando,
+            onPressed: _guardando
+                ? null
+                : () async {
+                    if (_nombreCtrl.text.isEmpty || _fechaCtrl.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Completa nombre y fecha.')),
+                      );
+                      return;
+                    }
+                    if (_guardando) return;
+                    setState(() => _guardando = true);
+                    final partesFecha = _fechaCtrl.text.split('/');
+                    final fecha = DateTime(
+                      int.parse(partesFecha[2]),
+                      int.parse(partesFecha[1]),
+                      int.parse(partesFecha[0]),
+                    );
+                    final producto = Producto(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      nombre: _nombreCtrl.text.trim(),
+                      emoji: _emojiParaCategoria(_categoriaSeleccionada ?? ''),
+                      categoria: _categoriaSeleccionada ?? 'otro',
+                      cantidad: _cantidadCtrl.text.trim().isEmpty
+                          ? '1 unidad'
+                          : '${_cantidadCtrl.text.trim()} ${_unidadSeleccionada?.abreviatura ?? ''}',
+                      fechaCaducidad: fecha,
+                      esFresco:
+                          _categoriaSeleccionada == 'fruta' ||
+                          _categoriaSeleccionada == 'verdura',
+                    );
+                    widget.onGuardar(producto);
+                  },
           ),
         ],
       ),
@@ -542,36 +542,21 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
 
   String _emojiParaCategoria(String categoria) {
     switch (categoria) {
-      case 'Verdura':
-        return '🥦';
-      case 'Fruta':
-        return '🍎';
-      case 'Pollo':
-        return '🍗';
-      case 'Carne':
-        return '🥩';
-      case 'Pescado':
-        return '🐟';
-      case 'Huevo':
-        return '🥚';
-      case 'Leche':
-        return '🥛';
-      case 'Yogur':
-        return '🥛';
-      case 'Queso':
-        return '🧀';
-      case 'Pan':
-        return '🍞';
-      case 'Grano':
-        return '🍝';
-      case 'Jugo':
-        return '🧃';
-      case 'Embutido':
-        return '🌭';
-      case 'Conserva':
-        return '🥫';
-      default:
-        return '🥫';
+      case 'Verdura':  return '🥦';
+      case 'Fruta':    return '🍎';
+      case 'Pollo':    return '🍗';
+      case 'Carne':    return '🥩';
+      case 'Pescado':  return '🐟';
+      case 'Huevo':    return '🥚';
+      case 'Leche':    return '🥛';
+      case 'Yogur':    return '🥛';
+      case 'Queso':    return '🧀';
+      case 'Pan':      return '🍞';
+      case 'Grano':    return '🍝';
+      case 'Jugo':     return '🧃';
+      case 'Embutido': return '🌭';
+      case 'Conserva': return '🥫';
+      default:         return '🥫';
     }
   }
 }
@@ -656,7 +641,6 @@ class _CategoriaDropdown extends StatelessWidget {
         underline: const SizedBox(),
         borderRadius: BorderRadius.circular(20),
         elevation: 8,
-
         hint: Text(
           'Selecciona una categoría',
           style: textTheme.titleMedium?.copyWith(
@@ -741,7 +725,9 @@ class _UnidadDropdown extends StatelessWidget {
 
 class _SaveButton extends StatelessWidget {
   final VoidCallback? onPressed;
-  const _SaveButton({this.onPressed});
+  final bool guardando;
+
+  const _SaveButton({this.onPressed, this.guardando = false});
 
   @override
   Widget build(BuildContext context) {
@@ -750,9 +736,18 @@ class _SaveButton extends StatelessWidget {
       width: double.infinity,
       child: FilledButton.icon(
         onPressed: onPressed,
-        icon: const Icon(CupertinoIcons.check_mark_circled, size: 20),
+        icon: guardando
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(CupertinoIcons.check_mark_circled, size: 20),
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.green,
+          backgroundColor: guardando ? AppColors.textMuted : AppColors.green,
           foregroundColor: AppColors.bg,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
@@ -760,7 +755,7 @@ class _SaveButton extends StatelessWidget {
           ),
         ),
         label: Text(
-          'Guardar producto',
+          guardando ? 'Guardando...' : 'Guardar producto',
           style: textTheme.titleMedium?.copyWith(
             color: AppColors.bg,
             fontWeight: FontWeight.w700,
@@ -827,6 +822,7 @@ class _ConfirmacionProductoSheetState
   late final TextEditingController _nombreCtrl;
   late String _categoriaSeleccionada;
   late DateTime _fechaSeleccionada;
+  bool _guardando = false;
 
   @override
   void initState() {
@@ -894,7 +890,6 @@ class _ConfirmacionProductoSheetState
     final categorias = vidaUtilPorCategoria.keys.toList();
 
     return Padding(
-      // Sube el sheet cuando aparece el teclado
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
@@ -911,7 +906,6 @@ class _ConfirmacionProductoSheetState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle
               Center(
                 child: Container(
                   width: 40,
@@ -923,7 +917,6 @@ class _ConfirmacionProductoSheetState
                   ),
                 ),
               ),
-
               Text(
                 'CONFIRMAR PRODUCTO',
                 style: textTheme.titleSmall?.copyWith(
@@ -932,8 +925,6 @@ class _ConfirmacionProductoSheetState
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Nombre
               TextField(
                 controller: _nombreCtrl,
                 style: textTheme.titleMedium?.copyWith(
@@ -944,7 +935,7 @@ class _ConfirmacionProductoSheetState
                   labelText: 'Nombre',
                   filled: true,
                   fillColor: AppColors.card,
-                  labelStyle: TextStyle(color: AppColors.textMuted),
+                  labelStyle: const TextStyle(color: AppColors.textMuted),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: const BorderSide(color: AppColors.border),
@@ -955,14 +946,11 @@ class _ConfirmacionProductoSheetState
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide:
-                        const BorderSide(color: AppColors.accent, width: 1.5),
+                    borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Categoría
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
@@ -993,31 +981,20 @@ class _ConfirmacionProductoSheetState
                     if (cat == null) return;
                     setState(() {
                       _categoriaSeleccionada = cat;
-                      // Actualiza la fecha sugerida al cambiar categoría
                       final dias = vidaUtilPorCategoria[cat] ?? 7;
-                      _fechaSeleccionada =
-                          DateTime.now().add(Duration(days: dias));
+                      _fechaSeleccionada = DateTime.now().add(Duration(days: dias));
                     });
                   },
                   dropdownColor: AppColors.surface,
-                  icon: const Icon(
-                    CupertinoIcons.chevron_down,
-                    size: 16,
-                    color: AppColors.textMuted,
-                  ),
+                  icon: const Icon(CupertinoIcons.chevron_down, size: 16, color: AppColors.textMuted),
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Fecha
               GestureDetector(
                 onTap: _seleccionarFecha,
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                   decoration: BoxDecoration(
                     color: AppColors.card,
                     border: Border.all(color: AppColors.border),
@@ -1025,11 +1002,7 @@ class _ConfirmacionProductoSheetState
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.calendar_today_outlined,
-                        size: 16,
-                        color: AppColors.textMuted,
-                      ),
+                      const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textMuted),
                       const SizedBox(width: 10),
                       Text(
                         _fechaFormateada,
@@ -1043,48 +1016,49 @@ class _ConfirmacionProductoSheetState
                 ),
               ),
               const SizedBox(height: 20),
-
-              // Botón confirmar
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: () {
-                    if (_nombreCtrl.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('El nombre no puede estar vacío.'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    final productoEditado = Producto(
-                      id: widget.producto.id,
-                      nombre: _nombreCtrl.text.trim(),
-                      emoji: _emojiParaCategoria(_categoriaSeleccionada),
-                      categoria: _categoriaSeleccionada,
-                      cantidad: widget.producto.cantidad,
-                      fechaCaducidad: _fechaSeleccionada,
-                      esFresco: _categoriaSeleccionada == 'fruta' ||
-                          _categoriaSeleccionada == 'verdura',
-                      imagenUrl: widget.producto.imagenUrl,
-                    );
-
-                    Navigator.pop(context);
-                    widget.onConfirmar(productoEditado);
-                  },
-                  icon: const Icon(Icons.check_rounded),
-                  label: const Text(
-                    'Agregar a mi despensa',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  onPressed: _guardando
+                      ? null
+                      : () {
+                          if (_nombreCtrl.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('El nombre no puede estar vacío.')),
+                            );
+                            return;
+                          }
+                          setState(() => _guardando = true);
+                          final productoEditado = Producto(
+                            id: widget.producto.id,
+                            nombre: _nombreCtrl.text.trim(),
+                            emoji: _emojiParaCategoria(_categoriaSeleccionada),
+                            categoria: _categoriaSeleccionada,
+                            cantidad: widget.producto.cantidad,
+                            fechaCaducidad: _fechaSeleccionada,
+                            esFresco: _categoriaSeleccionada == 'fruta' ||
+                                _categoriaSeleccionada == 'verdura',
+                            imagenUrl: widget.producto.imagenUrl,
+                          );
+                          Navigator.pop(context);
+                          widget.onConfirmar(productoEditado);
+                        },
+                  icon: _guardando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.check_rounded),
+                  label: Text(
+                    _guardando ? 'Guardando...' : 'Agregar a mi despensa',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accent,
+                    backgroundColor: _guardando ? AppColors.textMuted : AppColors.accent,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
               ),
