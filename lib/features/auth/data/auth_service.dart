@@ -1,20 +1,24 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../domain/auth_user.dart';
 
 class AuthService {
   final _auth = FirebaseAuth.instance;
+  final _db = FirebaseFirestore.instance;
 
-  Stream<AuthUser?> get authStateChanges => _auth.authStateChanges().map(
-    (user) => user == null ? null : _mapUser(user),
-  );
+  Stream<AuthUser?> get authStateChanges =>
+      _auth.authStateChanges().asyncMap((user) async {
+        if (user == null) return null;
+        return await _mapUserConPerfil(user);
+      });
 
   AuthUser? get usuarioActual {
     final user = _auth.currentUser;
     return user == null ? null : _mapUser(user);
   }
 
-  //email-contraseña
+  // ── email / contraseña ────────────────────────────────────────────────────
 
   Future<AuthUser> registrar({
     required String email,
@@ -28,7 +32,24 @@ class AuthService {
       );
       await cred.user?.updateDisplayName(nombre.trim());
       await cred.user?.reload();
-      return _mapUser(_auth.currentUser!);
+
+      final user = _auth.currentUser!;
+
+      // Crear documento en Firestore con status 'active' por defecto
+      await _db.collection('users').doc(user.uid).set({
+        'name': nombre.trim(),
+        'email': email.trim(),
+        'status': 'active',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      return AuthUser(
+        uid: user.uid,
+        email: user.email,
+        nombre: user.displayName,
+        fotoUrl: user.photoURL,
+        status: 'active',
+      );
     } on FirebaseAuthException catch (e) {
       throw _mapError(e);
     }
@@ -43,13 +64,13 @@ class AuthService {
         email: email.trim(),
         password: password,
       );
-      return _mapUser(cred.user!);
+      return await _mapUserConPerfil(cred.user!);
     } on FirebaseAuthException catch (e) {
       throw _mapError(e);
     }
   }
 
-  //google
+  // ── Google ────────────────────────────────────────────────────────────────
 
   final _googleSignIn = GoogleSignIn();
 
@@ -65,27 +86,60 @@ class AuthService {
       );
 
       final cred = await _auth.signInWithCredential(credential);
-      return _mapUser(cred.user!);
+      final user = cred.user!;
+
+      // Si es la primera vez, crear perfil en Firestore
+      final doc = await _db.collection('users').doc(user.uid).get();
+      if (!doc.exists) {
+        await _db.collection('users').doc(user.uid).set({
+          'name': user.displayName ?? '',
+          'email': user.email ?? '',
+          'status': 'active',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      return await _mapUserConPerfil(user);
     } on FirebaseAuthException catch (e) {
       throw _mapError(e);
     }
   }
 
-  //logout
+  // ── logout ────────────────────────────────────────────────────────────────
 
   Future<void> cerrarSesion() async {
     await _googleSignIn.signOut();
     await _auth.signOut();
   }
 
-  //helpers
+  // ── helpers ───────────────────────────────────────────────────────────────
 
+  /// Lee el perfil completo desde Firestore incluyendo el status.
+  Future<AuthUser> _mapUserConPerfil(User user) async {
+    try {
+      final doc = await _db.collection('users').doc(user.uid).get();
+      final status = doc.data()?['status'] as String? ?? 'active';
+      return AuthUser(
+        uid: user.uid,
+        email: user.email,
+        nombre: user.displayName,
+        fotoUrl: user.photoURL,
+        status: status,
+      );
+    } catch (_) {
+      // Si Firestore falla, asumir active para no bloquear al usuario
+      return _mapUser(user);
+    }
+  }
+
+  /// Mapeo simple sin Firestore (solo para compatibilidad).
   AuthUser _mapUser(User user) => AuthUser(
-    uid: user.uid,
-    email: user.email,
-    nombre: user.displayName,
-    fotoUrl: user.photoURL,
-  );
+        uid: user.uid,
+        email: user.email,
+        nombre: user.displayName,
+        fotoUrl: user.photoURL,
+        status: 'active',
+      );
 
   String _mapError(FirebaseAuthException e) {
     switch (e.code) {
