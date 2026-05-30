@@ -35,11 +35,13 @@ class AuthService {
 
       final user = _auth.currentUser!;
 
-      // Crear documento en Firestore con status 'active' por defecto
+      // Crear documento en Firestore con status y role por defecto
       await _db.collection('users').doc(user.uid).set({
+        'uid': user.uid,
         'name': nombre.trim(),
         'email': email.trim(),
         'status': 'active',
+        'role': 'active',
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -49,6 +51,7 @@ class AuthService {
         nombre: user.displayName,
         fotoUrl: user.photoURL,
         status: 'active',
+        role: UserRole.active,
       );
     } on FirebaseAuthException catch (e) {
       throw _mapError(e);
@@ -92,9 +95,11 @@ class AuthService {
       final doc = await _db.collection('users').doc(user.uid).get();
       if (!doc.exists) {
         await _db.collection('users').doc(user.uid).set({
+          'uid': user.uid,
           'name': user.displayName ?? '',
           'email': user.email ?? '',
           'status': 'active',
+          'role': 'active',
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
@@ -114,32 +119,46 @@ class AuthService {
 
   // ── helpers ───────────────────────────────────────────────────────────────
 
-  /// Lee el perfil completo desde Firestore incluyendo el status.
   Future<AuthUser> _mapUserConPerfil(User user) async {
     try {
       final doc = await _db.collection('users').doc(user.uid).get();
-      final status = doc.data()?['status'] as String? ?? 'active';
+      final data = doc.data();
+      final status = data?['status'] as String? ?? 'active';
+      final roleStr = data?['role'] as String? ?? 'active';
+      final role = _parseRole(roleStr);
+
       return AuthUser(
         uid: user.uid,
         email: user.email,
-        nombre: user.displayName,
+        nombre: data?['name'] as String? ?? user.displayName,
         fotoUrl: user.photoURL,
         status: status,
+        role: role,
       );
     } catch (_) {
-      // Si Firestore falla, asumir active para no bloquear al usuario
       return _mapUser(user);
     }
   }
 
-  /// Mapeo simple sin Firestore (solo para compatibilidad).
   AuthUser _mapUser(User user) => AuthUser(
         uid: user.uid,
         email: user.email,
         nombre: user.displayName,
         fotoUrl: user.photoURL,
         status: 'active',
+        role: UserRole.active,
       );
+
+  UserRole _parseRole(String roleStr) {
+    switch (roleStr) {
+      case 'admin':
+        return UserRole.admin;
+      case 'viewer':
+        return UserRole.viewer;
+      default:
+        return UserRole.active;
+    }
+  }
 
   String _mapError(FirebaseAuthException e) {
     switch (e.code) {
