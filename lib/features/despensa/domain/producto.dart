@@ -1,5 +1,8 @@
-/// Posibles estados de sincronización de un producto con Firestore.
+/// Estados de sincronización offline-first.
 enum SyncStatus { synced, pendingSync, failedSync }
+
+/// Estados de negocio del producto.
+enum ProductoEstado { disponible, urgente, critico, vencido }
 
 class Producto {
   final String id;
@@ -11,8 +14,6 @@ class Producto {
   final bool esFresco;
   final String? codigoBarras;
   final String? imagenUrl;
-
-  /// Estado de sincronización con Firestore (offline-first).
   final SyncStatus syncStatus;
 
   Producto({
@@ -30,10 +31,18 @@ class Producto {
 
   int get diasRestantes => fechaCaducidad.difference(DateTime.now()).inDays;
 
-  bool get urgente => diasRestantes <= 3;
-  bool get critico => diasRestantes <= 1;
+  bool get urgente => diasRestantes <= 3 && diasRestantes >= 0;
+  bool get critico => diasRestantes <= 1 && diasRestantes >= 0;
   bool get vencido => diasRestantes < 0;
   bool get isPendingSync => syncStatus == SyncStatus.pendingSync;
+
+  /// Estado de negocio calculado automáticamente.
+  ProductoEstado get estado {
+    if (vencido) return ProductoEstado.vencido;
+    if (critico) return ProductoEstado.critico;
+    if (urgente) return ProductoEstado.urgente;
+    return ProductoEstado.disponible;
+  }
 
   Producto copyWith({
     String? id,
