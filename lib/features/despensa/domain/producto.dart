@@ -13,7 +13,6 @@ class Producto {
   final String? imagenUrl;
 
   /// Estado de sincronización con Firestore (offline-first).
-  /// Por defecto es [SyncStatus.synced].
   final SyncStatus syncStatus;
 
   Producto({
@@ -34,8 +33,6 @@ class Producto {
   bool get urgente => diasRestantes <= 3;
   bool get critico => diasRestantes <= 1;
   bool get vencido => diasRestantes < 0;
-
-  /// Indica si el producto está pendiente de sincronizar con Firestore.
   bool get isPendingSync => syncStatus == SyncStatus.pendingSync;
 
   Producto copyWith({
