@@ -101,6 +101,24 @@ class DespensaScreen extends ConsumerWidget {
                                           color: AppColors.textMain,
                                         ),
                                       ),
+                                      if (authState.value?.isAdmin == true)
+                                        Container(
+                                          margin: const EdgeInsets.only(top: 4),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.accent.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
+                                          ),
+                                          child: const Text(
+                                            'Administrador',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.accent,
+                                            ),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                   GestureDetector(

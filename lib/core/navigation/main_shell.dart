@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/agregar/presentation/agregar_screen.dart';
 import 'package:lastbite/features/alertas/presentation/alertas_screen.dart';
+import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_screen.dart';
 import 'package:lastbite/features/recetas/presentation/recetas_screen.dart';
+import 'package:lastbite/core/services/permission_service.dart';
 
-class MainShell extends StatefulWidget {
+class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends ConsumerState<MainShell> {
   int _selectedIndex = 0;
 
   late final List<Widget> _pages = [
@@ -25,37 +28,59 @@ class _MainShellState extends State<MainShell> {
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    final user = ref.read(authStateProvider).value;
+    if (index == 1 && user != null) {
+      final permisos = PermissionService();
+      if (!permisos.puedeAgregarProducto(user)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tu rol no permite agregar productos.'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        return;
+      }
+    }
+    setState(() => _selectedIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authStateProvider).value;
+    final permisos = PermissionService();
+    final puedeAgregar = user != null && permisos.puedeAgregarProducto(user);
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Stack(
-        children:[
+        children: [
           IndexedStack(index: _selectedIndex, children: _pages),
-
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: _FloatingMenuBar(selectedIndex: _selectedIndex, onTap: _onItemTapped),
-          )
-        ]
-      )
+            child: _FloatingMenuBar(
+              selectedIndex: _selectedIndex,
+              onTap: _onItemTapped,
+              puedeAgregar: puedeAgregar,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-
 class _FloatingMenuBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onTap;
+  final bool puedeAgregar;
 
-  const _FloatingMenuBar({required this.selectedIndex, required this.onTap});
+  const _FloatingMenuBar({
+    required this.selectedIndex,
+    required this.onTap,
+    required this.puedeAgregar,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -82,11 +107,12 @@ class _FloatingMenuBar extends StatelessWidget {
               selected: selectedIndex == 0,
               onTap: () => onTap(0),
             ),
-            _MenuItem(
-              icon: CupertinoIcons.camera,
-              selected: selectedIndex == 1,
-              onTap: () => onTap(1),
-            ),
+            if (puedeAgregar)
+              _MenuItem(
+                icon: CupertinoIcons.camera,
+                selected: selectedIndex == 1,
+                onTap: () => onTap(1),
+              ),
             _MenuItem(
               icon: HugeIcons.strokeRoundedChefHat,
               selected: selectedIndex == 2,
@@ -140,54 +166,6 @@ class _MenuItem extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ComingSoonScreen extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _ComingSoonScreen({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 42, color: AppColors.textMuted),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textMain,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 15,
-                  height: 1.4,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

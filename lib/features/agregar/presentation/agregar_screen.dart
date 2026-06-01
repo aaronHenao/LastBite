@@ -83,13 +83,34 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final conectado = ref.watch(conectividadProvider).maybeWhen(
+      data: (value) => value,
+      orElse: () => true,
+    );
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return Column(
+      children: [
+        if (!conectado)
+          Container(
+            width: double.infinity,
+            color: const Color(0xFF9E9E9E).withValues(alpha: 0.15),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.wifi_off_rounded, size: 16, color: Color(0xFF9E9E9E)),
+                SizedBox(width: 8),
+                Text("Sin conexion", style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))),
+              ],
+            ),
+          ),
+        Expanded(
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
             InkWell(
               onTap: widget.onBackToPantry,
               borderRadius: BorderRadius.circular(10),
@@ -151,9 +172,12 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
                       },
                     ),
             ),
-          ],
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -362,7 +386,7 @@ class _FakeBarcode extends StatelessWidget {
 }
 
 class _ManualEntryForm extends StatefulWidget {
-  final ValueChanged<Producto> onGuardar;
+  final Future<void> Function(Producto) onGuardar;
   const _ManualEntryForm({super.key, required this.onGuardar});
 
   @override
@@ -532,7 +556,11 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
                           _categoriaSeleccionada == 'fruta' ||
                           _categoriaSeleccionada == 'verdura',
                     );
-                    widget.onGuardar(producto);
+                    try {
+                      await widget.onGuardar(producto);
+                    } finally {
+                      if (mounted) setState(() => _guardando = false);
+                    }
                   },
           ),
         ],

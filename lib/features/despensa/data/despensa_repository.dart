@@ -1,11 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import '../domain/producto.dart';
+import 'app_database.dart';
 
 class DespensaRepository {
-  DespensaRepository({required this.userId});
+  DespensaRepository({required this.userId, required this.db});
 
   final String userId;
+  final AppDatabase db;
   final _firestore = FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _col =>
@@ -14,17 +15,52 @@ class DespensaRepository {
   CollectionReference<Map<String, dynamic>> get _recetasCol =>
       _firestore.collection('users').doc(userId).collection('recetas_sugeridas');
 
+  /// Carga desde DB local primero; si está vacía, baja de Firestore y cachea.
   Future<List<Producto>> cargarProductos() async {
-    final snapshot = await _col.get();
-    return snapshot.docs.map((doc) => Producto.fromMap(doc.data())).toList();
+    final locales = await db.obtenerProductos(userId);
+    if (locales.isNotEmpty) return locales;
+
+    // Primera carga: bajar de Firestore y guardar local
+    try {
+      final snapshot = await _col.get();
+      final remotos = snapshot.docs.map((doc) => Producto.fromMap(doc.data())).toList();
+      for (final p in remotos) {
+        await db.insertarOActualizar(userId, p);
+      }
+      return remotos;
+    } catch (_) {
+      return [];
+    }
   }
 
+  /// Guarda localmente siempre. Si hay conexión, también sube a Firestore.
   Future<void> guardar(Producto producto) async {
-    await _col.doc(producto.id).set(producto.toMap());
+    await db.insertarOActualizar(userId, producto);
+
+    if (producto.syncStatus == SyncStatus.synced) {
+      await _col.doc(producto.id).set(producto.toMap());
+    }
   }
 
   Future<void> eliminar(String id) async {
-    await _col.doc(id).delete();
+    await db.eliminarProducto(userId, id);
+    try {
+      await _col.doc(id).delete();
+    } catch (_) {}
+  }
+
+  /// Sube los pendientes a Firestore y los marca como synced en local.
+  Future<void> sincronizarPendientes() async {
+    final pendientes = await db.obtenerPendientes(userId);
+    for (final producto in pendientes) {
+      try {
+        final sincronizado = producto.copyWith(syncStatus: SyncStatus.synced);
+        await _col.doc(producto.id).set(sincronizado.toMap());
+        await db.insertarOActualizar(userId, sincronizado);
+      } catch (_) {
+        // Si falla, queda pendingSync para el próximo intento
+      }
+    }
   }
 
   DocumentReference<Map<String, dynamic>> get _statsDoc => _firestore
@@ -69,16 +105,4 @@ class DespensaRepository {
     await batch.commit();
   }
 
-  Future<bool> _verificarConexion() async {
-    try {
-      final results = await Connectivity().checkConnectivity();
-      return !results.contains(ConnectivityResult.none);
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<void> sincronizarPendientes() async {
-    await _verificarConexion();
-  }
 }

@@ -58,4 +58,4 @@
 
 ---
 
-**Responsables:** Isabella Ceballos (Persona A) + Sofía Correa (Persona B)
+**Responsables: Isabella, Sofía y Aaron

@@ -1,9 +1,18 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
+import 'package:lastbite/features/despensa/data/app_database.dart';
 import '../data/despensa_repository.dart';
 import '../domain/producto.dart';
+
+final _dbProvider = Provider<AppDatabase>((ref) => AppDatabase());
+
+/// Stream que emite true si hay internet, false si no.
+final conectividadProvider = StreamProvider<bool>((ref) {
+  return Connectivity().onConnectivityChanged.map(
+    (results) => !results.contains(ConnectivityResult.none),
+  );
+});
 
 class DespensaNotifier extends AsyncNotifier<List<Producto>> {
   late DespensaRepository _repo;
@@ -15,7 +24,20 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
     final user = await ref.watch(firebaseUserProvider.future);
     if (user == null) return [];
 
-    _repo = DespensaRepository(userId: user.uid);
+    final db = ref.read(_dbProvider);
+    _repo = DespensaRepository(userId: user.uid, db: db);
+
+    // Al recuperar conexión: sincronizar pendientes y recargar desde local
+    ref.listen(conectividadProvider, (_, next) {
+      next.whenData((tieneConexion) async {
+        if (tieneConexion) {
+          await _repo.sincronizarPendientes();
+          // Recargar desde DB local (ya actualizada con synced)
+          final productos = await db.obtenerProductos(user.uid);
+          state = AsyncData(productos);
+        }
+      });
+    });
 
     final resultados = await Future.wait([
       _repo.cargarProductos(),
@@ -27,8 +49,15 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
   }
 
   Future<void> agregar(Producto producto) async {
-    await _repo.guardar(producto);
-    state = AsyncData([...state.value ?? [], producto]);
+    final conectividad = await Connectivity().checkConnectivity();
+    final tieneConexion = !conectividad.contains(ConnectivityResult.none);
+
+    final productoConSync = producto.copyWith(
+      syncStatus: tieneConexion ? SyncStatus.synced : SyncStatus.pendingSync,
+    );
+
+    await _repo.guardar(productoConSync);
+    state = AsyncData([...state.value ?? [], productoConSync]);
   }
 
   Future<void> consumir(String id) async {

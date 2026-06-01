@@ -12,11 +12,8 @@ class ProductoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-
     final bool esUrgente = producto.urgente;
-
     final int diasRestantes = producto.diasRestantes;
-
     final Color colorEstado = esUrgente ? AppColors.accent : AppColors.green;
 
     return Material(
@@ -52,7 +49,6 @@ class ProductoCard extends StatelessWidget {
             children: [
               Text(producto.emoji, style: const TextStyle(fontSize: 30)),
               const SizedBox(width: 14),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,23 +62,54 @@ class ProductoCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      '${producto.cantidad} · ${producto.categoria}',
-                      style: textTheme.bodySmall?.copyWith(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textMuted,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          '${producto.cantidad} · ${producto.categoria}',
+                          style: textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        if (producto.isPendingSync) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: Colors.orange.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.cloud_sync_rounded, size: 11, color: Colors.orange),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Pendiente',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
               ),
-
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: colorEstado.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
