@@ -119,6 +119,24 @@ class DespensaScreen extends ConsumerWidget {
                                             ),
                                           ),
                                         ),
+                                      if (authState.value?.isViewer == true)
+                                        Container(
+                                          margin: const EdgeInsets.only(top: 4),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.textMuted.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: AppColors.textMuted.withValues(alpha: 0.4)),
+                                          ),
+                                          child: const Text(
+                                            'Solo lectura',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.textMuted,
+                                            ),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                   GestureDetector(
@@ -336,8 +354,8 @@ class DespensaScreen extends ConsumerWidget {
                 ),
               ),
               onTap: () async {
-                Navigator.pop(context);
                 await ref.read(authServiceProvider).cerrarSesion();
+                if (context.mounted) Navigator.pop(context);
               },
             ),
             const SizedBox(height: 16),
@@ -352,6 +370,16 @@ class DespensaScreen extends ConsumerWidget {
     WidgetRef ref,
     Producto producto,
   ) {
+    final user = ref.read(authStateProvider).value;
+    if (user?.isViewer == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tu rol es de solo lectura. No puedes modificar productos.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,

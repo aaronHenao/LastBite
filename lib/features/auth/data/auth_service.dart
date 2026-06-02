@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:rxdart/rxdart.dart';
 import '../domain/auth_user.dart';
 
 class AuthService {
@@ -8,10 +9,30 @@ class AuthService {
   final _db = FirebaseFirestore.instance;
 
   Stream<AuthUser?> get authStateChanges =>
-      _auth.authStateChanges().asyncMap((user) async {
-        if (user == null) return null;
-        return await _mapUserConPerfil(user);
+      _auth.authStateChanges().switchMap((user) {
+        if (user == null) return Stream<AuthUser?>.value(null);
+        return _db
+            .collection('users')
+            .doc(user.uid)
+            .snapshots()
+            .map<AuthUser?>((doc) {
+              final data = doc.data();
+              final status = data?['status'] as String? ?? 'active';
+              final roleStr = data?['role'] as String? ?? 'active';
+              final role = _parseRole(roleStr);
+              return AuthUser(
+                uid: user.uid,
+                email: user.email,
+                nombre: data?['name'] as String? ?? user.displayName,
+                fotoUrl: user.photoURL,
+                status: status,
+                role: role,
+              );
+            })
+            .onErrorReturn(null);
       });
+
+
 
   AuthUser? get usuarioActual {
     final user = _auth.currentUser;
