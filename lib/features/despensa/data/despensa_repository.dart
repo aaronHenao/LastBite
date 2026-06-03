@@ -10,7 +10,6 @@ class DespensaRepository {
   CollectionReference<Map<String, dynamic>> get _col =>
       _db.collection('users').doc(userId).collection('productos');
 
-  
   CollectionReference<Map<String, dynamic>> get _recetasCol =>
       _db.collection('users').doc(userId).collection('recetas_sugeridas');
 
@@ -64,6 +63,31 @@ class DespensaRepository {
   Future<void> incrementarSalvados() async {
     await _statsDoc.set({
       'salvados': FieldValue.increment(1),
+    }, SetOptions(merge: true));
+  }
+
+  DocumentReference<Map<String, dynamic>> get _notifDoc => _db
+      .collection('users')
+      .doc(userId)
+      .collection('estadisticas')
+      .doc('notificaciones');
+
+  Future<bool> debeEnviarNotificaciones() async {
+    final doc = await _notifDoc.get();
+    if (!doc.exists) return true;
+
+    final raw = doc.data()?['ultimoEnvio']?.toString();
+    if (raw == null) return true;
+
+    final ultimo = DateTime.tryParse(raw);
+    if (ultimo == null) return true;
+
+    return DateTime.now().difference(ultimo).inHours >= 23;
+  }
+
+  Future<void> registrarEnvioNotificaciones() async {
+    await _notifDoc.set({
+      'ultimoEnvio': DateTime.now().toIso8601String(),
     }, SetOptions(merge: true));
   }
 }
