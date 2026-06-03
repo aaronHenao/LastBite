@@ -2,6 +2,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/navigation/main_shell.dart';
+import 'package:lastbite/core/notifications/notification_service.dart';
+import 'package:lastbite/core/notifications/vencimiento_checker.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/auth_provider.dart';
 import 'features/auth/presentation/login_screen.dart';
@@ -11,7 +13,12 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  await NotificationService.instance.init();
+
   runApp(const ProviderScope(child: LastBiteApp()));
 }
 
@@ -29,12 +36,18 @@ class LastBiteApp extends StatelessWidget {
   }
 }
 
-
-class _AuthGate extends ConsumerWidget {
+class _AuthGate extends ConsumerStatefulWidget {
   const _AuthGate();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends ConsumerState<_AuthGate> {
+  bool _initDone = false;
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
 
     return authState.when(
@@ -47,14 +60,20 @@ class _AuthGate extends ConsumerWidget {
       data: (user) {
         if (user == null) return const LoginScreen();
 
-        // Redirigir según el status leído desde Firestore
+        if (!_initDone) {
+          _initDone = true;
+
+          Future.microtask(() async {
+            await NotificationService.instance.solicitarPermisos();
+            VencimientoChecker.instance.verificar();
+          });
+        }
+
         switch (user.status) {
           case 'blocked':
             return const BlockedScreen();
           case 'pendingApproval':
             return const PendingScreen();
-          case 'active':
-          case 'admin':
           default:
             return const MainShell();
         }

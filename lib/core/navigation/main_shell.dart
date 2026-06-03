@@ -10,6 +10,7 @@ import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_screen.dart';
 import 'package:lastbite/features/recetas/presentation/recetas_screen.dart';
 import 'package:lastbite/core/services/permission_service.dart';
+import 'package:lastbite/core/notifications/notification_service.dart';
 
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
@@ -20,6 +21,27 @@ class MainShell extends ConsumerStatefulWidget {
 
 class _MainShellState extends ConsumerState<MainShell> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    NotificationService.instance.onNotificationTap = (payload) {
+      if (!mounted) return;
+
+      final user = ref.read(authStateProvider).value;
+
+      if (payload == 'alertas' && !(user?.isAdmin ?? false)) {
+        setState(() => _selectedIndex = 3);
+      }
+    };
+  }
+
+  @override
+  void dispose() {
+    NotificationService.instance.onNotificationTap = null;
+    super.dispose();
+  }
 
   void _onItemTapped(int index) {
     final user = ref.read(authStateProvider).value;
