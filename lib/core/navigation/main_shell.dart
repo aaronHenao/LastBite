@@ -6,6 +6,7 @@ import 'package:lastbite/features/agregar/presentation/agregar_screen.dart';
 import 'package:lastbite/features/alertas/presentation/alertas_screen.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_screen.dart';
 import 'package:lastbite/features/recetas/presentation/recetas_screen.dart';
+import 'package:lastbite/core/notifications/notification_service.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -24,6 +25,23 @@ class _MainShellState extends State<MainShell> {
     const AlertasScreen(),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    NotificationService.instance.onNotificationTap = (payload) {
+      if (!mounted) return;
+      if (payload == 'alertas') {
+        setState(() => _selectedIndex = 3);
+      }
+    };
+  }
+
+  @override
+  void dispose() {
+    NotificationService.instance.onNotificationTap = null;
+    super.dispose();
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -35,21 +53,23 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Stack(
-        children:[
+        children: [
           IndexedStack(index: _selectedIndex, children: _pages),
 
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: _FloatingMenuBar(selectedIndex: _selectedIndex, onTap: _onItemTapped),
-          )
-        ]
-      )
+            child: _FloatingMenuBar(
+              selectedIndex: _selectedIndex,
+              onTap: _onItemTapped,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
-
 
 class _FloatingMenuBar extends StatelessWidget {
   final int selectedIndex;

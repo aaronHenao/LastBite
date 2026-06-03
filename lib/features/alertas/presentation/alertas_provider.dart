@@ -48,14 +48,11 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
   }
 
   Future<List<Alerta>> _cargarAlertas() async {
-    final user = await ref.watch(firebaseUserProvider.future);
+    final user = await ref.read(firebaseUserProvider.future);
     if (user == null) return [];
 
     _repo = AlertasRepository(userId: user.uid);
-    //_translator = //AiTranslationDataSource();
-    _busquedaDataSource = RecetasBusquedaRemoteDataSource(
-      //translator: _translator,
-    );
+    _busquedaDataSource = RecetasBusquedaRemoteDataSource();
     _avisoTraduccion = null;
 
     final resultados = await Future.wait([
@@ -83,13 +80,12 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
       alertas: alertasExistentes,
       productos: productos,
     );
-    alertasExistentes
-      ..clear()
-      ..addAll(completadas);
 
-    final visibles = alertasExistentes
-      .where((alerta) => !alerta.estaOculta)
-      .toList();
+    final todasLasAlertas = List<Alerta>.from(completadas);
+
+    final visibles = todasLasAlertas
+        .where((alerta) => !alerta.estaOculta)
+        .toList();
     visibles.sort((a, b) => b.creadaEn.compareTo(a.creadaEn));
     return visibles;
   }
@@ -99,6 +95,12 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     required List<Alerta> alertasExistentes,
     required DateTime? lastClearAt,
   }) async {
+    print('🔄 Generando alertas para ${productos.length} productos');
+    print('📋 Alertas existentes: ${alertasExistentes.length}');
+
+    for (final p in productos) {
+      print('  → ${p.nombre}: ${p.diasRestantes}d urgente:${p.urgente}');
+    }
     final existentesIds = alertasExistentes.map((a) => a.id).toSet();
     final productosNoVencidos = productos.where((p) => !p.vencido).toList()
       ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
@@ -180,7 +182,8 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     for (final alerta in alertas) {
       if (alerta.estaOculta) continue;
       if (alerta.recetaSugerida != null) continue;
-      if (alerta.tipo != AlertaTipo.aviso3 && alerta.tipo != AlertaTipo.aviso1) {
+      if (alerta.tipo != AlertaTipo.aviso3 &&
+          alerta.tipo != AlertaTipo.aviso1) {
         continue;
       }
 
@@ -232,8 +235,9 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     final alertaId = Alerta.buildId(productoId: producto.id, tipo: tipo);
     if (existentesIds.contains(alertaId)) return null;
 
-    final fechaDisparo = producto.fechaCaducidad
-        .subtract(Duration(days: umbralDias));
+    final fechaDisparo = producto.fechaCaducidad.subtract(
+      Duration(days: umbralDias),
+    );
 
     if (lastClearAt != null && !fechaDisparo.isAfter(lastClearAt)) {
       return null;
@@ -266,33 +270,27 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     required bool maximizarMatch,
   }) async {
     try {
+      final recetasSoloProducto = await _buscarRecetas([producto.nombre]);
+      final seleccionSolo = _seleccionarReceta(
+        recetasSoloProducto,
+        producto.nombre,
+        maximizarMatch: maximizarMatch,
+      );
+      if (seleccionSolo != null) return seleccionSolo;
+
       final ingredientes = _combinarIngredientes(
         producto.nombre,
         ingredientesDespensa,
       );
-
       final recetas = await _buscarRecetas(ingredientes);
-      final seleccion = _seleccionarReceta(
+      return _seleccionarReceta(
         recetas,
         producto.nombre,
         maximizarMatch: maximizarMatch,
       );
-
-      if (seleccion != null) return seleccion;
-
-      if (ingredientes.length > 1) {
-        final recetasSoloProducto = await _buscarRecetas([producto.nombre]);
-        return _seleccionarReceta(
-          recetasSoloProducto,
-          producto.nombre,
-          maximizarMatch: maximizarMatch,
-        );
-      }
     } catch (_) {
       return null;
     }
-
-    return null;
   }
 
   Future<List<Receta>> _buscarRecetas(List<String> ingredientes) async {
@@ -319,9 +317,7 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
 
     final productoKey = _normalizar(productoNombre);
     final recetasConProducto = recetas
-        .where(
-          (receta) => _recetaIncluyeProducto(receta, productoKey),
-        )
+        .where((receta) => _recetaIncluyeProducto(receta, productoKey))
         .toList();
 
     final candidatas = recetasConProducto.isNotEmpty
@@ -329,9 +325,7 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
         : recetas;
 
     if (maximizarMatch) {
-      candidatas.sort(
-        (a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch),
-      );
+      candidatas.sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
     }
 
     return candidatas.first;

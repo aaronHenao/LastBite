@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lastbite/core/notifications/vencimiento_checker.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import '../data/despensa_repository.dart';
 import '../domain/producto.dart';
@@ -29,6 +30,9 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
   Future<void> agregar(Producto producto) async {
     await _repo.guardar(producto);
     state = AsyncData([...state.value ?? [], producto]);
+    Future.delayed(const Duration(seconds: 5), () {
+      VencimientoChecker.instance.verificar();
+    });
   }
 
   Future<void> consumir(String id) async {
@@ -43,6 +47,8 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
 
     _salvados++;
     state = AsyncData((state.value ?? []).where((p) => p.id != id).toList());
+
+    VencimientoChecker.instance.verificar();
   }
 
   Future<void> eliminar(String id) async {

@@ -2,6 +2,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/navigation/main_shell.dart';
+import 'package:lastbite/core/notifications/notification_service.dart';
+import 'package:lastbite/core/notifications/vencimiento_checker.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/auth_provider.dart';
 import 'features/auth/presentation/login_screen.dart';
@@ -10,6 +12,9 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  await NotificationService.instance.init();
+
   runApp(const ProviderScope(child: LastBiteApp()));
 }
 
@@ -37,12 +42,19 @@ class _AuthGate extends ConsumerWidget {
 
     return authState.when(
       loading: () => const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.accent),
-        ),
+        body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
       ),
       error: (_, __) => const LoginScreen(),
-      data: (user) => user != null ? const MainShell() : const LoginScreen(),
+      data: (user) {
+        if (user != null) {
+          NotificationService.instance.solicitarPermisos();
+          Future.delayed(const Duration(seconds: 3), () {
+            VencimientoChecker.instance.verificar();
+          });
+          return const MainShell();
+        }
+        return const LoginScreen();
+      },
     );
   }
 }
