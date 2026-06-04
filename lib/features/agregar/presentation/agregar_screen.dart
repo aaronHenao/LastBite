@@ -72,7 +72,7 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${productoEditado.nombre} agregado ✅'),
+              content: Text('${productoEditado.nombre} agregado'),
               backgroundColor: AppColors.green,
             ),
           );
@@ -109,7 +109,7 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Entrada Hibrida',
+              'Entrada Híbrida',
               style: textTheme.bodyLarge?.copyWith(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
@@ -302,7 +302,7 @@ class _ScanEntryCard extends StatelessWidget {
                 height: 92,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.danger, width: 1),
+                  border: Border.all(color: AppColors.green, width: 1),
                   color: AppColors.surface,
                 ),
                 child: const Center(child: _FakeBarcode()),

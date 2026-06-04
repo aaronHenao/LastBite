@@ -93,7 +93,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
               //header
               Text(
-                'Crea tu cuenta 🌿',
+                'Crea tu cuenta',
                 style: textTheme.bodyLarge?.copyWith(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,

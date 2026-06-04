@@ -77,7 +77,8 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
+                            Expanded(child: 
+                              Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
@@ -97,7 +98,9 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                                   ),
                                 ),
                               ],
+                              ),
                             ),
+                            
                             if (alertas.isNotEmpty)
                               TextButton(
                                 onPressed: () => _confirmarBorrado(context),

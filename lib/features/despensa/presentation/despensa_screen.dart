@@ -62,21 +62,21 @@ class DespensaScreen extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Text(
-                                  'MI DESPENSA',
-                                  style: textTheme.titleSmall?.copyWith(
-                                    letterSpacing: 2.4,
-                                    color: AppColors.textMuted,
-                                  ),
+                                Image.asset(
+                                  'lib/assets/images/logo.png', // <-- Cambia esto por la ruta real de tu imagen de la L
+                                  height:
+                                      38, // Altura ideal para alinearse con el texto
+                                  fit: BoxFit.contain,
                                 ),
-                                const SizedBox(height: 2),
+                                
+                                const SizedBox(width: 5),
                                 Text(
-                                  'LastBite 🌿',
+                                  'Mi Despensa',
                                   style: textTheme.bodyLarge?.copyWith(
-                                    fontSize: 24,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.w800,
                                     color: AppColors.textMain,
                                   ),
@@ -115,23 +115,22 @@ class DespensaScreen extends ConsumerWidget {
                             ),
                             const SizedBox(width: 10),
                             _StatCard(
-                              icon: CupertinoIcons.clock,
-                              value: '${urgentes.length}',
-                              label: 'Por vencer',
-                              color: AppColors.danger,
-                              bg: AppColors.danger.withValues(alpha: 0.15),
-                            ),
-                            const SizedBox(width: 10),
-                            _StatCard(
                               icon: CupertinoIcons.check_mark_circled,
                               value: '$salvados',
                               label: 'Salvados',
                               color: AppColors.green,
                               bg: AppColors.green.withValues(alpha: 0.15),
                             ),
+                            const SizedBox(width: 10),
+                            _StatCard(
+                              icon: CupertinoIcons.clock,
+                              value: '${urgentes.length}',
+                              label: 'Por vencer',
+                              color: AppColors.danger,
+                              bg: AppColors.danger.withValues(alpha: 0.15),
+                            ),
                           ],
                         ),
-
                         const SizedBox(height: 24),
                       ],
                     ),

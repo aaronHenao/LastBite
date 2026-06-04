@@ -272,7 +272,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Residuo Cero 🍳',
+                    'Residuo Cero',
                     style: textTheme.bodyLarge?.copyWith(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
@@ -340,7 +340,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.accent.withValues(alpha: 0.12),
+                      color: AppColors.danger.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
@@ -348,7 +348,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                         Icon(
                           HugeIcons.strokeRoundedFire,
                           size: 24,
-                          color: AppColors.accent,
+                          color: AppColors.danger,
                         ),
                         const SizedBox(width: 10),
                         Expanded(

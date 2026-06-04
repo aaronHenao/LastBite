@@ -17,7 +17,7 @@ class ProductoCard extends StatelessWidget {
 
     final int diasRestantes = producto.diasRestantes;
 
-    final Color colorEstado = esUrgente ? AppColors.accent : AppColors.green;
+    final Color colorEstado = esUrgente ? AppColors.danger : AppColors.green;
 
     return Material(
       color: Colors.transparent,

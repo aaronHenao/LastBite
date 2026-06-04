@@ -169,7 +169,7 @@ class _RecetaCardState extends State<RecetaCard> {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w600,
                               color: AppColors.textMain,
                             ),
                           ),

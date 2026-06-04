@@ -27,7 +27,6 @@ class AuthField extends StatelessWidget {
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
-      // Color del texto que escribe el usuario (Verde principal)
       style: textTheme.titleMedium?.copyWith(
         color: AppColors.green,
         fontWeight: FontWeight.w500,
@@ -35,7 +34,6 @@ class AuthField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        // Forzamos a que el icono del ojo (o cualquier otro) herede el color verde
         suffixIcon: suffixIcon != null 
             ? IconTheme(
                 data: const IconThemeData(color: AppColors.green),
@@ -43,19 +41,16 @@ class AuthField extends StatelessWidget {
               )
             : null,
         filled: true,
-        // Fondo blanco puro como el botón secundario del diseño
         fillColor: AppColors.card, 
         
-        // Color de las etiquetas y hints alineados al verde de la marca
         labelStyle: textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w500,
-          color: AppColors.green.withValues(alpha: 0.7), // Un tono verde suave para el label
+          color: AppColors.green.withValues(alpha: 0.7), 
         ),
         hintStyle: textTheme.bodySmall?.copyWith(
           color: AppColors.green.withValues(alpha: 0.5),
         ),
         
-        // Bordes redondeados con la línea en el verde principal
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.green),
@@ -64,7 +59,6 @@ class AuthField extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.green),
         ),
-        // Cuando el usuario hace clic, el borde se vuelve un poco más grueso
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.green, width: 2.0),
