@@ -2,18 +2,6 @@
 
 Aplicación móvil desarrollada en Flutter que ayuda a los usuarios a gestionar los productos de su despensa, reduciendo el desperdicio de alimentos mediante alertas de vencimiento, persistencia local y sincronización con Firebase.
 
----
-
-## Integrantes del equipo
-
-| Nombre |
-|---|
-| Isabella |
-| Sofía |
-| Aaron |
-
----
-
 ## Descripción del problema
 
 El desperdicio de alimentos en el hogar ocurre principalmente porque las personas no llevan un registro de lo que tienen en su despensa ni de las fechas de vencimiento. LastBite permite registrar productos, recibir alertas antes de que venzan y marcarlos como consumidos, incentivando el aprovechamiento de los alimentos.
