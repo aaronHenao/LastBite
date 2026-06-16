@@ -1,3 +1,9 @@
+[🇨🇴 Español](#español) · [🇺🇸 English](#english)
+
+---
+
+## <a name="español">🇨🇴 Español</a>
+
 # LastBite
 
 App de gestión inteligente de despensa que reduce desperdicios de alimentos mediante alertas de vencimiento, sugerencia automática de recetas y escaneo de códigos de barras.
@@ -220,12 +226,230 @@ flutter run --dart-define=SPOONACULAR_API_KEY=tu_api_key_aqui
 
 ---
 
-## 👨‍💻 Autores y Contribuidores
-
-Desarrollado por Aaron Henao
-
----
-
 ## 📄 Licencia
 
 Este proyecto se distribuye bajo licencia privada. No está publicado en pub.dev.
+
+---
+
+## <a name="english">🇺🇸 English</a>
+
+# LastBite
+
+A smart pantry management app that reduces food waste through expiration alerts, automatic recipe suggestions, and barcode scanning.
+
+## 🎯 Concept
+
+LastBite helps users **make the most of their food** before it becomes unfit for consumption. The app automatically suggests recipes based on ingredients nearing their expiration dates, taking into account expiration dates and product categories.
+
+---
+
+## ✨ Key Features
+
+### 1. **Pantry Management**
+- View all added food items
+- Clear information on quantity, category, and days remaining until expiration
+- Automatic sorting by urgency level
+- Visual statuses for products: fresh, nearing expiration, expired
+
+### 2. **Adding Products**
+
+#### Barcode Scanning
+- Integration with the **OpenFoodFacts API** to automatically retrieve product information
+- Search order: Colombia → Global database
+- Fields captured: name, category, quantity, image
+- Fallback to manual entry if the code is not found
+
+#### Manual Entry
+- Form to add products without a barcode
+- Category selection with descriptive emojis
+- Manual quantity specification
+
+### 3. **Automatic Expiration Date Calculation**
+The app uses the `vida_util` table, which defines recommended shelf lives by category:
+- Vegetables/Fruits/Herbs: 5–7 days
+- Proteins (Meat/Chicken/Fish): 2–3 days
+- Dairy (Milk/Yogurt/Cheese): 8-30 days
+- Grains/Canned Goods: 180-365 days
+- And more categories...
+
+These values are calculated automatically from the date of addition.
+
+### 4. **Smart Recipe Engine** 🚀
+
+#### Automatic Generation
+- Uses the **Spoonacular API** to retrieve recipes based on available ingredients
+- Automatically prioritizes products nearing their expiration date
+- Generates recipes only when ingredients are available in the current pantry
+- Smart cache: avoids unnecessary calls if urgent ingredients remain unchanged
+
+#### Contextual Translation
+- **MyMemory Translation API** for translating recipes from English to Spanish
+- Culinary context to improve translation accuracy
+- Translates ingredients, titles, and instructions in parallel
+- Translation cache to optimize performance
+- Notifies the user if there are limitations in the translation
+
+#### Manual Search
+- Search by recipe name
+- Search by specific ingredient
+- Detailed information: instructions, prep time, servings, likes
+
+### 5. **Notifications and Alerts**
+- 4 levels of alerts:
+  - ⚠️ **1-day alert**: “expires tomorrow”
+  - 🕐 **3-day alert**: “plan a recipe”
+  - 🚨 **Expired**: “Remove it from your pantry”
+  - 5-day notice: no push notification (in-app only)
+- Notifications only if there are changes to urgent products
+- Deep linking: tap the notification to go to the alerts screen
+- Notification permissions requested upon login
+
+---
+
+## 🏗️ Technical Architecture
+
+### Technology Stack
+- **Framework**: Flutter (Dart 3.11.4+)
+- **State Management**: Flutter Riverpod
+- **Backend**: Firebase (Auth, Firestore, Cloud Messaging)
+- **Networking**: Dio
+- **Scanning**: mobile_scanner
+- **Authentication**: Google Sign-In
+- **Notifications**: firebase_messaging + flutter_local_notifications
+
+### External APIs
+| Service | Purpose | Base URL |
+|----------|-----------|----------|
+| **OpenFoodFacts** | Product search by barcode | `api.openfoodfacts.org` |
+| **Spoonacular** | Search for recipes by ingredients | `api.spoonacular.com` |
+| **MyMemory** | Translation of recipes into Spanish | `api.mymemory.translated.net` |
+
+### Folder Structure
+```
+lib/
+├── core/
+│   ├── navigation/          # Routes and navigation
+│   ├── notifications/       # Notification service and expiration checks
+│   ├── theme/              # App theme (colors, typography)
+│   └── constants/          # Global constants (shelf_life)
+│
+├── features/
+│   ├── auth/               # Authentication with Firebase + Google Sign-In
+│   ├── pantry/           # Pantry product management
+│   ├── add/            # Barcode scanning + manual entry
+│   ├── recipes/            # Recipe engine with translation
+│   └── alerts/            # Expiration alert screen
+│
+└── main.dart              # App entry point
+```
+
+### Data Flow
+1. **User logs in** → Firebase Auth (Google Sign-In)
+2. **App requests permissions** → Local notifications
+3. **Checks expiration dates** → ExpirationChecker runs every 3 seconds
+4. **User adds product**:
+   - Scans barcode → OpenFoodFacts extracts info
+   - Or enters manually
+5. **Calculates expiration date** → uses shelf_life table
+6. **On the Recipes screen**:
+   - Reads urgent products from Firestore
+   - Searches for recipes on Spoonacular
+   - Translates ingredients/instructions via MyMemory
+   - Caches results for optimization
+7. **Generates alerts** → NotificationService notifies only if there are changes
+
+---
+
+## 📱 Main Screens
+
+- **Pantry**: List of all food items with urgency status
+- **Add**: Barcode scanning + manual form
+- **Recipes**: Recipe engine with search and filters
+- **Alerts**: Notification history and expired products
+
+---
+
+## 🔐 Authentication and Data
+
+- **Firebase Authentication**: Google Sign-In only
+- **Cloud Firestore**: Stores products by user
+  - Collection: `users/{userId}/pantry/`
+  - Collection: `users/{userId}/alerts/`
+  - Collection: `users/{userId}/recipes_cache/`
+
+---
+
+## 🚀 Configuration and Environment Variables
+
+### Required Variables
+```bash
+# Run with Spoonacular API Key
+flutter run --dart-define=SPOONACULAR_API_KEY=your_api_key_here
+```
+
+If the key is not provided, the app will throw an exception:
+```
+‘SPOONACULAR_API_KEY is missing. Use --dart-define=SPOONACULAR_API_KEY=...’
+```
+
+### Firebase Setup
+1. Create a project in the Firebase Console
+2. Download `google-services.json` (Android) and `GoogleService-Info.plist` (iOS)
+3. Set up OAuth with Google (OAuth credentials)
+
+---
+
+## 📊 Project Status
+- ✅ Product scanning and search (OpenFoodFacts)
+- ✅ Pantry management in Firestore
+- ✅ Recipe engine with Spoonacular
+- ✅ Contextual recipe translation
+- ✅ Expiration alert system
+- ✅ Google authentication
+- 🔄 In development: UI/UX improvements, cache optimizations
+
+---
+
+## 🎨 Design and UX
+
+- Custom theme with accent colors, background colors, and a warning color palette
+- Font: Montserrat (weights: Regular, Medium, SemiBold, Bold, Black)
+- Floating bottom navigation bar with 4 tabs
+- Descriptive emojis for product categories
+
+---
+
+## 🛠️ Installation and Execution
+
+### Requirements
+- Flutter SDK 3.11.4+
+- Dart 3.11.4+
+- Android SDK (for Android) / Xcode (for iOS)
+
+### Steps
+```bash
+# Clone repository
+git clone https://github.com/aaronHenao/LastBite.git
+cd LastBite
+
+# Install dependencies
+flutter pub get
+
+# Set up Firebase (download configuration files)
+# See “Configuration and Environment Variables” section
+
+# Run in development
+flutter run --dart-define=SPOONACULAR_API_KEY=your_api_key_here
+```
+
+---
+
+## 📚 Resources and Documentation
+
+- [Flutter Docs](https://flutter.dev)
+- [Firebase for Flutter](https://firebase.flutter.dev)
+- [Riverpod State Management](https://riverpod.dev)
+- [OpenFoodFacts API](https://world.openfoodfacts.org/api)
+- [Spoonacular API](https://spoonacular.com/food-api)
+- [MyMemory Translation API](https://mymemory.translated.net)
