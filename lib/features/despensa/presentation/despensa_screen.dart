@@ -5,6 +5,10 @@ import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/producto.dart';
 import 'widgets/producto_card.dart';
+import '../../perfil/presentation/perfil_screen.dart';
+import '../../perfil/domain/item_compra.dart';
+import '../../perfil/presentation/perfil_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../auth/presentation/auth_provider.dart';
 
@@ -48,6 +52,8 @@ class DespensaScreen extends ConsumerWidget {
               orElse: () => 0,
             );
 
+        final user = authState.valueOrNull;
+
         return Scaffold(
           body: SafeArea(
             child: CustomScrollView(
@@ -66,12 +72,11 @@ class DespensaScreen extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Image.asset(
-                                  'lib/assets/images/logo.png', // <-- Cambia esto por la ruta real de tu imagen de la L
-                                  height:
-                                      38, // Altura ideal para alinearse con el texto
+                                  'lib/assets/images/logo.png',
+                                  height: 38,
                                   fit: BoxFit.contain,
                                 ),
-                                
+
                                 const SizedBox(width: 5),
                                 Text(
                                   'Mi Despensa',
@@ -92,10 +97,16 @@ class DespensaScreen extends ConsumerWidget {
                               child: CircleAvatar(
                                 radius: 20,
                                 backgroundColor: AppColors.surface,
-                                child: Icon(
-                                  Icons.person,
-                                  color: AppColors.textMain,
-                                ),
+                                backgroundImage: user?.fotoUrl != null
+                                    ? CachedNetworkImageProvider(user!.fotoUrl!)
+                                    : null,
+                                child: user?.fotoUrl == null
+                                    ? const Icon(
+                                        Icons.person,
+                                        size: 20,
+                                        color: AppColors.textMuted,
+                                      )
+                                    : null,
                               ),
                             ),
                           ],
@@ -281,7 +292,6 @@ class DespensaScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle
             Container(
               margin: const EdgeInsets.symmetric(vertical: 12),
               width: 40,
@@ -291,30 +301,57 @@ class DespensaScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            // Header perfil
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppColors.accent.withValues(alpha: 0.15),
-                    child: const Icon(Icons.person, color: AppColors.accent),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    nombreUsuario,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textMain,
+            
+            InkWell(
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PerfilScreen()),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: AppColors.accent.withValues(alpha: 0.15),
+                      child: const Icon(Icons.person, color: AppColors.accent),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nombreUsuario,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textMain,
+                            ),
+                          ),
+                          Text(
+                            'Ver perfil y lista de compras',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
+                    ),
+                  ],
+                ),
               ),
             ),
             const Divider(color: AppColors.border),
-            // Cerrar sesión
             ListTile(
               leading: const Icon(
                 Icons.logout_rounded,
@@ -412,6 +449,7 @@ class DespensaScreen extends ConsumerWidget {
                       backgroundColor: AppColors.green,
                     ),
                   );
+                  _preguntarListaCompras(context, ref, producto);
                 }
               },
             ),
@@ -435,6 +473,9 @@ class DespensaScreen extends ConsumerWidget {
               onTap: () async {
                 Navigator.pop(context);
                 await ref.read(despensaProvider.notifier).eliminar(producto.id);
+                if (context.mounted) {
+                  _preguntarListaCompras(context, ref, producto);
+                }
               },
             ),
             const SizedBox(height: 16),
@@ -493,4 +534,70 @@ class _StatCard extends StatelessWidget {
       ),
     );
   }
+}
+
+void _preguntarListaCompras(
+  BuildContext context,
+  WidgetRef ref,
+  Producto producto,
+) {
+  showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Text(producto.emoji, style: const TextStyle(fontSize: 24)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '¿Añadir a lista de compras?',
+              style: const TextStyle(
+                color: AppColors.textMain,
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        'Agregar ${producto.nombre} a tu lista para la próxima compra.',
+        style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext), 
+          child: const Text(
+            'No, gracias',
+            style: TextStyle(color: AppColors.textMuted),
+          ),
+        ),
+        FilledButton(
+          onPressed: () async {
+            Navigator.pop(dialogContext); 
+            final item = ItemCompra(
+              id: '${producto.id}_${DateTime.now().millisecondsSinceEpoch}',
+              nombre: producto.nombre,
+              emoji: producto.emoji,
+              comprado: false,
+              agregadoEn: DateTime.now(),
+            );
+            await ref.read(listaComprasProvider.notifier).agregar(item);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${producto.nombre} añadido a tu lista 🛒'),
+                  backgroundColor: AppColors.accent,
+                ),
+              );
+            }
+          },
+          style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
+          child: const Text('Añadir'),
+        ),
+      ],
+    ),
+  );
 }
