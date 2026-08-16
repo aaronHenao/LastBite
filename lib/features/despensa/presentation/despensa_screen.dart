@@ -41,12 +41,10 @@ class DespensaScreen extends ConsumerWidget {
           ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
         final urgentes = sorted.where((p) => p.urgente).toList();
         final enBuenEstado = sorted.where((p) => !p.urgente).toList();
-        final salvados = ref
-            .watch(despensaProvider)
-            .maybeWhen(
-              data: (_) => ref.read(despensaProvider.notifier).salvados,
-              orElse: () => 0,
-            );
+        final notifier = ref.read(despensaProvider.notifier);
+        final salvados = notifier.salvados;
+        final ahorro = notifier.ahorroMes;
+        final conteoAhorro = notifier.conteoMes;
 
         return Scaffold(
           body: SafeArea(
@@ -71,7 +69,7 @@ class DespensaScreen extends ConsumerWidget {
                                       38, // Altura ideal para alinearse con el texto
                                   fit: BoxFit.contain,
                                 ),
-                                
+
                                 const SizedBox(width: 5),
                                 Text(
                                   'Mi Despensa',
@@ -131,6 +129,10 @@ class DespensaScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
+
+                        const SizedBox(height: 12),
+                        _AhorroCard(ahorro: ahorro, conteo: conteoAhorro),
+
                         const SizedBox(height: 24),
                       ],
                     ),
@@ -490,6 +492,118 @@ class _StatCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+const _mesesEs = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+];
+
+/// Formatea un entero como pesos colombianos: 47000 -> "$47.000".
+String _formatearCop(int valor) {
+  final digitos = valor.toString();
+  final buffer = StringBuffer();
+  for (var i = 0; i < digitos.length; i++) {
+    if (i > 0 && (digitos.length - i) % 3 == 0) buffer.write('.');
+    buffer.write(digitos[i]);
+  }
+  return '\$$buffer';
+}
+
+class _AhorroCard extends StatelessWidget {
+  final int ahorro;
+  final Map<String, int> conteo;
+
+  const _AhorroCard({required this.ahorro, required this.conteo});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final mes = _mesesEs[DateTime.now().month - 1];
+    final top = conteo.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.green.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                CupertinoIcons.money_dollar_circle,
+                size: 16,
+                color: AppColors.green,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Ahorro estimado de $mes'.toUpperCase(),
+                  style: textTheme.labelSmall?.copyWith(
+                    fontSize: 10,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _formatearCop(ahorro),
+            style: textTheme.titleLarge?.copyWith(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: AppColors.green,
+            ),
+          ),
+          if (top.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Consume un producto antes de que venza para empezar a sumar',
+                style: textTheme.bodySmall?.copyWith(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
+              ),
+            )
+          else ...[
+            const SizedBox(height: 8),
+            Text(
+              top.take(3).map((e) => '${e.key} x${e.value}').join('  ·  '),
+              style: textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+                color: AppColors.textMuted,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Estimado según precios promedio por categoría',
+              style: textTheme.labelSmall?.copyWith(
+                fontSize: 9,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
