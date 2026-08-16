@@ -66,6 +66,28 @@ class DespensaRepository {
     }, SetOptions(merge: true));
   }
 
+  DocumentReference<Map<String, dynamic>> get _ahorroDoc => _db
+      .collection('users')
+      .doc(userId)
+      .collection('estadisticas')
+      .doc('ahorro');
+
+  static String claveMes(DateTime fecha) =>
+      '${fecha.year}-${fecha.month.toString().padLeft(2, '0')}';
+
+  Future<void> registrarSalvado(String categoria, DateTime cuando) async {
+    await _ahorroDoc.set({
+      claveMes(cuando): {categoria: FieldValue.increment(1)},
+    }, SetOptions(merge: true));
+  }
+
+  Future<Map<String, int>> cargarConteoMes(DateTime cuando) async {
+    final doc = await _ahorroDoc.get();
+    final mes = doc.data()?[claveMes(cuando)] as Map<String, dynamic>?;
+    if (mes == null) return {};
+    return mes.map((k, v) => MapEntry(k, (v as num).toInt()));
+  }
+
   DocumentReference<Map<String, dynamic>> get _notifDoc => _db
       .collection('users')
       .doc(userId)

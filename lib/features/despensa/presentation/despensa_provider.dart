@@ -1,15 +1,21 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/notifications/vencimiento_checker.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
+import 'package:lastbite/core/constants/precio_promedio.dart';
 import '../data/despensa_repository.dart';
 import '../domain/producto.dart';
 
 class DespensaNotifier extends AsyncNotifier<List<Producto>> {
   late DespensaRepository _repo;
+
   int _salvados = 0;
   int get salvados => _salvados;
+
+  Map<String, int> _conteoMes = {};
+  Map<String, int> get conteoMes => _conteoMes;
+  int get ahorroMes => ahorroEstimado(_conteoMes);
 
   @override
   Future<List<Producto>> build() async {
@@ -21,9 +27,11 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
     final resultados = await Future.wait([
       _repo.cargarProductos(),
       _repo.cargarSalvados(),
+      _repo.cargarConteoMes(DateTime.now()),
     ]);
 
     _salvados = resultados[1] as int;
+    _conteoMes = resultados[2] as Map<String, int>;
     return resultados[0] as List<Producto>;
   }
 
@@ -41,11 +49,20 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
     await _repo.eliminar(id);
     await _repo.incrementarSalvados();
 
+    // Métrica de ahorro: no es crítica, así que no bloquea el consumo ni lo
+    // hace fallar si Firestore no responde.
+    unawaited(
+      _repo
+          .registrarSalvado(producto.categoria, DateTime.now())
+          .catchError((Object _) {}),
+    );
+
     if (producto.urgente) {
       await _repo.invalidarRecetasPorIngrediente(producto.nombre);
     }
 
     _salvados++;
+    _conteoMes.update(producto.categoria, (v) => v + 1, ifAbsent: () => 1);
     state = AsyncData((state.value ?? []).where((p) => p.id != id).toList());
 
     VencimientoChecker.instance.verificar();
