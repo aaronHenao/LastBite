@@ -51,7 +51,7 @@ class OpenFoodFactsService {
         categoria: categoria,
         cantidad: cantidad,
         fechaCaducidad: fechaCaducidad,
-        esFresco: categoria == 'fruta' || categoria == 'verdura',
+        esFresco: categoria == 'Fruta' || categoria == 'Verdura',
         imagenUrl: imagenUrl,
       );
     } on DioException {
