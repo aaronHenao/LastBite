@@ -9,6 +9,7 @@ import '../../perfil/presentation/perfil_screen.dart';
 import '../../perfil/domain/item_compra.dart';
 import '../../perfil/presentation/perfil_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:lastbite/core/responsive/responsive.dart';
 
 import '../../auth/presentation/auth_provider.dart';
 
@@ -88,25 +89,38 @@ class DespensaScreen extends ConsumerWidget {
                                 ),
                               ],
                             ),
+
                             GestureDetector(
                               onTap: () => _mostrarMenuPerfil(
                                 context,
                                 ref,
                                 nombreUsuario,
                               ),
-                              child: CircleAvatar(
-                                radius: 20,
-                                backgroundColor: AppColors.surface,
-                                backgroundImage: user?.fotoUrl != null
-                                    ? CachedNetworkImageProvider(user!.fotoUrl!)
-                                    : null,
-                                child: user?.fotoUrl == null
-                                    ? const Icon(
-                                        Icons.person,
-                                        size: 20,
-                                        color: AppColors.textMuted,
-                                      )
-                                    : null,
+                              child: Builder(
+                                builder: (context) {
+                                  final isWeb = Responsive.isTabletOrWeb(
+                                    context,
+                                  );
+                                  final fotoUrl = user?.fotoUrl;
+
+                                  if (!isWeb && fotoUrl != null) {
+                                    return CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: AppColors.surface,
+                                      backgroundImage:
+                                          CachedNetworkImageProvider(fotoUrl),
+                                    );
+                                  }
+                                  return CircleAvatar(
+                                    radius: 20,
+                                    backgroundColor: AppColors.surface,
+                                    child: const Icon(
+                                      Icons.person,
+                                      size: 20,
+                                      color: AppColors.textMuted,
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           ],
@@ -301,7 +315,7 @@ class DespensaScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            
+
             InkWell(
               onTap: () {
                 Navigator.pop(context);
@@ -568,7 +582,7 @@ void _preguntarListaCompras(
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(dialogContext), 
+          onPressed: () => Navigator.pop(dialogContext),
           child: const Text(
             'No, gracias',
             style: TextStyle(color: AppColors.textMuted),
@@ -576,7 +590,7 @@ void _preguntarListaCompras(
         ),
         FilledButton(
           onPressed: () async {
-            Navigator.pop(dialogContext); 
+            Navigator.pop(dialogContext);
             final item = ItemCompra(
               id: '${producto.id}_${DateTime.now().millisecondsSinceEpoch}',
               nombre: producto.nombre,

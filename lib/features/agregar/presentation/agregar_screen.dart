@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/constants/unidades_medida.dart';
 import 'package:lastbite/core/constants/vida_util.dart';
+import 'package:lastbite/core/responsive/responsive_container.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
@@ -60,98 +61,107 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
   }
 
   void _mostrarConfirmacion(Producto producto) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    builder: (_) => _ConfirmacionProductoSheet(
-      producto: producto,
-      onConfirmar: (productoEditado) async {
-        await ref.read(despensaProvider.notifier).agregar(productoEditado);
-        widget.onBackToPantry?.call();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${productoEditado.nombre} agregado'),
-              backgroundColor: AppColors.green,
-            ),
-          );
-        }
-      },
-    ),
-  );
-}
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _ConfirmacionProductoSheet(
+        producto: producto,
+        onConfirmar: (productoEditado) async {
+          await ref.read(despensaProvider.notifier).agregar(productoEditado);
+          widget.onBackToPantry?.call();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${productoEditado.nombre} agregado'),
+                backgroundColor: AppColors.green,
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            InkWell(
-              onTap: widget.onBackToPantry,
-              borderRadius: BorderRadius.circular(10),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: ResponsiveContainer(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              InkWell(
+                onTap: widget.onBackToPantry,
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 4,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 11),
-            Text(
-              'AGREGAR ALIMENTO',
-              style: textTheme.titleSmall?.copyWith(
-                letterSpacing: 2.4,
-                color: AppColors.textMuted,
+              const SizedBox(height: 11),
+              Text(
+                'AGREGAR ALIMENTO',
+                style: textTheme.titleSmall?.copyWith(
+                  letterSpacing: 2.4,
+                  color: AppColors.textMuted,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Entrada Híbrida',
-              style: textTheme.bodyLarge?.copyWith(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textMain,
+              const SizedBox(height: 6),
+              Text(
+                'Entrada Híbrida',
+                style: textTheme.bodyLarge?.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textMain,
+                ),
               ),
-            ),
-            const SizedBox(height: 18),
-            _HybridModeSwitch(
-              mode: _mode,
-              onChanged: (value) => setState(() => _mode = value),
-            ),
-            const SizedBox(height: 20),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 240),
-              switchInCurve: Curves.easeOut,
-              switchOutCurve: Curves.easeIn,
-              child: _mode == _EntryMode.scan
-                  ? _ScanEntryCard(
-                      key: const ValueKey('scan'),
-                      onTap: _buscandoProducto ? null : () { _abrirEscaner(); },
-                      ultimoCodigo: _ultimoCodigoEscaneado,
-                      cargando: _buscandoProducto,
-                    )
-                  : _ManualEntryForm(
-                      key: ValueKey('manual'),
-                      onGuardar: (producto) async {
-                        await ref
-                            .read(despensaProvider.notifier)
-                            .agregar(producto);
-                        widget.onBackToPantry?.call();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '${producto.nombre} agregado a la despensa.',
+              const SizedBox(height: 18),
+              _HybridModeSwitch(
+                mode: _mode,
+                onChanged: (value) => setState(() => _mode = value),
+              ),
+              const SizedBox(height: 20),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 240),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                child: _mode == _EntryMode.scan
+                    ? _ScanEntryCard(
+                        key: const ValueKey('scan'),
+                        onTap: _buscandoProducto
+                            ? null
+                            : () {
+                                _abrirEscaner();
+                              },
+                        ultimoCodigo: _ultimoCodigoEscaneado,
+                        cargando: _buscandoProducto,
+                      )
+                    : _ManualEntryForm(
+                        key: ValueKey('manual'),
+                        onGuardar: (producto) async {
+                          await ref
+                              .read(despensaProvider.notifier)
+                              .agregar(producto);
+                          widget.onBackToPantry?.call();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${producto.nombre} agregado a la despensa.',
+                              ),
+                              backgroundColor: AppColors.green,
                             ),
-                            backgroundColor: AppColors.green,
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -869,22 +879,38 @@ class _ConfirmacionProductoSheetState
 
   String _emojiParaCategoria(String categoria) {
     switch (categoria) {
-      case 'Verdura':     return '🥦';
-      case 'Fruta':       return '🍎';
-      case 'Pollo':       return '🍗';
-      case 'Carne':       return '🥩';
-      case 'Pescado':     return '🐟';
-      case 'Huevo':       return '🥚';
-      case 'Leche':       return '🥛';
-      case 'Yogur':       return '🥛';
-      case 'Queso':       return '🧀';
-      case 'Mantequilla': return '🧈';
-      case 'Pan':         return '🍞';
-      case 'Grano':       return '🍝';
-      case 'Jugo':        return '🧃';
-      case 'Embutido':    return '🌭';
-      case 'Conserva':    return '🥫';
-      default:            return '🥫';
+      case 'Verdura':
+        return '🥦';
+      case 'Fruta':
+        return '🍎';
+      case 'Pollo':
+        return '🍗';
+      case 'Carne':
+        return '🥩';
+      case 'Pescado':
+        return '🐟';
+      case 'Huevo':
+        return '🥚';
+      case 'Leche':
+        return '🥛';
+      case 'Yogur':
+        return '🥛';
+      case 'Queso':
+        return '🧀';
+      case 'Mantequilla':
+        return '🧈';
+      case 'Pan':
+        return '🍞';
+      case 'Grano':
+        return '🍝';
+      case 'Jugo':
+        return '🧃';
+      case 'Embutido':
+        return '🌭';
+      case 'Conserva':
+        return '🥫';
+      default:
+        return '🥫';
     }
   }
 
@@ -955,8 +981,10 @@ class _ConfirmacionProductoSheetState
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide:
-                        const BorderSide(color: AppColors.accent, width: 1.5),
+                    borderSide: const BorderSide(
+                      color: AppColors.accent,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -995,8 +1023,9 @@ class _ConfirmacionProductoSheetState
                       _categoriaSeleccionada = cat;
                       // Actualiza la fecha sugerida al cambiar categoría
                       final dias = vidaUtilPorCategoria[cat] ?? 7;
-                      _fechaSeleccionada =
-                          DateTime.now().add(Duration(days: dias));
+                      _fechaSeleccionada = DateTime.now().add(
+                        Duration(days: dias),
+                      );
                     });
                   },
                   dropdownColor: AppColors.surface,
@@ -1065,7 +1094,8 @@ class _ConfirmacionProductoSheetState
                       categoria: _categoriaSeleccionada,
                       cantidad: widget.producto.cantidad,
                       fechaCaducidad: _fechaSeleccionada,
-                      esFresco: _categoriaSeleccionada == 'fruta' ||
+                      esFresco:
+                          _categoriaSeleccionada == 'fruta' ||
                           _categoriaSeleccionada == 'verdura',
                       imagenUrl: widget.producto.imagenUrl,
                     );

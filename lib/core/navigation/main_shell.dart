@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
+import 'package:lastbite/core/responsive/responsive.dart';
 import 'package:lastbite/features/agregar/presentation/agregar_screen.dart';
 import 'package:lastbite/features/alertas/presentation/alertas_screen.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_screen.dart';
@@ -43,19 +44,35 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
+    final isWide = Responsive.isTabletOrWeb(context);
+
+    if (isWide) {
+      return Scaffold(
+        backgroundColor: AppColors.bg,
+        body: Row(
+          children: [
+            //sidebaar izq
+            _Sidebar(selectedIndex: _selectedIndex, onTap: _onItemTapped),
+            //contenido principal
+            Expanded(
+              child: IndexedStack(index: _selectedIndex, children: _pages),
+            ),
+          ],
+        ),
+      );
+    }
+
+    //navbar flotante (mobile)
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Stack(
         children: [
           IndexedStack(index: _selectedIndex, children: _pages),
-
           Positioned(
             left: 0,
             right: 0,
@@ -71,6 +88,142 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
+//sidebar tablet/web
+class _Sidebar extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onTap;
+
+  const _Sidebar({required this.selectedIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = Responsive.isWeb(context);
+
+    return Container(
+      width: isWeb ? 220 : 72,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(right: BorderSide(color: AppColors.border)),
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            //logo letra
+            if (isWeb) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Image.asset(
+                      'lib/assets/images/letra.png',
+                      height: 95,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(width: 5),
+                    
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+            ] else ...[
+              Text('🌿', style: const TextStyle(fontSize: 24)),
+              const SizedBox(height: 32),
+            ],
+
+            //items de navegación
+            _SidebarItem(
+              icon: HugeIcons.strokeRoundedHome04,
+              label: 'Despensa',
+              selected: selectedIndex == 0,
+              showLabel: isWeb,
+              onTap: () => onTap(0),
+            ),
+            _SidebarItem(
+              icon: CupertinoIcons.camera,
+              label: 'Agregar',
+              selected: selectedIndex == 1,
+              showLabel: isWeb,
+              onTap: () => onTap(1),
+            ),
+            _SidebarItem(
+              icon: HugeIcons.strokeRoundedChefHat,
+              label: 'Recetas',
+              selected: selectedIndex == 2,
+              showLabel: isWeb,
+              onTap: () => onTap(2),
+            ),
+            _SidebarItem(
+              icon: CupertinoIcons.bell,
+              label: 'Alertas',
+              selected: selectedIndex == 3,
+              showLabel: isWeb,
+              onTap: () => onTap(3),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SidebarItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final bool showLabel;
+  final VoidCallback onTap;
+
+  const _SidebarItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.showLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? AppColors.accent : AppColors.textMuted;
+    final bg = selected
+        ? AppColors.accent.withValues(alpha: 0.12)
+        : Colors.transparent;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: showLabel
+              ? Row(
+                  children: [
+                    Icon(icon, size: 22, color: color),
+                    const SizedBox(width: 12),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                )
+              : Center(child: Icon(icon, size: 24, color: color)),
+        ),
+      ),
+    );
+  }
+}
+
+//navbar mobile
 class _FloatingMenuBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onTap;
@@ -160,54 +313,6 @@ class _MenuItem extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ComingSoonScreen extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _ComingSoonScreen({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 42, color: AppColors.textMuted),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textMain,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 15,
-                  height: 1.4,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
