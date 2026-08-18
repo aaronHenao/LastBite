@@ -37,6 +37,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   String _query = '';
   bool _cargaInicial = false;
   bool _busquedaPorProducto = false;
+  bool _ordenarPorTiempo = false;
 
   RecetaCacheRepository? _cacheRepo;
 
@@ -79,6 +80,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
           delegate: SliverChildBuilderDelegate((context, index) {
             final receta = _recetasFiltradas[index];
             return RecetaCard(
+              key: ValueKey(receta.id),
               receta: receta,
               onTap: () => _abrirDetalle(receta),
             );
@@ -98,21 +100,42 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         final receta = _recetasFiltradas[index];
         return Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-          child: RecetaCard(receta: receta, onTap: () => _abrirDetalle(receta)),
+          child: RecetaCard(
+            key: ValueKey(receta.id),
+            receta: receta,
+            onTap: () => _abrirDetalle(receta),
+          ),
         );
       }, childCount: _recetasFiltradas.length),
     );
   }
 
   List<Receta> get _recetasFiltradas {
-    //ordenamiento por porcentaje de match descendente
-    final lista = [..._recetas]
-      ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
+    final lista = [..._recetas]..sort(_compararRecetas);
 
     if (_query.isEmpty || _busquedaPorProducto) return lista;
     return lista
         .where((r) => r.titulo.toLowerCase().contains(_query.toLowerCase()))
         .toList();
+  }
+
+  int _compararRecetas(Receta a, Receta b) {
+    if (!_ordenarPorTiempo) {
+      return b.porcentajeMatch.compareTo(a.porcentajeMatch);
+    }
+
+    final minutosA = a.minutosPreparacion;
+    final minutosB = b.minutosPreparacion;
+
+    if (minutosA == null && minutosB == null) {
+      return b.porcentajeMatch.compareTo(a.porcentajeMatch);
+    }
+    if (minutosA == null) return 1;
+    if (minutosB == null) return -1;
+
+    final porTiempo = minutosA.compareTo(minutosB);
+    if (porTiempo != 0) return porTiempo;
+    return b.porcentajeMatch.compareTo(a.porcentajeMatch);
   }
 
   String _urgentesLabel(List<Producto> productos) {
@@ -413,14 +436,28 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Text(
-                      'RECETAS SUGERIDAS',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1,
-                        color: AppColors.textMuted,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'RECETAS SUGERIDAS',
+                            style: textTheme.titleSmall?.copyWith(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _OrdenPorTiempoBoton(
+                          activo: _ordenarPorTiempo,
+                          onTap: () => setState(
+                            () => _ordenarPorTiempo = !_ordenarPorTiempo,
+                          ),
+                        ),
+                      ],
                     ),
                     if (_avisoTraduccion != null) ...[
                       const SizedBox(height: 8),
@@ -609,5 +646,48 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         .replaceAll('&nbsp;', ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
+  }
+}
+
+class _OrdenPorTiempoBoton extends StatelessWidget {
+  final bool activo;
+  final VoidCallback onTap;
+
+  const _OrdenPorTiempoBoton({required this.activo, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = activo ? AppColors.accent : AppColors.textMuted;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: activo
+              ? AppColors.accent.withValues(alpha: 0.12)
+              : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.timer_outlined, size: 14, color: color),
+            const SizedBox(width: 6),
+            Text(
+              'Menor tiempo',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

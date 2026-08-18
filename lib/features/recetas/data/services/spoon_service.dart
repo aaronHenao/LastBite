@@ -41,6 +41,28 @@ class SpoonService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getRecipeInformationBulk({
+    required List<int> recipeIds,
+  }) async {
+    _validateApiKey();
+
+    if (recipeIds.isEmpty) return const [];
+
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '$_recipesBaseUrl/informationBulk',
+        queryParameters: {'ids': recipeIds.join(','), 'apiKey': _apiKey},
+      );
+
+      return (response.data ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+    } on DioException catch (e) {
+      throw _mapRemoteError(e);
+    }
+  }
+
   Future<Map<String, dynamic>> getRecipeInformation({
     required int recipeId,
   }) async {
