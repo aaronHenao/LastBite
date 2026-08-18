@@ -3,12 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:lastbite/core/responsive/responsive_container.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import 'package:lastbite/features/recetas/data/datasources/recetas_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
-//import 'package:lastbite/features/recetas/data/services/translation_service.dart';
+import 'package:lastbite/core/responsive/responsive.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
@@ -23,7 +24,6 @@ class RecetasScreen extends ConsumerStatefulWidget {
 }
 
 class _RecetasScreenState extends ConsumerState<RecetasScreen> {
-  
   late final RecetasBusquedaRemoteDataSource _busquedaDataSource;
   late final RecetasDetalleRemoteDataSource _detalleDataSource;
   final _searchCtrl = TextEditingController();
@@ -37,6 +37,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   String _query = '';
   bool _cargaInicial = false;
   bool _busquedaPorProducto = false;
+  bool _ordenarPorTiempo = false;
 
   RecetaCacheRepository? _cacheRepo;
 
@@ -71,15 +72,70 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     super.dispose();
   }
 
+  Widget _buildRecetasSliver(BuildContext context) {
+    if (Responsive.isTabletOrWeb(context)) {
+      return SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        sliver: SliverGrid(
+          delegate: SliverChildBuilderDelegate((context, index) {
+            final receta = _recetasFiltradas[index];
+            return RecetaCard(
+              key: ValueKey(receta.id),
+              receta: receta,
+              onTap: () => _abrirDetalle(receta),
+            );
+          }, childCount: _recetasFiltradas.length),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.8,
+          ),
+        ),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate((context, index) {
+        final receta = _recetasFiltradas[index];
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          child: RecetaCard(
+            key: ValueKey(receta.id),
+            receta: receta,
+            onTap: () => _abrirDetalle(receta),
+          ),
+        );
+      }, childCount: _recetasFiltradas.length),
+    );
+  }
+
   List<Receta> get _recetasFiltradas {
-    //ordenamiento por porcentaje de match descendente
-    final lista = [..._recetas]
-      ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
+    final lista = [..._recetas]..sort(_compararRecetas);
 
     if (_query.isEmpty || _busquedaPorProducto) return lista;
     return lista
         .where((r) => r.titulo.toLowerCase().contains(_query.toLowerCase()))
         .toList();
+  }
+
+  int _compararRecetas(Receta a, Receta b) {
+    if (!_ordenarPorTiempo) {
+      return b.porcentajeMatch.compareTo(a.porcentajeMatch);
+    }
+
+    final minutosA = a.minutosPreparacion;
+    final minutosB = b.minutosPreparacion;
+
+    if (minutosA == null && minutosB == null) {
+      return b.porcentajeMatch.compareTo(a.porcentajeMatch);
+    }
+    if (minutosA == null) return 1;
+    if (minutosB == null) return -1;
+
+    final porTiempo = minutosA.compareTo(minutosB);
+    if (porTiempo != 0) return porTiempo;
+    return b.porcentajeMatch.compareTo(a.porcentajeMatch);
   }
 
   String _urgentesLabel(List<Producto> productos) {
@@ -255,284 +311,317 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     final textTheme = Theme.of(context).textTheme;
     final productosDespensa = ref.read(despensaProvider).value ?? [];
     return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'MOTOR DE RECETAS',
-                    style: textTheme.titleSmall?.copyWith(
-                      letterSpacing: 2.4,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Residuo Cero',
-                    style: textTheme.bodyLarge?.copyWith(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textMain,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  //Buscador
-                  TextField(
-                    controller: _searchCtrl,
-                    onChanged: _onQueryChanged,
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textMuted,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Buscar por nombre...',
-                      hintStyle: textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textMuted.withValues(alpha: 0.9),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.search_rounded,
+      child: ResponsiveContainer(
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'MOTOR DE RECETAS',
+                      style: textTheme.titleSmall?.copyWith(
+                        letterSpacing: 2.4,
                         color: AppColors.textMuted,
                       ),
-                      suffixIcon: _query.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(
-                                Icons.close_rounded,
-                                color: AppColors.textMuted,
-                              ),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                setState(() => _query = '');
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: AppColors.surface,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(
-                          color: AppColors.accent,
-                          width: 1.5,
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Residuo Cero',
+                      style: textTheme.bodyLarge?.copyWith(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textMain,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 14),
+                    const SizedBox(height: 16),
 
-                  // Prioridad ingredientes urgentes
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.danger.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          HugeIcons.strokeRoundedFire,
-                          size: 24,
-                          color: AppColors.danger,
+                    //Buscador
+                    TextField(
+                      controller: _searchCtrl,
+                      onChanged: _onQueryChanged,
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textMuted,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Buscar por nombre...',
+                        hintStyle: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textMuted.withValues(alpha: 0.9),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Priorizando ingredientes urgentes',
-                                style: textTheme.titleSmall?.copyWith(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1,
-                                  color: AppColors.danger,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                _urgentesLabel(productosDespensa),
-                                style: textTheme.bodyMedium?.copyWith(
-                                  fontSize: 12,
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          color: AppColors.textMuted,
+                        ),
+                        suffixIcon: _query.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(
+                                  Icons.close_rounded,
                                   color: AppColors.textMuted,
                                 ),
-                              ),
-                            ],
+                                onPressed: () {
+                                  _searchCtrl.clear();
+                                  setState(() => _query = '');
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: AppColors.accent,
+                            width: 1.5,
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'RECETAS SUGERIDAS',
-                    style: textTheme.titleSmall?.copyWith(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                  if (_avisoTraduccion != null) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 14),
+
+                    // Prioridad ingredientes urgentes
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
+                        horizontal: 14,
+                        vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.yellow.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: AppColors.yellow.withValues(alpha: 0.4),
-                        ),
+                        color: AppColors.danger.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(
-                            Icons.translate,
-                            size: 14,
-                            color: AppColors.textMain,
+                          Icon(
+                            HugeIcons.strokeRoundedFire,
+                            size: 24,
+                            color: AppColors.danger,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 10),
                           Expanded(
-                            child: Text(
-                              _avisoTraduccion!,
-                              style: textTheme.bodySmall?.copyWith(
-                                fontSize: 11,
-                                color: AppColors.textMain,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Priorizando ingredientes urgentes',
+                                  style: textTheme.titleSmall?.copyWith(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1,
+                                    color: AppColors.danger,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _urgentesLabel(productosDespensa),
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    fontSize: 12,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 12),
-                ],
-              ),
-            ),
-          ),
-
-          //Lista de recetas
-          _cargandoRecetas
-              ? const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: 60),
-                    child: Center(
-                      child: CircularProgressIndicator(color: AppColors.accent),
-                    ),
-                  ),
-                )
-              : _errorCarga != null
-              ? SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'No se pudieron cargar recetas',
-                            style: TextStyle(
-                              fontSize: 15,
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'RECETAS SUGERIDAS',
+                            style: textTheme.titleSmall?.copyWith(
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.textMain,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _errorCarga!,
-                            style: const TextStyle(
-                              fontSize: 12,
+                              letterSpacing: 1,
                               color: AppColors.textMuted,
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          FilledButton(
-                            onPressed: () =>
-                                _cargarRecetasDesdeApi(forzar: true),
-                            child: const Text('Reintentar'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
-              : _recetasFiltradas.isEmpty
-              ? SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 60),
-                    child: Column(
-                      children: [
-                        const Text('🍽️', style: TextStyle(fontSize: 48)),
-                        const SizedBox(height: 12),
-                        Text(
-                          _query.isEmpty
-                              ? 'No hay recetas sugeridas\npara tu despensa actual'
-                              : 'No encontramos recetas\ncon "$_query"',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textMuted,
+                        ),
+                        const SizedBox(width: 8),
+                        _OrdenPorTiempoBoton(
+                          activo: _ordenarPorTiempo,
+                          onTap: () => setState(
+                            () => _ordenarPorTiempo = !_ordenarPorTiempo,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                )
-              : SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final receta = _recetasFiltradas[index];
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                      child: RecetaCard(
-                        receta: receta,
-                        onTap: () => _abrirDetalle(receta),
+                    if (_avisoTraduccion != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.yellow.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: AppColors.yellow.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.translate,
+                              size: 14,
+                              color: AppColors.textMain,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                _avisoTraduccion!,
+                                style: textTheme.bodySmall?.copyWith(
+                                  fontSize: 11,
+                                  color: AppColors.textMain,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    );
-                  }, childCount: _recetasFiltradas.length),
+                    ],
+                    const SizedBox(height: 12),
+                  ],
                 ),
+              ),
+            ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
+            //Lista de recetas
+            _cargandoRecetas
+                ? const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 60),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    ),
+                  )
+                : _errorCarga != null
+                ? SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'No se pudieron cargar recetas',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textMain,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _errorCarga!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            FilledButton(
+                              onPressed: () =>
+                                  _cargarRecetasDesdeApi(forzar: true),
+                              child: const Text('Reintentar'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                : _recetasFiltradas.isEmpty
+                ? SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 60),
+                      child: Column(
+                        children: [
+                          const Text('🍽️', style: TextStyle(fontSize: 48)),
+                          const SizedBox(height: 12),
+                          Text(
+                            _query.isEmpty
+                                ? 'No hay recetas sugeridas\npara tu despensa actual'
+                                : 'No encontramos recetas\ncon "$_query"',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : _buildRecetasSliver(context),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
+        ),
       ),
     );
   }
 
   void _abrirDetalle(Receta receta) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => RecetaDetalleSheet(
-        receta: receta,
-        detalleFuture: _cargarDetalleReceta(receta),
-      ),
-    );
+    final isWeb = Responsive.isTabletOrWeb(context);
+
+    if (isWeb) {
+      showDialog(
+        context: context,
+        builder: (_) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 80,
+            vertical: 40,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: SizedBox(
+              width: 600,
+              child: RecetaDetalleSheet(
+                receta: receta,
+                detalleFuture: _cargarDetalleReceta(receta),
+                isDialog: true,
+              ),
+            ),
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => RecetaDetalleSheet(
+          receta: receta,
+          detalleFuture: _cargarDetalleReceta(receta),
+        ),
+      );
+    }
   }
 
   Future<Receta> _cargarDetalleReceta(Receta receta) async {
@@ -583,5 +672,48 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         .replaceAll('&nbsp;', ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
+  }
+}
+
+class _OrdenPorTiempoBoton extends StatelessWidget {
+  final bool activo;
+  final VoidCallback onTap;
+
+  const _OrdenPorTiempoBoton({required this.activo, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = activo ? AppColors.accent : AppColors.textMuted;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: activo
+              ? AppColors.accent.withValues(alpha: 0.12)
+              : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.timer_outlined, size: 14, color: color),
+            const SizedBox(width: 6),
+            Text(
+              'Menor tiempo',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

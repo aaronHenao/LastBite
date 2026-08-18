@@ -8,6 +8,7 @@ class RecetaBusquedaRemoteModel {
     required this.ingredientesUsados,
     required this.ingredientesFaltantes,
     required this.likes,
+    required this.minutosPreparacion,
     required this.nombresIngredientesUsados,
     required this.nombresIngredientesFaltantes,
   });
@@ -18,6 +19,7 @@ class RecetaBusquedaRemoteModel {
   final int ingredientesUsados;
   final int ingredientesFaltantes;
   final int likes;
+  final int? minutosPreparacion;
   final List<String> nombresIngredientesUsados;
   final List<String> nombresIngredientesFaltantes;
 
@@ -51,6 +53,7 @@ class RecetaBusquedaRemoteModel {
           (json['missedIngredientCount'] as num?)?.toInt() ??
           faltantesNombres.length,
       likes: (json['likes'] as num?)?.toInt() ?? 0,
+      minutosPreparacion: (json['readyInMinutes'] as num?)?.toInt(),
       nombresIngredientesUsados: usadosNombres,
       nombresIngredientesFaltantes: faltantesNombres,
     );
@@ -70,6 +73,7 @@ class RecetaBusquedaRemoteModel {
       ingredientesUsados: ingredientesUsados,
       ingredientesFaltantes: ingredientesFaltantes,
       likes: likes,
+      minutosPreparacion: minutosPreparacion,
       ingredientes: [
         ...nombresIngredientesUsados,
         ...nombresIngredientesFaltantes,

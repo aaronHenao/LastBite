@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lastbite/core/responsive/responsive_container.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/alertas/presentation/alertas_provider.dart';
 import 'package:lastbite/features/alertas/presentation/widgets/alerta_card.dart';
@@ -48,9 +49,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
 
     return asyncAlertas.when(
       loading: () => const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.accent),
-        ),
+        body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
       ),
       error: (e, _) => Scaffold(
         body: Center(
@@ -61,139 +60,144 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
         ),
       ),
       data: (alertas) {
-        final avisoTraduccion =
-            ref.read(alertasProvider.notifier).avisoTraduccion;
+        final avisoTraduccion = ref
+            .read(alertasProvider.notifier)
+            .avisoTraduccion;
 
         return Scaffold(
           body: SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(child: 
-                              Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'ALERTAS',
-                                  style: textTheme.titleSmall?.copyWith(
-                                    letterSpacing: 2.4,
-                                    color: AppColors.textMuted,
+            child: ResponsiveContainer(
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'ALERTAS',
+                                      style: textTheme.titleSmall?.copyWith(
+                                        letterSpacing: 2.4,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Caducidad y recetas',
+                                      style: textTheme.bodyLarge?.copyWith(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.textMain,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              if (alertas.isNotEmpty)
+                                TextButton(
+                                  onPressed: () => _confirmarBorrado(context),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: AppColors.danger,
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Caducidad y recetas',
-                                  style: textTheme.bodyLarge?.copyWith(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.textMain,
-                                  ),
-                                ),
-                              ],
-                              ),
-                            ),
-                            
-                            if (alertas.isNotEmpty)
-                              TextButton(
-                                onPressed: () => _confirmarBorrado(context),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: AppColors.danger,
-                                ),
-                                child: const Text(
-                                  'Borrar todo',
-                                  style: TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Las alertas se mantienen hasta que decidas borrarlas.',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                        if (avisoTraduccion != null) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.yellow.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: AppColors.yellow.withValues(alpha: 0.4),
-                              ),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Icon(
-                                  Icons.translate,
-                                  size: 14,
-                                  color: AppColors.textMain,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    avisoTraduccion,
-                                    style: textTheme.bodySmall?.copyWith(
-                                      fontSize: 11,
-                                      color: AppColors.textMain,
+                                  child: const Text(
+                                    'Borrar todo',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
+                            ],
                           ),
-                        ],
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-                  ),
-                ),
-                if (alertas.isEmpty) ...[
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 40),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              CupertinoIcons.bell_slash,
-                              size: 48,
+                          const SizedBox(height: 10),
+                          Text(
+                            'Las alertas se mantienen hasta que decidas borrarlas.',
+                            style: textTheme.bodySmall?.copyWith(
                               color: AppColors.textMuted,
                             ),
+                          ),
+                          if (avisoTraduccion != null) ...[
                             const SizedBox(height: 12),
-                            Text(
-                              'No tienes alertas activas',
-                              textAlign: TextAlign.center,
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textMuted,
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.yellow.withValues(alpha: 0.16),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: AppColors.yellow.withValues(
+                                    alpha: 0.4,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(
+                                    Icons.translate,
+                                    size: 14,
+                                    color: AppColors.textMain,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      avisoTraduccion,
+                                      style: textTheme.bodySmall?.copyWith(
+                                        fontSize: 11,
+                                        color: AppColors.textMain,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
-                        ),
+                          const SizedBox(height: 16),
+                        ],
                       ),
                     ),
                   ),
-                ] else ...[
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
+                  if (alertas.isEmpty) ...[
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 40),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                CupertinoIcons.bell_slash,
+                                size: 48,
+                                color: AppColors.textMuted,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No tienes alertas activas',
+                                textAlign: TextAlign.center,
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
                         final alerta = alertas[index];
                         return Padding(
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -214,13 +218,12 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                             ),
                           ),
                         );
-                      },
-                      childCount: alertas.length,
+                      }, childCount: alertas.length),
                     ),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 110)),
+                    const SliverToBoxAdapter(child: SizedBox(height: 110)),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         );
@@ -351,8 +354,9 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
       likes: info.likes > 0 ? info.likes : base.likes,
       minutosPreparacion: info.minutosPreparacion,
       porciones: info.porciones,
-      ingredientes:
-          detalle.ingredientes.isNotEmpty ? detalle.ingredientes : base.ingredientes,
+      ingredientes: detalle.ingredientes.isNotEmpty
+          ? detalle.ingredientes
+          : base.ingredientes,
       instrucciones: _limpiarHtml(info.instrucciones),
     );
   }

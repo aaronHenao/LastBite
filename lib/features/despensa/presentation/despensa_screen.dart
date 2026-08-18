@@ -5,6 +5,11 @@ import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/producto.dart';
 import 'widgets/producto_card.dart';
+import '../../perfil/presentation/perfil_screen.dart';
+import '../../perfil/domain/item_compra.dart';
+import '../../perfil/presentation/perfil_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:lastbite/core/responsive/responsive.dart';
 
 import '../../auth/presentation/auth_provider.dart';
 
@@ -46,6 +51,8 @@ class DespensaScreen extends ConsumerWidget {
         final ahorro = notifier.ahorroMes;
         final conteoAhorro = notifier.conteoMes;
 
+        final user = authState.valueOrNull;
+
         return Scaffold(
           body: SafeArea(
             child: CustomScrollView(
@@ -64,9 +71,8 @@ class DespensaScreen extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Image.asset(
-                                  'lib/assets/images/logo.png', // <-- Cambia esto por la ruta real de tu imagen de la L
-                                  height:
-                                      38, // Altura ideal para alinearse con el texto
+                                  'lib/assets/images/logo.png',
+                                  height: 38,
                                   fit: BoxFit.contain,
                                 ),
 
@@ -81,19 +87,38 @@ class DespensaScreen extends ConsumerWidget {
                                 ),
                               ],
                             ),
+
                             GestureDetector(
                               onTap: () => _mostrarMenuPerfil(
                                 context,
                                 ref,
                                 nombreUsuario,
                               ),
-                              child: CircleAvatar(
-                                radius: 20,
-                                backgroundColor: AppColors.surface,
-                                child: Icon(
-                                  Icons.person,
-                                  color: AppColors.textMain,
-                                ),
+                              child: Builder(
+                                builder: (context) {
+                                  final isWeb = Responsive.isTabletOrWeb(
+                                    context,
+                                  );
+                                  final fotoUrl = user?.fotoUrl;
+
+                                  if (!isWeb && fotoUrl != null) {
+                                    return CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: AppColors.surface,
+                                      backgroundImage:
+                                          CachedNetworkImageProvider(fotoUrl),
+                                    );
+                                  }
+                                  return CircleAvatar(
+                                    radius: 20,
+                                    backgroundColor: AppColors.surface,
+                                    child: const Icon(
+                                      Icons.person,
+                                      size: 20,
+                                      color: AppColors.textMuted,
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           ],
@@ -172,26 +197,177 @@ class DespensaScreen extends ConsumerWidget {
                     ),
                   ),
                 ] else ...[
-                  if (urgentes.isNotEmpty) ...[
+                  if (Responsive.isTabletOrWeb(context))
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      sliver: SliverToBoxAdapter(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            //columna prox a vencer
+                            if (urgentes.isNotEmpty)
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          CupertinoIcons
+                                              .exclamationmark_triangle,
+                                          size: 16,
+                                          color: AppColors.danger,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'PRÓXIMOS A VENCER',
+                                          style: textTheme.titleSmall?.copyWith(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 1,
+                                            color: AppColors.danger,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    ...urgentes.map(
+                                      (producto) => Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 8,
+                                        ),
+                                        child: ProductoCard(
+                                          producto: producto,
+                                          onTap: () => _mostrarAcciones(
+                                            context,
+                                            ref,
+                                            producto,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                            if (urgentes.isNotEmpty) const SizedBox(width: 20),
+
+                            //columna en buen estado
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        CupertinoIcons.cube_box_fill,
+                                        size: 16,
+                                        color: AppColors.green,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'EN BUEN ESTADO',
+                                        style: textTheme.titleSmall?.copyWith(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 1,
+                                          color: AppColors.textMuted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ...enBuenEstado.map(
+                                    (producto) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: ProductoCard(
+                                        producto: producto,
+                                        onTap: () => _mostrarAcciones(
+                                          context,
+                                          ref,
+                                          producto,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else ...[
+                    //vists mobile (secuencial)
+                    if (urgentes.isNotEmpty) ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Icon(
+                                CupertinoIcons.exclamationmark_triangle,
+                                size: 16,
+                                color: AppColors.danger,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'PRÓXIMOS A VENCER',
+                                style: textTheme.titleSmall?.copyWith(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1,
+                                  color: AppColors.danger,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                            child: ProductoCard(
+                              producto: urgentes[index],
+                              onTap: () => _mostrarAcciones(
+                                context,
+                                ref,
+                                urgentes[index],
+                              ),
+                            ),
+                          ),
+                          childCount: urgentes.length,
+                        ),
+                      ),
+                    ],
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Icon(
-                              CupertinoIcons.exclamationmark_triangle,
+                              CupertinoIcons.cube_box_fill,
                               size: 16,
-                              color: AppColors.danger,
+                              color: AppColors.green,
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'PRÓXIMOS A VENCER',
+                              'EN BUEN ESTADO',
                               style: textTheme.titleSmall?.copyWith(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 1,
-                                color: AppColors.danger,
+                                color: AppColors.textMuted,
                               ),
                             ),
                           ],
@@ -203,57 +379,18 @@ class DespensaScreen extends ConsumerWidget {
                         (context, index) => Padding(
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                           child: ProductoCard(
-                            producto: urgentes[index],
-                            onTap: () =>
-                                _mostrarAcciones(context, ref, urgentes[index]),
+                            producto: enBuenEstado[index],
+                            onTap: () => _mostrarAcciones(
+                              context,
+                              ref,
+                              enBuenEstado[index],
+                            ),
                           ),
                         ),
-                        childCount: urgentes.length,
+                        childCount: enBuenEstado.length,
                       ),
                     ),
                   ],
-
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Icon(
-                            CupertinoIcons.cube_box_fill,
-                            size: 16,
-                            color: AppColors.green,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'EN BUEN ESTADO',
-                            style: textTheme.titleSmall?.copyWith(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                        child: ProductoCard(
-                          producto: enBuenEstado[index],
-                          onTap: () => _mostrarAcciones(
-                            context,
-                            ref,
-                            enBuenEstado[index],
-                          ),
-                        ),
-                      ),
-                      childCount: enBuenEstado.length,
-                    ),
-                  ),
 
                   const SliverToBoxAdapter(child: SizedBox(height: 100)),
                 ],
@@ -283,7 +420,6 @@ class DespensaScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle
             Container(
               margin: const EdgeInsets.symmetric(vertical: 12),
               width: 40,
@@ -293,30 +429,57 @@ class DespensaScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            // Header perfil
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppColors.accent.withValues(alpha: 0.15),
-                    child: const Icon(Icons.person, color: AppColors.accent),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    nombreUsuario,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textMain,
+
+            InkWell(
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PerfilScreen()),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: AppColors.accent.withValues(alpha: 0.15),
+                      child: const Icon(Icons.person, color: AppColors.accent),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nombreUsuario,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textMain,
+                            ),
+                          ),
+                          Text(
+                            'Ver perfil y lista de compras',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
+                    ),
+                  ],
+                ),
               ),
             ),
             const Divider(color: AppColors.border),
-            // Cerrar sesión
             ListTile(
               leading: const Icon(
                 Icons.logout_rounded,
@@ -414,6 +577,7 @@ class DespensaScreen extends ConsumerWidget {
                       backgroundColor: AppColors.green,
                     ),
                   );
+                  _preguntarListaCompras(context, ref, producto);
                 }
               },
             ),
@@ -437,6 +601,9 @@ class DespensaScreen extends ConsumerWidget {
               onTap: () async {
                 Navigator.pop(context);
                 await ref.read(despensaProvider.notifier).eliminar(producto.id);
+                if (context.mounted) {
+                  _preguntarListaCompras(context, ref, producto);
+                }
               },
             ),
             const SizedBox(height: 16),
@@ -607,4 +774,70 @@ class _AhorroCard extends StatelessWidget {
       ),
     );
   }
+}
+
+void _preguntarListaCompras(
+  BuildContext context,
+  WidgetRef ref,
+  Producto producto,
+) {
+  showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Text(producto.emoji, style: const TextStyle(fontSize: 24)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '¿Añadir a lista de compras?',
+              style: const TextStyle(
+                color: AppColors.textMain,
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        'Agregar ${producto.nombre} a tu lista para la próxima compra.',
+        style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text(
+            'No, gracias',
+            style: TextStyle(color: AppColors.textMuted),
+          ),
+        ),
+        FilledButton(
+          onPressed: () async {
+            Navigator.pop(dialogContext);
+            final item = ItemCompra(
+              id: '${producto.id}_${DateTime.now().millisecondsSinceEpoch}',
+              nombre: producto.nombre,
+              emoji: producto.emoji,
+              comprado: false,
+              agregadoEn: DateTime.now(),
+            );
+            await ref.read(listaComprasProvider.notifier).agregar(item);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${producto.nombre} añadido a tu lista 🛒'),
+                  backgroundColor: AppColors.accent,
+                ),
+              );
+            }
+          },
+          style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
+          child: const Text('Añadir'),
+        ),
+      ],
+    ),
+  );
 }

@@ -44,7 +44,8 @@ class RecetasService {
     );
 
     final capped = raw.take(maxRecetasPorBusqueda).toList();
-    return _traducirResultados(capped);
+    final conTiempos = await _agregarTiemposPreparacion(capped);
+    return _traducirResultados(conTiempos);
   }
 
   Future<Map<String, dynamic>> obtenerDetalleRecetaRaw({
@@ -56,6 +57,40 @@ class RecetasService {
       'information': traducido,
       'equipment': {'equipment': <Map<String, dynamic>>[]},
     };
+  }
+
+  Future<List<Map<String, dynamic>>> _agregarTiemposPreparacion(
+    List<Map<String, dynamic>> raw,
+  ) async {
+    if (raw.isEmpty) return raw;
+
+    final ids = raw
+        .map((r) => (r['id'] as num?)?.toInt())
+        .whereType<int>()
+        .toList();
+
+    if (ids.isEmpty) return raw;
+
+    try {
+      final info = await _spoon.getRecipeInformationBulk(recipeIds: ids);
+
+      final minutosPorId = <int, int>{};
+      for (final item in info) {
+        final id = (item['id'] as num?)?.toInt();
+        final minutos = (item['readyInMinutes'] as num?)?.toInt();
+        if (id != null && minutos != null) minutosPorId[id] = minutos;
+      }
+
+      return raw.map((recipe) {
+        final id = (recipe['id'] as num?)?.toInt();
+        final minutos = id == null ? null : minutosPorId[id];
+        if (minutos == null) return recipe;
+
+        return {...recipe, 'readyInMinutes': minutos};
+      }).toList();
+    } on RecetasRemoteException {
+      return raw;
+    }
   }
 
   // ── Traducción de resultados de búsqueda ──────────────
