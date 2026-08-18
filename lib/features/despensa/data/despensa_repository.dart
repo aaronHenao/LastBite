@@ -75,17 +75,23 @@ class DespensaRepository {
   static String claveMes(DateTime fecha) =>
       '${fecha.year}-${fecha.month.toString().padLeft(2, '0')}';
 
-  Future<void> registrarSalvado(String categoria, DateTime cuando) async {
+  /// Suma la cantidad salvada, expresada en la unidad base de la categoria
+  /// (kilos, litros o unidades segun corresponda).
+  Future<void> registrarSalvado(
+    String categoria,
+    double cantidad,
+    DateTime cuando,
+  ) async {
     await _ahorroDoc.set({
-      claveMes(cuando): {categoria: FieldValue.increment(1)},
+      claveMes(cuando): {categoria: FieldValue.increment(cantidad)},
     }, SetOptions(merge: true));
   }
 
-  Future<Map<String, int>> cargarConteoMes(DateTime cuando) async {
+  Future<Map<String, double>> cargarConteoMes(DateTime cuando) async {
     final doc = await _ahorroDoc.get();
     final mes = doc.data()?[claveMes(cuando)] as Map<String, dynamic>?;
     if (mes == null) return {};
-    return mes.map((k, v) => MapEntry(k, (v as num).toInt()));
+    return mes.map((k, v) => MapEntry(k, (v as num).toDouble()));
   }
 
   DocumentReference<Map<String, dynamic>> get _notifDoc => _db

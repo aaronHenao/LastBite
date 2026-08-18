@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/constants/precio_promedio.dart';
 import '../domain/producto.dart';
 import 'widgets/producto_card.dart';
 import '../../perfil/presentation/perfil_screen.dart';
@@ -690,9 +691,29 @@ String _formatearCop(int valor) {
   return '\$$buffer';
 }
 
+/// Muestra "1,2 kg", "500 g", "3 unidades" segun la magnitud.
+String _formatearCantidad(String categoria, double cantidad) {
+  final base = precioDeCategoria(categoria).base;
+
+  if (base == BaseMedida.unidad) {
+    final entero = cantidad.round();
+    return entero == 1 ? '1 unidad' : '$entero unidades';
+  }
+
+  if (cantidad < 1) {
+    final chico = (cantidad * 1000).round();
+    return base == BaseMedida.kilo ? '$chico g' : '$chico ml';
+  }
+
+  final texto = cantidad
+      .toStringAsFixed(cantidad.truncateToDouble() == cantidad ? 0 : 1)
+      .replaceAll('.', ',');
+  return '$texto ${base.abreviatura}';
+}
+
 class _AhorroCard extends StatelessWidget {
   final int ahorro;
-  final Map<String, int> conteo;
+  final Map<String, double> conteo;
 
   const _AhorroCard({required this.ahorro, required this.conteo});
 
@@ -755,7 +776,10 @@ class _AhorroCard extends StatelessWidget {
           else ...[
             const SizedBox(height: 8),
             Text(
-              top.take(3).map((e) => '${e.key} x${e.value}').join('  ·  '),
+              top
+                  .take(3)
+                  .map((e) => '${e.key} ${_formatearCantidad(e.key, e.value)}')
+                  .join('  ·  '),
               style: textTheme.bodySmall?.copyWith(
                 fontSize: 11,
                 color: AppColors.textMuted,

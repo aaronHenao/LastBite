@@ -3,22 +3,95 @@ import 'package:lastbite/core/constants/precio_promedio.dart';
 import 'package:lastbite/core/constants/vida_util.dart';
 
 void main() {
-  group('precioEstimado', () {
-    test('devuelve el precio de una categoría conocida', () {
-      expect(precioEstimado('Verdura'), precioPromedioPorCategoria['Verdura']);
+  group('precioDeCategoria', () {
+    test('devuelve la entrada de una categoría conocida', () {
+      expect(precioDeCategoria('Carne').base, BaseMedida.kilo);
+      expect(precioDeCategoria('Leche').base, BaseMedida.litro);
+      expect(precioDeCategoria('Huevo').base, BaseMedida.unidad);
+    });
+
+    test('ignora mayúsculas y espacios', () {
+      expect(
+        precioDeCategoria('  carne  ').precio,
+        precioDeCategoria('Carne').precio,
+      );
     });
 
     test('una categoría desconocida cae a Otro', () {
-      expect(precioEstimado('Marciano'), precioPromedioPorCategoria['Otro']);
+      expect(
+        precioDeCategoria('Marciano').precio,
+        preciosPorCategoria['Otro']!.precio,
+      );
+    });
+  });
+
+  group('leerCantidad', () {
+    test('lee masa y la normaliza a kilos', () {
+      final r = leerCantidad('500 g')!;
+      expect(r.base, BaseMedida.kilo);
+      expect(r.valor, closeTo(0.5, 1e-9));
     });
 
-    test('el lookup ignora mayúsculas y espacios', () {
-      expect(precioEstimado('  verdura  '), precioEstimado('Verdura'));
-      expect(precioEstimado('CARNE'), precioEstimado('Carne'));
+    test('lee volumen y lo normaliza a litros', () {
+      final r = leerCantidad('250 ml')!;
+      expect(r.base, BaseMedida.litro);
+      expect(r.valor, closeTo(0.25, 1e-9));
     });
 
-    test('una categoría vacía cae a Otro sin lanzar', () {
-      expect(precioEstimado(''), precioPromedioPorCategoria['Otro']);
+    test('acepta coma decimal y falta de espacio', () {
+      expect(leerCantidad('1,5 L')!.valor, closeTo(1.5, 1e-9));
+      expect(leerCantidad('2unidades')!.valor, closeTo(2, 1e-9));
+    });
+
+    test('un número sin unidad se cuenta como unidades', () {
+      final r = leerCantidad('3')!;
+      expect(r.base, BaseMedida.unidad);
+      expect(r.valor, closeTo(3, 1e-9));
+    });
+
+    test('convierte onzas y libras a kilos', () {
+      expect(leerCantidad('1 lb')!.valor, closeTo(0.453592, 1e-6));
+      expect(leerCantidad('1 oz')!.base, BaseMedida.kilo);
+    });
+
+    test('devuelve null cuando no hay número o la unidad es desconocida', () {
+      expect(leerCantidad(''), isNull);
+      expect(leerCantidad('al gusto'), isNull);
+      expect(leerCantidad('2 cda'), isNull);
+      expect(leerCantidad('1 taza'), isNull);
+      expect(leerCantidad('0 g'), isNull);
+    });
+  });
+
+  group('cantidadEnBase', () {
+    test('usa la cantidad leída cuando la dimensión coincide', () {
+      expect(cantidadEnBase('Carne', '2 kg'), closeTo(2, 1e-9));
+      expect(cantidadEnBase('Leche', '500 ml'), closeTo(0.5, 1e-9));
+      expect(cantidadEnBase('Huevo', '12 unidades'), closeTo(12, 1e-9));
+    });
+
+    test('intercambia masa y volumen asumiendo densidad 1', () {
+      // Leche se cotiza por litro pero el empaque viene en gramos.
+      expect(cantidadEnBase('Leche', '900 g'), closeTo(0.9, 1e-9));
+    });
+
+    test('cae a la referencia si no se puede leer la cantidad', () {
+      expect(
+        cantidadEnBase('Carne', 'al gusto'),
+        preciosPorCategoria['Carne']!.referencia,
+      );
+      expect(
+        cantidadEnBase('Verdura', '2 cda'),
+        preciosPorCategoria['Verdura']!.referencia,
+      );
+    });
+
+    test('cae a la referencia si mezcla conteo con peso', () {
+      // Huevo se cotiza por unidad; 500 g no dice cuántos huevos son.
+      expect(
+        cantidadEnBase('Huevo', '500 g'),
+        preciosPorCategoria['Huevo']!.referencia,
+      );
     });
   });
 
@@ -27,30 +100,41 @@ void main() {
       expect(ahorroEstimado({}), 0);
     });
 
-    test('multiplica por la cantidad salvada', () {
-      expect(ahorroEstimado({'Verdura': 3}), precioEstimado('Verdura') * 3);
+    test('escala con la cantidad, no con el número de productos', () {
+      final medioKilo = ahorroEstimado({'Carne': 0.5});
+      final dosKilos = ahorroEstimado({'Carne': 2.0});
+      expect(dosKilos, medioKilo * 4);
     });
 
     test('suma varias categorías', () {
-      final esperado = precioEstimado('Verdura') * 2 + precioEstimado('Carne');
-      expect(ahorroEstimado({'Verdura': 2, 'Carne': 1}), esperado);
+      final esperado =
+          (preciosPorCategoria['Verdura']!.precio * 1.5 +
+                  preciosPorCategoria['Leche']!.precio * 2.0)
+              .round();
+      expect(ahorroEstimado({'Verdura': 1.5, 'Leche': 2.0}), esperado);
     });
 
-    test('las categorías desconocidas aportan el precio de Otro', () {
-      expect(ahorroEstimado({'Marciano': 1}), precioEstimado('Otro'));
+    test('las categorías desconocidas se cobran como Otro', () {
+      expect(
+        ahorroEstimado({'Marciano': 1.0}),
+        preciosPorCategoria['Otro']!.precio,
+      );
     });
   });
 
-  test('cubre exactamente las mismas categorías que vida_util', () {
-    expect(
-      precioPromedioPorCategoria.keys.toSet(),
-      vidaUtilPorCategoria.keys.toSet(),
-    );
-  });
+  group('integridad de la tabla', () {
+    test('cubre exactamente las mismas categorías que vida_util', () {
+      expect(
+        preciosPorCategoria.keys.toSet(),
+        vidaUtilPorCategoria.keys.toSet(),
+      );
+    });
 
-  test('todos los precios son positivos', () {
-    for (final entry in precioPromedioPorCategoria.entries) {
-      expect(entry.value, greaterThan(0), reason: 'categoría ${entry.key}');
-    }
+    test('todos los precios y referencias son positivos', () {
+      for (final entry in preciosPorCategoria.entries) {
+        expect(entry.value.precio, greaterThan(0), reason: entry.key);
+        expect(entry.value.referencia, greaterThan(0), reason: entry.key);
+      }
+    });
   });
 }

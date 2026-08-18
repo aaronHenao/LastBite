@@ -13,8 +13,9 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
   int _salvados = 0;
   int get salvados => _salvados;
 
-  Map<String, int> _conteoMes = {};
-  Map<String, int> get conteoMes => _conteoMes;
+  /// Cantidad salvada este mes por categoria, en su unidad base.
+  Map<String, double> _conteoMes = {};
+  Map<String, double> get conteoMes => _conteoMes;
   int get ahorroMes => ahorroEstimado(_conteoMes);
 
   @override
@@ -31,7 +32,7 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
     ]);
 
     _salvados = resultados[1] as int;
-    _conteoMes = resultados[2] as Map<String, int>;
+    _conteoMes = resultados[2] as Map<String, double>;
     return resultados[0] as List<Producto>;
   }
 
@@ -51,9 +52,10 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
 
     // Métrica de ahorro: no es crítica, así que no bloquea el consumo ni lo
     // hace fallar si Firestore no responde.
+    final cantidad = cantidadEnBase(producto.categoria, producto.cantidad);
     unawaited(
       _repo
-          .registrarSalvado(producto.categoria, DateTime.now())
+          .registrarSalvado(producto.categoria, cantidad, DateTime.now())
           .catchError((Object _) {}),
     );
 
@@ -62,7 +64,11 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
     }
 
     _salvados++;
-    _conteoMes.update(producto.categoria, (v) => v + 1, ifAbsent: () => 1);
+    _conteoMes.update(
+      producto.categoria,
+      (v) => v + cantidad,
+      ifAbsent: () => cantidad,
+    );
     state = AsyncData((state.value ?? []).where((p) => p.id != id).toList());
 
     VencimientoChecker.instance.verificar();
