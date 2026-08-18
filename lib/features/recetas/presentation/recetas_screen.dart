@@ -9,7 +9,7 @@ import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import 'package:lastbite/features/recetas/data/datasources/recetas_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
-//import 'package:lastbite/features/recetas/data/services/translation_service.dart';
+import 'package:lastbite/core/responsive/responsive.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
@@ -69,6 +69,39 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     _searchCtrl.dispose();
     _searchDebounce?.cancel();
     super.dispose();
+  }
+
+  Widget _buildRecetasSliver(BuildContext context) {
+    if (Responsive.isTabletOrWeb(context)) {
+      return SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        sliver: SliverGrid(
+          delegate: SliverChildBuilderDelegate((context, index) {
+            final receta = _recetasFiltradas[index];
+            return RecetaCard(
+              receta: receta,
+              onTap: () => _abrirDetalle(receta),
+            );
+          }, childCount: _recetasFiltradas.length),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.8,
+          ),
+        ),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate((context, index) {
+        final receta = _recetasFiltradas[index];
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          child: RecetaCard(receta: receta, onTap: () => _abrirDetalle(receta)),
+        );
+      }, childCount: _recetasFiltradas.length),
+    );
   }
 
   List<Receta> get _recetasFiltradas {
@@ -507,18 +540,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                       ),
                     ),
                   )
-                : SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final receta = _recetasFiltradas[index];
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                        child: RecetaCard(
-                          receta: receta,
-                          onTap: () => _abrirDetalle(receta),
-                        ),
-                      );
-                    }, childCount: _recetasFiltradas.length),
-                  ),
+                :  _buildRecetasSliver(context),
 
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
