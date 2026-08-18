@@ -454,6 +454,12 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
               setState(() {
                 _categoriaSeleccionada = categoria;
 
+                final unidad = _unidadSeleccionada;
+                if (categoria == null ||
+                    (unidad != null && !unidadValida(categoria, unidad))) {
+                  _unidadSeleccionada = null;
+                }
+
                 if (categoria != null) {
                   _mostrarMensajeRecomendacion = true;
                   _recomendarFechaParaCategoria(categoria);
@@ -476,6 +482,7 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
               Expanded(
                 flex: 2,
                 child: _UnidadDropdown(
+                  categoria: _categoriaSeleccionada,
                   unidadSeleccionada: _unidadSeleccionada,
                   onUnidadChanged: (unidad) {
                     setState(() {
@@ -532,14 +539,14 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
                 id: DateTime.now().millisecondsSinceEpoch.toString(),
                 nombre: _nombreCtrl.text.trim(),
                 emoji: _emojiParaCategoria(_categoriaSeleccionada ?? ''),
-                categoria: _categoriaSeleccionada ?? 'otro',
+                categoria: _categoriaSeleccionada ?? 'Otro',
                 cantidad: _cantidadCtrl.text.trim().isEmpty
                     ? '1 unidad'
                     : '${_cantidadCtrl.text.trim()} ${_unidadSeleccionada?.abreviatura ?? ''}',
                 fechaCaducidad: fecha,
                 esFresco:
-                    _categoriaSeleccionada == 'fruta' ||
-                    _categoriaSeleccionada == 'verdura',
+                    _categoriaSeleccionada == 'Fruta' ||
+                    _categoriaSeleccionada == 'Verdura',
               );
 
               widget.onGuardar(producto);
@@ -699,15 +706,23 @@ class _CategoriaDropdown extends StatelessWidget {
 class _UnidadDropdown extends StatelessWidget {
   final UnidadMedida? unidadSeleccionada;
   final ValueChanged<UnidadMedida?> onUnidadChanged;
+  final String? categoria;
 
   const _UnidadDropdown({
     required this.unidadSeleccionada,
     required this.onUnidadChanged,
+    required this.categoria,
   });
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    // Sin categoria no se sabe que unidades aplican, asi que no se ofrece
+    // ninguna en vez de ofrecerlas todas.
+    final opciones = categoria == null
+        ? const <UnidadMedida>[]
+        : unidadesPara(categoria!);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
@@ -721,14 +736,14 @@ class _UnidadDropdown extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         elevation: 8,
         hint: Text(
-          'Unidad',
+          categoria == null ? 'Elige categoría' : 'Unidad',
           style: textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w500,
             color: AppColors.textMuted,
           ),
         ),
         value: unidadSeleccionada,
-        items: UnidadMedida.values.map((unidad) {
+        items: opciones.map((unidad) {
           return DropdownMenuItem<UnidadMedida>(
             value: unidad,
             child: Text(
@@ -740,7 +755,7 @@ class _UnidadDropdown extends StatelessWidget {
             ),
           );
         }).toList(),
-        onChanged: onUnidadChanged,
+        onChanged: opciones.isEmpty ? null : onUnidadChanged,
         dropdownColor: AppColors.surface,
         icon: const Icon(CupertinoIcons.chevron_down, size: 16),
         iconEnabledColor: AppColors.textMuted,
