@@ -70,18 +70,20 @@ class _RecetaCardState extends State<RecetaCard> {
     final ingredientesUsados = _ingredientesUsados(widget.receta);
 
     Future.wait([
-      //_translationService.translateRecipeTitle(widget.receta.titulo),
-      //_translationService.translateIngredients(ingredientesUsados),
-    ]).then((results) {
-      if (!mounted) return;
-      setState(() {
-        _titulo = results[0] as String;
-        _ingredientes = results[1] as List<String>;
-        _traduciendo = false;
-      });
-    }).catchError((_) {
-      _traduciendo = false;
-    });
+          //_translationService.translateRecipeTitle(widget.receta.titulo),
+          //_translationService.translateIngredients(ingredientesUsados),
+        ])
+        .then((results) {
+          if (!mounted) return;
+          setState(() {
+            _titulo = results[0] as String;
+            _ingredientes = results[1] as List<String>;
+            _traduciendo = false;
+          });
+        })
+        .catchError((_) {
+          _traduciendo = false;
+        });
   }
 
   List<String> _ingredientesUsados(Receta receta) {
@@ -309,11 +311,13 @@ class _IngredientTag extends StatelessWidget {
 class RecetaDetalleSheet extends StatefulWidget {
   final Receta receta;
   final Future<Receta>? detalleFuture;
+  final bool isDialog;
 
   const RecetaDetalleSheet({
     super.key,
     required this.receta,
     this.detalleFuture,
+    this.isDialog = false,
   });
 
   @override
@@ -341,7 +345,6 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
       if (!mounted) return;
       setState(() => _receta = detalle);
     } catch (_) {
-      // Keep the base recipe data if full detail loading fails.
     } finally {
       if (mounted) setState(() => _cargandoDetalle = false);
     }
@@ -350,263 +353,282 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
   @override
   Widget build(BuildContext context) {
     final receta = _receta;
+    final contenido = _buildContenido(receta);
+
+    if (widget.isDialog) {
+      return Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: contenido,
+      );
+    }
 
     return DraggableScrollableSheet(
       initialChildSize: 0.75,
       minChildSize: 0.5,
       maxChildSize: 0.95,
-      builder: (_, controller) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      builder: (_, controller) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: ListView(
+          controller: controller,
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+          children: _buildChildren(receta),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContenido(Receta receta) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+      children: _buildChildren(receta),
+    );
+  }
+
+  List<Widget> _buildChildren(Receta receta) {
+    return [
+      // Handle — solo en mobile
+      if (!widget.isDialog)
+        Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-          child: ListView(
-            controller: controller,
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-            children: [
-              // Handle
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
+        ),
+      // Botón cerrar — solo en dialog
+      if (widget.isDialog)
+        Align(
+          alignment: Alignment.topRight,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 12, right: 4),
+            child: IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+            ),
+          ),
+        ),
 
-              // Emoji grande
-              Center(
-                child: Container(
+      // Imagen
+      Container(
+        width: double.infinity,
+        height: 120,
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: receta.imagenUrl.isEmpty
+            ? Center(
+                child: Text(
+                  _emojiParaReceta(receta.titulo),
+                  style: const TextStyle(fontSize: 60),
+                ),
+              )
+            : ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Image.network(
+                  _urlImagenOptimizada(receta.imagenUrl),
                   width: double.infinity,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: AppColors.card,
-                    borderRadius: BorderRadius.circular(18),
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
+                  webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+                  errorBuilder: (_, error, stackTrace) => Center(
+                    child: Text(
+                      _emojiParaReceta(receta.titulo),
+                      style: const TextStyle(fontSize: 60),
+                    ),
                   ),
-                  child: receta.imagenUrl.isEmpty
-                      ? Center(
-                          child: Text(
-                            _emojiParaReceta(receta.titulo),
-                            style: const TextStyle(fontSize: 60),
-                          ),
-                        )
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: Image.network(
-                            _urlImagenOptimizada(receta.imagenUrl),
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            filterQuality: FilterQuality.high,
-                            webHtmlElementStrategy:
-                                WebHtmlElementStrategy.prefer,
-                            errorBuilder: (_, error, stackTrace) => Center(
-                              child: Text(
-                                _emojiParaReceta(receta.titulo),
-                                style: const TextStyle(fontSize: 60),
-                              ),
-                            ),
-                          ),
-                        ),
                 ),
               ),
-              const SizedBox(height: 16),
+      ),
+      const SizedBox(height: 16),
 
-              // Título y match
-              Row(
+      // Título y match
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              receta.titulo,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textMain,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.green.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.green.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Text(
+              '${receta.porcentajeMatch}% match',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: AppColors.green,
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+
+      // Metadatos
+      Row(
+        children: [
+          if (receta.minutosPreparacion != null) ...[
+            const Icon(
+              Icons.timer_outlined,
+              size: 16,
+              color: AppColors.textMuted,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '${receta.minutosPreparacion} min',
+              style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+            ),
+            const SizedBox(width: 16),
+          ],
+          const Icon(
+            Icons.favorite_border_rounded,
+            size: 16,
+            color: AppColors.textMuted,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '${receta.likes} likes',
+            style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+          ),
+        ],
+      ),
+      if (_cargandoDetalle) ...[
+        const SizedBox(height: 12),
+        const LinearProgressIndicator(minHeight: 2),
+      ],
+      const SizedBox(height: 20),
+
+      // Ingredientes
+      const Text(
+        'INGREDIENTES',
+        style: TextStyle(
+          fontSize: 11,
+          letterSpacing: 1.5,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textMuted,
+        ),
+      ),
+      const SizedBox(height: 10),
+      if (receta.ingredientes != null)
+        ...receta.ingredientes!.asMap().entries.map((e) {
+          final tienes = e.key < receta.ingredientesUsados;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 10,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: tienes
+                      ? AppColors.green.withValues(alpha: 0.4)
+                      : AppColors.border,
+                ),
+              ),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Text(
-                      receta.titulo,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textMain,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.green.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AppColors.green.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    child: Text(
-                      '${receta.porcentajeMatch}% match',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.green,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Metadatos
-              Row(
-                children: [
-                  if (receta.minutosPreparacion != null) ...[
-                    const Icon(
-                      Icons.timer_outlined,
-                      size: 16,
-                      color: AppColors.textMuted,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${receta.minutosPreparacion} min',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                  ],
-                  const Icon(
-                    Icons.favorite_border_rounded,
-                    size: 16,
-                    color: AppColors.textMuted,
-                  ),
-                  const SizedBox(width: 4),
                   Text(
-                    '${receta.likes} likes',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-              if (_cargandoDetalle) ...[
-                const SizedBox(height: 12),
-                const LinearProgressIndicator(minHeight: 2),
-              ],
-              const SizedBox(height: 20),
-
-              // Ingredientes
-              const Text(
-                'INGREDIENTES',
-                style: TextStyle(
-                  fontSize: 11,
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textMuted,
-                ),
-              ),
-              const SizedBox(height: 10),
-              if (receta.ingredientes != null)
-                ...receta.ingredientes!.asMap().entries.map((e) {
-                  final tienes = e.key < receta.ingredientesUsados;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.card,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: tienes
-                              ? AppColors.green.withValues(alpha: 0.4)
-                              : AppColors.border,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            e.value,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textMain,
-                            ),
-                          ),
-                          Text(
-                            tienes ? '✓ Tienes' : 'Falta',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: tienes
-                                  ? AppColors.green
-                                  : AppColors.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              const SizedBox(height: 20),
-
-              // Instrucciones
-              if (receta.instrucciones != null) ...[
-                const Text(
-                  'PREPARACIÓN',
-                  style: TextStyle(
-                    fontSize: 11,
-                    letterSpacing: 1.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.card,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Text(
-                    receta.instrucciones!,
+                    e.value,
                     style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.textMain,
-                      height: 1.6,
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-              ],
-
-              // Botón cocinar
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.restaurant_menu_rounded),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                  Text(
+                    tienes ? '✓ Tienes' : 'Falta',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: tienes ? AppColors.green : AppColors.textMuted,
                     ),
                   ),
-                  label: const Text(
-                    '¡Vamos a cocinar!',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ),
+                ],
               ),
-            ],
+            ),
+          );
+        }),
+      const SizedBox(height: 20),
+
+      // Instrucciones
+      if (receta.instrucciones != null) ...[
+        const Text(
+          'PREPARACIÓN',
+          style: TextStyle(
+            fontSize: 11,
+            letterSpacing: 1.5,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textMuted,
           ),
-        );
-      },
-    );
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Text(
+            receta.instrucciones!,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textMain,
+              height: 1.6,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+
+      // Botón cocinar
+      SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.restaurant_menu_rounded),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.accent,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          label: const Text(
+            '¡Vamos a cocinar!',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ),
+    ];
   }
 
   String _emojiParaReceta(String titulo) {
