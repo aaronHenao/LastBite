@@ -577,7 +577,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                       ),
                     ),
                   )
-                :  _buildRecetasSliver(context),
+                : _buildRecetasSliver(context),
 
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
@@ -587,15 +587,41 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   }
 
   void _abrirDetalle(Receta receta) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => RecetaDetalleSheet(
-        receta: receta,
-        detalleFuture: _cargarDetalleReceta(receta),
-      ),
-    );
+    final isWeb = Responsive.isTabletOrWeb(context);
+
+    if (isWeb) {
+      showDialog(
+        context: context,
+        builder: (_) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 80,
+            vertical: 40,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: SizedBox(
+              width: 600,
+              child: RecetaDetalleSheet(
+                receta: receta,
+                detalleFuture: _cargarDetalleReceta(receta),
+                isDialog: true,
+              ),
+            ),
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => RecetaDetalleSheet(
+          receta: receta,
+          detalleFuture: _cargarDetalleReceta(receta),
+        ),
+      );
+    }
   }
 
   Future<Receta> _cargarDetalleReceta(Receta receta) async {

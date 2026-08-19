@@ -18,7 +18,7 @@ class Producto {
     required this.fechaCaducidad,
     required this.esFresco,
     this.codigoBarras,
-    this.imagenUrl
+    this.imagenUrl,
   });
 
   int get diasRestantes => fechaCaducidad.difference(DateTime.now()).inDays;
