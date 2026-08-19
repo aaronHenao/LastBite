@@ -55,3 +55,9 @@ app.*.map.json
 
 # Notas locales, no forman parte del proyecto
 CLAUDE.md
+
+# Artefactos de analisis local
+.ua/
+
+# Artefactos de analisis local
+.ua/
