@@ -8,6 +8,7 @@ import 'widgets/producto_card.dart';
 import '../../perfil/presentation/perfil_screen.dart';
 import '../../perfil/domain/item_compra.dart';
 import '../../perfil/presentation/perfil_provider.dart';
+import '../../consulta_rapida/presentation/consulta_rapida_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:lastbite/core/responsive/responsive.dart';
 
@@ -476,6 +477,34 @@ class DespensaScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+            ),
+            const Divider(color: AppColors.border),
+            ListTile(
+              leading: const Icon(
+                CupertinoIcons.search,
+                color: AppColors.accent,
+              ),
+              title: const Text(
+                'Consulta Rápida',
+                style: TextStyle(
+                  color: AppColors.textMain,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: const Text(
+                'Buscar productos de tu despensa',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ConsultaRapidaScreen(),
+                  ),
+                );
+              },
             ),
             const Divider(color: AppColors.border),
             ListTile(
