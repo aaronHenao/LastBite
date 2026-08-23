@@ -10,6 +10,7 @@ import 'package:lastbite/features/recetas/data/datasources/recetas_remote_data_s
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
 import 'package:lastbite/core/responsive/responsive.dart';
+import '../../../core/constants/ritmo_cocina.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
@@ -38,6 +39,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   bool _cargaInicial = false;
   bool _busquedaPorProducto = false;
   bool _ordenarPorTiempo = false;
+  bool _ritmoAutomatico = false;
 
   RecetaCacheRepository? _cacheRepo;
 
@@ -58,6 +60,11 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     super.initState();
     _busquedaDataSource = RecetasBusquedaRemoteDataSource();
     _detalleDataSource = RecetasDetalleRemoteDataSource();
+
+    // Entre semana la lista arranca ordenada por tiempo; el usuario puede
+    // cambiarlo con el boton "Menor tiempo" y ahi deja de ser automatico.
+    _ordenarPorTiempo = priorizarRecetasRapidas(DateTime.now());
+    _ritmoAutomatico = true;
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -453,12 +460,36 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                         const SizedBox(width: 8),
                         _OrdenPorTiempoBoton(
                           activo: _ordenarPorTiempo,
-                          onTap: () => setState(
-                            () => _ordenarPorTiempo = !_ordenarPorTiempo,
-                          ),
+                          onTap: () => setState(() {
+                            _ordenarPorTiempo = !_ordenarPorTiempo;
+                            // Al elegir a mano deja de mandar el dia.
+                            _ritmoAutomatico = false;
+                          }),
                         ),
                       ],
                     ),
+                    if (_ritmoAutomatico) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.event_available_outlined,
+                            size: 13,
+                            color: AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              explicacionRitmo(DateTime.now()),
+                              style: textTheme.bodyMedium?.copyWith(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     if (_avisoTraduccion != null) ...[
                       const SizedBox(height: 8),
                       Container(
