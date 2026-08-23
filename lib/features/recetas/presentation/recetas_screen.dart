@@ -10,8 +10,10 @@ import 'package:lastbite/features/recetas/data/datasources/recetas_remote_data_s
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
 import 'package:lastbite/core/responsive/responsive.dart';
+import '../../../core/constants/momento_comida.dart';
 import '../../../core/constants/ritmo_cocina.dart';
 import '../../../core/theme/app_theme.dart';
+import '../domain/orden_recetas.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -127,22 +129,12 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   }
 
   int _compararRecetas(Receta a, Receta b) {
-    if (!_ordenarPorTiempo) {
-      return b.porcentajeMatch.compareTo(a.porcentajeMatch);
-    }
-
-    final minutosA = a.minutosPreparacion;
-    final minutosB = b.minutosPreparacion;
-
-    if (minutosA == null && minutosB == null) {
-      return b.porcentajeMatch.compareTo(a.porcentajeMatch);
-    }
-    if (minutosA == null) return 1;
-    if (minutosB == null) return -1;
-
-    final porTiempo = minutosA.compareTo(minutosB);
-    if (porTiempo != 0) return porTiempo;
-    return b.porcentajeMatch.compareTo(a.porcentajeMatch);
+    return compararRecetas(
+      a,
+      b,
+      ordenarPorTiempo: _ordenarPorTiempo,
+      momento: momentoComidaDe(DateTime.now()),
+    );
   }
 
   String _urgentesLabel(List<Producto> productos) {
@@ -241,9 +233,18 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
     } catch (e) {
+      // Si Spoonacular falla (sin cuota, sin red) mostramos lo ultimo que
+      // haya quedado guardado, aunque sea de una version anterior del cache.
+      // Puede venir sin dishTypes o sin tiempo: esos criterios simplemente
+      // no opinan sobre esas recetas. Es mejor que dejar la pantalla vacia.
+      final respaldo = _cacheRepo == null
+          ? const <Receta>[]
+          : await _cacheRepo!.cargarRecetas();
+
       if (!mounted) return;
       setState(() {
-        _errorCarga = e.toString();
+        _recetas = respaldo;
+        _errorCarga = respaldo.isEmpty ? e.toString() : null;
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
@@ -480,7 +481,8 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              explicacionRitmo(DateTime.now()),
+                              '${explicacionMomento(momentoComidaDe(DateTime.now()))}. '
+                              '${explicacionRitmo(DateTime.now())}',
                               style: textTheme.bodyMedium?.copyWith(
                                 fontSize: 12,
                                 color: AppColors.textMuted,

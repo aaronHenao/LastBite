@@ -75,18 +75,34 @@ class RecetasService {
       final info = await _spoon.getRecipeInformationBulk(recipeIds: ids);
 
       final minutosPorId = <int, int>{};
+      final tiposPorId = <int, List<String>>{};
       for (final item in info) {
         final id = (item['id'] as num?)?.toInt();
+        if (id == null) continue;
+
         final minutos = (item['readyInMinutes'] as num?)?.toInt();
-        if (id != null && minutos != null) minutosPorId[id] = minutos;
+        if (minutos != null) minutosPorId[id] = minutos;
+
+        final tipos = (item['dishTypes'] as List?)
+            ?.map((e) => e.toString())
+            .where((e) => e.isNotEmpty)
+            .toList();
+        if (tipos != null && tipos.isNotEmpty) tiposPorId[id] = tipos;
       }
 
       return raw.map((recipe) {
         final id = (recipe['id'] as num?)?.toInt();
-        final minutos = id == null ? null : minutosPorId[id];
-        if (minutos == null) return recipe;
+        if (id == null) return recipe;
 
-        return {...recipe, 'readyInMinutes': minutos};
+        final minutos = minutosPorId[id];
+        final tipos = tiposPorId[id];
+        if (minutos == null && tipos == null) return recipe;
+
+        return {
+          ...recipe,
+          'readyInMinutes': ?minutos,
+          'dishTypes': ?tipos,
+        };
       }).toList();
     } on RecetasRemoteException {
       return raw;

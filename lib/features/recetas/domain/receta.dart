@@ -8,6 +8,7 @@ class Receta {
 
   // segundo endpoint (detalle)
   final int? minutosPreparacion;
+  final List<String>? dishTypes;
   final int? porciones;
   final List<String>? ingredientes;
   final String? instrucciones;
@@ -20,6 +21,7 @@ class Receta {
     required this.ingredientesFaltantes,
     required this.likes,
     this.minutosPreparacion,
+    this.dishTypes,
     this.porciones,
     this.ingredientes,
     this.instrucciones,
@@ -41,6 +43,7 @@ class Receta {
     'ingredientesFaltantes': ingredientesFaltantes,
     'likes': likes,
     'minutosPreparacion': minutosPreparacion,
+    'dishTypes': dishTypes,
     'porciones': porciones,
     'ingredientes': ingredientes,
     'instrucciones': instrucciones,
@@ -58,6 +61,9 @@ factory Receta.fromMap(Map<String, dynamic> map) {
     ingredientesFaltantes: map['ingredientesFaltantes'] as int,
     likes: map['likes'] as int,
     minutosPreparacion: map['minutosPreparacion'] as int?,
+    dishTypes: (map['dishTypes'] as List?)
+        ?.map((e) => e.toString())
+        .toList(),
     porciones: map['porciones'] as int?,
     ingredientes: (map['ingredientes'] as List?)
         ?.map((e) => e.toString())

@@ -4,6 +4,16 @@ import '../domain/receta.dart';
 class RecetaCacheRepository {
   RecetaCacheRepository({required this.userId});
 
+  /// Version del formato guardado en Firestore.
+  ///
+  /// Subirla invalida el cache de todos los usuarios la proxima vez que
+  /// entren. Hay que subirla cada vez que se agrega un campo que viene de
+  /// Spoonacular: los documentos viejos no lo tienen y, como el cache no
+  /// expira por tiempo, se quedarian sin ese dato para siempre.
+  ///
+  /// v2: agrega `dishTypes`.
+  static const int versionCache = 2;
+
   final String userId;
   final _db = FirebaseFirestore.instance;
 
@@ -37,7 +47,7 @@ class RecetaCacheRepository {
         final map = receta.toMap(
           ingredientesUrgentesUsados: ingredientesUrgentes,
         );
-        batch.set(ref, map);
+        batch.set(ref, {...map, 'versionCache': versionCache});
       }
 
       await batch.commit();
@@ -73,8 +83,15 @@ class RecetaCacheRepository {
   //verifica si el caché es válido para los ingredientes actuales
   Future<bool> cacheEsValido(List<String> ingredientesUrgentesActuales) async {
     final snapshot = await _col.get();
-    
+
     if (snapshot.docs.isEmpty) return false;
+
+    // Un documento guardado por una version anterior no tiene los campos
+    // nuevos, y como el cache no expira se quedaria asi para siempre.
+    final desactualizado = snapshot.docs.any(
+      (doc) => (doc.data()['versionCache'] as num?)?.toInt() != versionCache,
+    );
+    if (desactualizado) return false;
 
     // Obtiene todos los ingredientes urgentes guardados en el caché
     final ingredientesEnCache = <String>{};
