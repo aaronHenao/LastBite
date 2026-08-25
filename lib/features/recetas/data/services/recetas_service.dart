@@ -1,13 +1,12 @@
 import '../datasources/my_memory_translate_service.dart';
 import '../datasources/recetas_remote_exception.dart';
 import 'spoon_service.dart';
+import 'package:lastbite/features/perfil/domain/perfil_nutricional.dart';
 
 class RecetasService {
-  RecetasService({
-    SpoonService? spoon,
-    MyMemoryTranslateService? translator,
-  })  : _spoon = spoon ?? SpoonService(),
-        _translator = translator ?? MyMemoryTranslateService();
+  RecetasService({SpoonService? spoon, MyMemoryTranslateService? translator})
+    : _spoon = spoon ?? SpoonService(),
+      _translator = translator ?? MyMemoryTranslateService();
 
   static const int maxRecetasPorBusqueda = 3;
 
@@ -22,13 +21,13 @@ class RecetasService {
     required List<String> productosDespensa,
     int number = 3,
     bool ignorePantry = false,
+    PerfilNutricional? perfil,
   }) async {
     final numberLimitado = number.clamp(1, maxRecetasPorBusqueda).toInt();
     final normalizados = _normalizarIngredientes(productosDespensa);
 
     // ES → EN para Spoonacular
-    final ingredientesEn =
-        await _translator.ingredientesEsAEn(normalizados);
+    final ingredientesEn = await _translator.ingredientesEsAEn(normalizados);
 
     if (ingredientesEn.isEmpty) {
       throw const RecetasRemoteException(
@@ -36,12 +35,22 @@ class RecetasService {
       );
     }
 
-    final raw = await _spoon.findByIngredients(
-      ingredients: ingredientesEn,
-      number: numberLimitado,
-      ignorePantry: ignorePantry,
-      ranking: 1,
-    );
+    final raw = perfil?.hasRecipePreferences == true
+        ? await _spoon.searchComplex(
+            ingredients: ingredientesEn,
+            number: numberLimitado,
+            diet: _dietFilter(perfil!),
+            intolerances: perfil.allergies,
+            excludedIngredients: perfil.restrictions,
+            sort: _sortFilter(perfil),
+            sortDirection: _sortDirection(perfil),
+          )
+        : await _spoon.findByIngredients(
+            ingredients: ingredientesEn,
+            number: numberLimitado,
+            ignorePantry: ignorePantry,
+            ranking: 1,
+          );
 
     final capped = raw.take(maxRecetasPorBusqueda).toList();
     final conTiempos = await _agregarTiemposPreparacion(capped);
@@ -175,10 +184,10 @@ class RecetasService {
     final extendedIngredients = copy['extendedIngredients'];
     final nombres = extendedIngredients is List
         ? extendedIngredients
-            .whereType<Map<String, dynamic>>()
-            .map((item) => item['name']?.toString() ?? '')
-            .where((n) => n.isNotEmpty)
-            .toList()
+              .whereType<Map<String, dynamic>>()
+              .map((item) => item['name']?.toString() ?? '')
+              .where((n) => n.isNotEmpty)
+              .toList()
         : <String>[];
 
     // Título e ingredientes en paralelo, instrucciones aparte
@@ -199,8 +208,9 @@ class RecetasService {
 
     // Traduce instrucciones separado porque es texto largo
     if (instrucciones.isNotEmpty) {
-      copy['instructions'] =
-          await _translator.instruccionesEnAEs(instrucciones);
+      copy['instructions'] = await _translator.instruccionesEnAEs(
+        instrucciones,
+      );
     }
 
     // Actualiza ingredientes traducidos
@@ -227,5 +237,39 @@ class RecetasService {
         .where((p) => p.isNotEmpty)
         .toSet()
         .toList();
+  }
+
+  String? _dietFilter(PerfilNutricional perfil) {
+    switch (perfil.dietaryType) {
+      case 'vegetarian':
+        return 'vegetarian';
+      case 'vegan':
+        return 'vegan';
+      default:
+        return null;
+    }
+  }
+
+  String? _sortFilter(PerfilNutricional perfil) {
+    if (perfil.userType == 'athlete') return 'protein';
+    if (perfil.userType == 'nutritional_plan') {
+      switch (perfil.goal) {
+        case 'lose_weight':
+          return 'calories';
+        case 'maintain_weight':
+          return 'max-used-ingredients';
+        case 'gain_weight':
+          return 'calories';
+      }
+    }
+    return 'max-used-ingredients';
+  }
+
+  String _sortDirection(PerfilNutricional perfil) {
+    if (perfil.userType == 'athlete') return 'desc';
+    if (perfil.userType == 'nutritional_plan' && perfil.goal == 'gain_weight') {
+      return 'desc';
+    }
+    return 'asc';
   }
 }
