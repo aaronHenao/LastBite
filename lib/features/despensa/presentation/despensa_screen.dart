@@ -607,7 +607,12 @@ class DespensaScreen extends ConsumerWidget {
                       backgroundColor: AppColors.green,
                     ),
                   );
-                  _preguntarListaCompras(context, ref, producto);
+                  _preguntarListaCompras(
+                    context,
+                    ref,
+                    producto,
+                    fechaConsumido: DateTime.now(),
+                  );
                 }
               },
             ),
@@ -632,7 +637,14 @@ class DespensaScreen extends ConsumerWidget {
                 Navigator.pop(context);
                 await ref.read(despensaProvider.notifier).eliminar(producto.id);
                 if (context.mounted) {
-                  _preguntarListaCompras(context, ref, producto);
+                  _preguntarListaCompras(
+                    context,
+                    ref,
+                    producto,
+                    fechaVencido: producto.vencido
+                        ? producto.fechaCaducidad
+                        : null,
+                  );
                 }
               },
             ),
@@ -832,8 +844,10 @@ class _AhorroCard extends StatelessWidget {
 void _preguntarListaCompras(
   BuildContext context,
   WidgetRef ref,
-  Producto producto,
-) {
+  Producto producto, {
+  DateTime? fechaConsumido,
+  DateTime? fechaVencido,
+}) {
   showDialog(
     context: context,
     builder: (dialogContext) => AlertDialog(
@@ -876,6 +890,8 @@ void _preguntarListaCompras(
               emoji: producto.emoji,
               comprado: false,
               agregadoEn: DateTime.now(),
+              fechaConsumido: fechaConsumido,
+              fechaVencido: fechaVencido,
             );
             await ref.read(listaComprasProvider.notifier).agregar(item);
             if (context.mounted) {
