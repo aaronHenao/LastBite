@@ -441,19 +441,46 @@ class _ItemCompraCard extends StatelessWidget {
               Text(item.emoji, style: const TextStyle(fontSize: 22)),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  item.nombre,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: item.comprado
-                        ? AppColors.textMuted
-                        : AppColors.textMain,
-                    decoration: item.comprado
-                        ? TextDecoration.lineThrough
-                        : null,
-                    decorationColor: AppColors.textMuted,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.nombre,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: item.comprado
+                            ? AppColors.textMuted
+                            : AppColors.textMain,
+                        decoration: item.comprado
+                            ? TextDecoration.lineThrough
+                            : null,
+                        decorationColor: AppColors.textMuted,
+                      ),
+                    ),
+                    if (item.fechaConsumido != null ||
+                        item.fechaVencido != null) ...[
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          if (item.fechaConsumido != null)
+                            _FechaPill(
+                              text:
+                                  'Consumido: ${_formatearFecha(item.fechaConsumido!)}',
+                              color: AppColors.green,
+                            ),
+                          if (item.fechaVencido != null)
+                            _FechaPill(
+                              text:
+                                  'Venció: ${_formatearFecha(item.fechaVencido!)}',
+                              color: AppColors.danger,
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
@@ -462,6 +489,40 @@ class _ItemCompraCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FechaPill extends StatelessWidget {
+  final String text;
+  final Color color;
+
+  const _FechaPill({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+String _formatearFecha(DateTime date) {
+  final day = date.day.toString().padLeft(2, '0');
+  final month = date.month.toString().padLeft(2, '0');
+  final year = date.year;
+  return '$day/$month/$year';
 }
 
 ImageProvider _buildImageProvider(String url) {
