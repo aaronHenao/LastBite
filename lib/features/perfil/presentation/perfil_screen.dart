@@ -9,6 +9,7 @@ import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import '../domain/item_compra.dart';
 import 'perfil_provider.dart';
 import 'package:lastbite/core/responsive/responsive.dart';
+import 'perfil_nutricional_screen.dart';
 
 class PerfilScreen extends ConsumerWidget {
   const PerfilScreen({super.key});
@@ -134,6 +135,57 @@ class PerfilScreen extends ConsumerWidget {
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      InkWell(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PerfilNutricionalScreen(),
+                          ),
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.restaurant_menu_outlined,
+                                color: AppColors.accent,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Perfil nutricional',
+                                      style: textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Adapta las recetas a tus preferencias',
+                                      style: textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.chevron_right_rounded,
+                                color: AppColors.textMuted,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 28),

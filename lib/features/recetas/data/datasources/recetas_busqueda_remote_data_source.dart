@@ -2,13 +2,14 @@ import 'package:dio/dio.dart';
 import '../services/recetas_service.dart';
 import '../services/spoon_service.dart';
 import '../datasources/my_memory_translate_service.dart';
+import 'package:lastbite/features/perfil/domain/perfil_nutricional.dart';
 
 class RecetasBusquedaRemoteDataSource {
   RecetasBusquedaRemoteDataSource({Dio? dio, String? apiKey})
-      : _service = RecetasService(
-          spoon: SpoonService(dio: dio, apiKey: apiKey),
-          translator: MyMemoryTranslateService(dio: dio),
-        );
+    : _service = RecetasService(
+        spoon: SpoonService(dio: dio, apiKey: apiKey),
+        translator: MyMemoryTranslateService(dio: dio),
+      );
 
   final RecetasService _service;
 
@@ -18,11 +19,13 @@ class RecetasBusquedaRemoteDataSource {
     required List<String> productosDespensa,
     int number = 3,
     bool ignorePantry = false,
+    PerfilNutricional? perfil,
   }) {
     return _service.buscarRecetasPorDespensaRaw(
       productosDespensa: productosDespensa,
       number: number,
       ignorePantry: ignorePantry,
+      perfil: perfil,
     );
   }
 }
