@@ -8,7 +8,7 @@ import 'package:lastbite/features/compartida/presentation/compartida_provider.da
 import '../data/despensa_repository.dart';
 import '../domain/producto.dart';
 
-class DespensaNotifier extends AsyncNotifier<List<Producto>> {
+class DespensaNotifier extends StreamNotifier<List<Producto>> {
   late DespensaRepository _repo;
 
   int _salvados = 0;
@@ -20,9 +20,12 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
   int get ahorroMes => ahorroEstimado(_conteoMes);
 
   @override
-  Future<List<Producto>> build() async {
+  Stream<List<Producto>> build() async* {
     final user = await ref.watch(firebaseUserProvider.future);
-    if (user == null) return [];
+    if (user == null) {
+      yield [];
+      return;
+    }
 
     final compartidaId = await ref.watch(despensaCompartidaIdProvider.future);
     _repo = DespensaRepository(
@@ -31,19 +34,21 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
     );
 
     final resultados = await Future.wait([
-      _repo.cargarProductos(),
       _repo.cargarSalvados(),
       _repo.cargarConteoMes(DateTime.now()),
     ]);
 
-    _salvados = resultados[1] as int;
-    _conteoMes = resultados[2] as Map<String, double>;
-    return resultados[0] as List<Producto>;
+    _salvados = resultados[0] as int;
+    _conteoMes = resultados[1] as Map<String, double>;
+
+    yield* _repo.productosStream();
   }
+
+  // Ninguna de estas operaciones toca la lista a mano: productosStream es la
+  // unica fuente y Firestore la emite de inmediato con el cambio local.
 
   Future<void> agregar(Producto producto) async {
     await _repo.guardar(producto);
-    state = AsyncData([...state.value ?? [], producto]);
     Future.delayed(const Duration(seconds: 5), () {
       VencimientoChecker.instance.verificar();
     });
@@ -74,14 +79,11 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
       (v) => v + cantidad,
       ifAbsent: () => cantidad,
     );
-    state = AsyncData((state.value ?? []).where((p) => p.id != id).toList());
-
     VencimientoChecker.instance.verificar();
   }
 
   Future<void> eliminar(String id) async {
     await _repo.eliminar(id);
-    state = AsyncData((state.value ?? []).where((p) => p.id != id).toList());
   }
 
   List<Producto> get urgentes {
@@ -91,6 +93,6 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
 }
 
 final despensaProvider =
-    AsyncNotifierProvider<DespensaNotifier, List<Producto>>(
+    StreamNotifierProvider<DespensaNotifier, List<Producto>>(
       DespensaNotifier.new,
     );

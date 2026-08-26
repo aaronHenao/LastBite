@@ -46,6 +46,23 @@ class DespensaRepository {
     await batch.commit();
   }
 
+  /// Productos en vivo: los cambios de otros miembros de la despensa
+  /// compartida llegan sin recargar la app.
+  Stream<List<Producto>> productosStream() => _col
+      .snapshots()
+      .map(
+        (snapshot) =>
+            snapshot.docs.map((doc) => Producto.fromMap(doc.data())).toList(),
+      )
+      // Al salir o ser expulsado de una despensa compartida se pierde el
+      // permiso sobre la coleccion. No es un error que mostrar: el puntero
+      // del usuario cambia enseguida y el provider se reconstruye sobre la
+      // despensa personal.
+      .handleError(
+        (Object _) {},
+        test: (e) => e is FirebaseException && e.code == 'permission-denied',
+      );
+
   Future<List<Producto>> cargarProductos() async {
     final snapshot = await _col.get();
     return snapshot.docs.map((doc) => Producto.fromMap(doc.data())).toList();

@@ -523,7 +523,9 @@ Future<void> _dialogoUnirse(BuildContext context, WidgetRef ref) async {
 /// Devuelve true/false segun lo que elija el usuario, o null si cancela.
 /// Si no tiene productos personales no hay nada que preguntar.
 Future<bool?> _preguntarMigracion(BuildContext context, WidgetRef ref) async {
-  final cantidad = await ref.read(productosPersonalesCountProvider.future);
+  // refresh y no read: el conteo cacheado de un intento anterior haria
+  // desaparecer el dialogo aunque si haya productos que migrar.
+  final cantidad = await ref.refresh(productosPersonalesCountProvider.future);
   if (!context.mounted) return null;
   if (cantidad == 0) return false;
 
