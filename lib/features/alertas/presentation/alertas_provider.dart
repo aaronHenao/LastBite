@@ -5,6 +5,7 @@ import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/recetas/data/datasources/recetas_busqueda_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/domain/receta.dart';
+import 'package:lastbite/features/compartida/presentation/compartida_provider.dart';
 import '../data/alertas_repository.dart';
 import '../domain/alerta.dart';
 
@@ -18,6 +19,8 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
 
   @override
   Future<List<Alerta>> build() async {
+    // Reconstruye al entrar o salir de una despensa compartida.
+    ref.watch(despensaCompartidaIdProvider);
     return _cargarAlertas();
   }
 
@@ -33,7 +36,10 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
       return;
     }
 
-    _repo = AlertasRepository(userId: user.uid);
+    _repo = AlertasRepository(
+      userId: user.uid,
+      despensaCompartidaId: await ref.read(despensaCompartidaIdProvider.future),
+    );
     await _repo.borrarTodasAlertas(DateTime.now());
     state = const AsyncData([]);
   }
@@ -42,7 +48,10 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     final user = await ref.read(firebaseUserProvider.future);
     if (user == null) return;
 
-    _repo = AlertasRepository(userId: user.uid);
+    _repo = AlertasRepository(
+      userId: user.uid,
+      despensaCompartidaId: await ref.read(despensaCompartidaIdProvider.future),
+    );
     await _repo.marcarAlertaBorrada(id, DateTime.now());
     state = AsyncData((state.value ?? []).where((a) => a.id != id).toList());
   }
@@ -51,7 +60,10 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     final user = await ref.read(firebaseUserProvider.future);
     if (user == null) return [];
 
-    _repo = AlertasRepository(userId: user.uid);
+    _repo = AlertasRepository(
+      userId: user.uid,
+      despensaCompartidaId: await ref.read(despensaCompartidaIdProvider.future),
+    );
     _busquedaDataSource = RecetasBusquedaRemoteDataSource();
     _avisoTraduccion = null;
 

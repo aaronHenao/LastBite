@@ -1,8 +1,95 @@
 rules_version = '2';
-service cloud.firestore.rules {
+
+service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function despensa(despensaId) {
+      return get(/databases/$(database)/documents/despensas_compartidas/$(despensaId)).data;
+    }
+
+    function esAdminDe(despensaId) {
+      return autenticado()
+        && despensaId is string
+        && despensa(despensaId).adminUid == request.auth.uid;
+    }
+
+    function esMiembroDe(despensaId) {
+      return autenticado()
+        && despensaId is string
+        && request.auth.uid in despensa(despensaId).miembrosUids;
+    }
+
+    // Despensa personal: solo su dueño.
+    match /users/{userId} {
+      allow read, write: if autenticado() && request.auth.uid == userId;
+
+      // El admin de una despensa compartida puede devolver a un miembro a su
+      // despensa personal (al expulsarlo o al eliminar la despensa). Solo
+      // puede tocar ese campo y solo puede dejarlo en null.
+      allow update: if autenticado()
+        && resource != null
+        && 'despensaCompartidaId' in resource.data
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['despensaCompartidaId'])
+        && request.resource.data.despensaCompartidaId == null
+        && esAdminDe(resource.data.despensaCompartidaId);
+    }
+
+    match /users/{userId}/{documento=**} {
+      allow read, write: if autenticado() && request.auth.uid == userId;
+    }
+
+    // Despensa compartida: solo sus miembros.
+    match /despensas_compartidas/{despensaId} {
+
+      function soloCambiaMembresia() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['miembrosUids', 'miembros']);
+      }
+
+      function seUne() {
+        return soloCambiaMembresia()
+          && request.auth.uid in request.resource.data.miembrosUids
+          && !(request.auth.uid in resource.data.miembrosUids);
+      }
+
+      function sale() {
+        return soloCambiaMembresia()
+          && request.auth.uid in resource.data.miembrosUids
+          && !(request.auth.uid in request.resource.data.miembrosUids);
+      }
+
+      // Nunca se lista la colección: unirse pasa por el índice de códigos.
+      allow list: if false;
+      allow get: if autenticado() && request.auth.uid in resource.data.miembrosUids;
+
+      allow create: if autenticado()
+        && request.resource.data.adminUid == request.auth.uid
+        && request.auth.uid in request.resource.data.miembrosUids;
+
+      allow update: if autenticado()
+        && (request.auth.uid == resource.data.adminUid || seUne() || sale());
+
+      allow delete: if autenticado() && request.auth.uid == resource.data.adminUid;
+    }
+
+    match /despensas_compartidas/{despensaId}/{documento=**} {
+      allow read, write: if esMiembroDe(despensaId);
+    }
+
+    // Índice código -> despensa. Se lee de a un documento (nunca se lista),
+    // así el código funciona como invitación sin exponer las demás despensas.
+    match /codigos_despensa/{codigo} {
+      allow list: if false;
+      allow get: if autenticado();
+      allow create: if autenticado()
+        && request.resource.data.despensaId is string;
+      allow delete: if esAdminDe(resource.data.despensaId);
+      allow update: if false;
     }
   }
 }

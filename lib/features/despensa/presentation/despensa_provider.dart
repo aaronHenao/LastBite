@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/notifications/vencimiento_checker.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/core/constants/precio_promedio.dart';
+import 'package:lastbite/features/compartida/presentation/compartida_provider.dart';
 import '../data/despensa_repository.dart';
 import '../domain/producto.dart';
 
@@ -23,7 +24,11 @@ class DespensaNotifier extends AsyncNotifier<List<Producto>> {
     final user = await ref.watch(firebaseUserProvider.future);
     if (user == null) return [];
 
-    _repo = DespensaRepository(userId: user.uid);
+    final compartidaId = await ref.watch(despensaCompartidaIdProvider.future);
+    _repo = DespensaRepository(
+      userId: user.uid,
+      despensaCompartidaId: compartidaId,
+    );
 
     final resultados = await Future.wait([
       _repo.cargarProductos(),

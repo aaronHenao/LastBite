@@ -6,6 +6,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/precio_promedio.dart';
 import '../domain/producto.dart';
 import 'widgets/producto_card.dart';
+import '../../compartida/presentation/compartida_provider.dart';
+import '../../compartida/presentation/compartida_screen.dart';
 import '../../perfil/presentation/perfil_screen.dart';
 import '../../perfil/domain/item_compra.dart';
 import '../../perfil/presentation/perfil_provider.dart';
@@ -28,6 +30,9 @@ class DespensaScreen extends ConsumerWidget {
       loading: () => 'Mi cuenta',
       error: (_, __) => 'Mi cuenta',
     );
+
+    final despensaCompartida = ref.watch(despensaCompartidaProvider).valueOrNull;
+    final tituloDespensa = despensaCompartida?.nombre ?? 'Mi Despensa';
 
     final asyncProductos = ref.watch(despensaProvider);
     return asyncProductos.when(
@@ -68,26 +73,31 @@ class DespensaScreen extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  'lib/assets/images/logo.png',
-                                  height: 38,
-                                  fit: BoxFit.contain,
-                                ),
-
-                                const SizedBox(width: 5),
-                                Text(
-                                  'Mi Despensa',
-                                  style: textTheme.bodyLarge?.copyWith(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.textMain,
+                            Expanded(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Image.asset(
+                                    'lib/assets/images/logo.png',
+                                    height: 38,
+                                    fit: BoxFit.contain,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      tituloDespensa,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: textTheme.bodyLarge?.copyWith(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.textMain,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
 
                             GestureDetector(
                               onTap: () => _mostrarMenuPerfil(
@@ -479,6 +489,51 @@ class DespensaScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+            ),
+            const Divider(color: AppColors.border),
+            Consumer(
+              builder: (context, ref, _) {
+                final compartida = ref
+                    .watch(despensaCompartidaProvider)
+                    .valueOrNull;
+
+                return ListTile(
+                  leading: const Icon(
+                    Icons.groups_rounded,
+                    color: AppColors.green,
+                  ),
+                  title: const Text(
+                    'Despensa compartida',
+                    style: TextStyle(
+                      color: AppColors.textMain,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    compartida == null
+                        ? 'Crea una o únete con un código'
+                        : compartida.nombre,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted,
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const DespensaCompartidaScreen(),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
             const Divider(color: AppColors.border),
             ListTile(

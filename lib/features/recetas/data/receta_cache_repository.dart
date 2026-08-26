@@ -1,14 +1,25 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../domain/receta.dart';
+import 'package:lastbite/core/data/despensa_ref.dart';
 
 class RecetaCacheRepository {
-  RecetaCacheRepository({required this.userId});
+  RecetaCacheRepository({required this.userId, this.despensaCompartidaId});
 
   final String userId;
+
+  /// Si no es null, el repositorio opera sobre la despensa compartida
+  /// en vez de la despensa personal del usuario.
+  final String? despensaCompartidaId;
+
   final _db = FirebaseFirestore.instance;
 
+  DocumentReference<Map<String, dynamic>> get _raiz => raizDespensa(
+    userId: userId,
+    despensaCompartidaId: despensaCompartidaId,
+  );
+
   CollectionReference<Map<String, dynamic>> get _col =>
-      _db.collection('users').doc(userId).collection('recetas_sugeridas');
+      _raiz.collection('recetas_sugeridas');
 
   //carga recetas del caché
   Future<List<Receta>> cargarRecetas() async {

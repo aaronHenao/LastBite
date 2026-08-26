@@ -1,17 +1,28 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../domain/producto.dart';
+import 'package:lastbite/core/data/despensa_ref.dart';
 
 class DespensaRepository {
-  DespensaRepository({required this.userId});
+  DespensaRepository({required this.userId, this.despensaCompartidaId});
 
   final String userId;
+
+  /// Si no es null, el repositorio opera sobre la despensa compartida
+  /// en vez de la despensa personal del usuario.
+  final String? despensaCompartidaId;
+
   final _db = FirebaseFirestore.instance;
 
+  DocumentReference<Map<String, dynamic>> get _raiz => raizDespensa(
+    userId: userId,
+    despensaCompartidaId: despensaCompartidaId,
+  );
+
   CollectionReference<Map<String, dynamic>> get _col =>
-      _db.collection('users').doc(userId).collection('productos');
+      _raiz.collection('productos');
 
   CollectionReference<Map<String, dynamic>> get _recetasCol =>
-      _db.collection('users').doc(userId).collection('recetas_sugeridas');
+      _raiz.collection('recetas_sugeridas');
 
   Future<void> invalidarRecetasPorIngrediente(String nombreIngrediente) async {
     final snapshot = await _recetasCol.get();
@@ -48,10 +59,7 @@ class DespensaRepository {
     await _col.doc(id).delete();
   }
 
-  DocumentReference<Map<String, dynamic>> get _statsDoc => _db
-      .collection('users')
-      .doc(userId)
-      .collection('estadisticas')
+  DocumentReference<Map<String, dynamic>> get _statsDoc => _raiz.collection('estadisticas')
       .doc('resumen');
 
   Future<int> cargarSalvados() async {
@@ -66,10 +74,7 @@ class DespensaRepository {
     }, SetOptions(merge: true));
   }
 
-  DocumentReference<Map<String, dynamic>> get _ahorroDoc => _db
-      .collection('users')
-      .doc(userId)
-      .collection('estadisticas')
+  DocumentReference<Map<String, dynamic>> get _ahorroDoc => _raiz.collection('estadisticas')
       .doc('ahorro');
 
   static String claveMes(DateTime fecha) =>
@@ -94,10 +99,7 @@ class DespensaRepository {
     return mes.map((k, v) => MapEntry(k, (v as num).toDouble()));
   }
 
-  DocumentReference<Map<String, dynamic>> get _notifDoc => _db
-      .collection('users')
-      .doc(userId)
-      .collection('estadisticas')
+  DocumentReference<Map<String, dynamic>> get _notifDoc => _raiz.collection('estadisticas')
       .doc('notificaciones');
 
   Future<bool> debeEnviarNotificaciones() async {

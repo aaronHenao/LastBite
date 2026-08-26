@@ -14,6 +14,7 @@ import '../../../core/theme/app_theme.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lastbite/features/compartida/presentation/compartida_provider.dart';
 import '../data/receta_cache_repository.dart';
 
 class RecetasScreen extends ConsumerStatefulWidget {
@@ -39,7 +40,20 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   bool _busquedaPorProducto = false;
   bool _ordenarPorTiempo = false;
 
-  RecetaCacheRepository? _cacheRepo;
+  /// Se resuelve en cada carga porque la raiz cambia al entrar o salir de una
+  /// despensa compartida. Espera el id en vez de leerlo del estado actual:
+  /// si el provider todavia no resolvio, se escribiria el cache personal
+  /// estando en una despensa compartida.
+  Future<RecetaCacheRepository?> _resolverCache() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+    return RecetaCacheRepository(
+      userId: user.uid,
+      despensaCompartidaId: await ref.read(
+        despensaCompartidaIdProvider.future,
+      ),
+    );
+  }
 
   @override
   void didChangeDependencies() {
@@ -58,11 +72,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     super.initState();
     _busquedaDataSource = RecetasBusquedaRemoteDataSource();
     _detalleDataSource = RecetasDetalleRemoteDataSource();
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      _cacheRepo = RecetaCacheRepository(userId: user.uid);
-    }
   }
 
   @override
@@ -184,10 +193,11 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
           .toList();
 
       //intentar caché
-      if (!forzar && _cacheRepo != null) {
-        final valido = await _cacheRepo!.cacheEsValido(urgentes);
+      final cacheRepo = await _resolverCache();
+      if (!forzar && cacheRepo != null) {
+        final valido = await cacheRepo.cacheEsValido(urgentes);
         if (valido) {
-          final recetasCache = await _cacheRepo!.cargarRecetas();
+          final recetasCache = await cacheRepo.cargarRecetas();
           if (recetasCache.isNotEmpty && mounted) {
             setState(() {
               _recetas = recetasCache
@@ -220,8 +230,8 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
             ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
 
       // guarda en caché
-      if (_cacheRepo != null && recetas.isNotEmpty) {
-        await _cacheRepo!.guardarRecetas(
+      if (cacheRepo != null && recetas.isNotEmpty) {
+        await cacheRepo.guardarRecetas(
           recetas: recetas,
           ingredientesUrgentes: urgentes,
         );

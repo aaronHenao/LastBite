@@ -1,5 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lastbite/features/compartida/data/despensa_compartida_repository.dart';
+import 'package:lastbite/core/data/despensa_ref.dart';
 import 'package:lastbite/features/despensa/data/despensa_repository.dart';
 import '../notifications/notification_service.dart';
 import '../../features/alertas/domain/alerta.dart';
@@ -8,22 +9,25 @@ class VencimientoChecker {
   VencimientoChecker._();
   static final instance = VencimientoChecker._();
 
-  final _db = FirebaseFirestore.instance;
-
   Future<void> verificar() async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return;
 
   try {
-    final repo = DespensaRepository(userId: user.uid);
+    final compartidaId = await DespensaCompartidaRepository().idCompartidaDe(
+      user.uid,
+    );
+    final repo = DespensaRepository(
+      userId: user.uid,
+      despensaCompartidaId: compartidaId,
+    );
     final debe = await repo.debeEnviarNotificaciones();
     if (!debe) return; 
 
-    final snapshot = await _db
-        .collection('users')
-        .doc(user.uid)
-        .collection('alertas')
-        .get();
+    final snapshot = await raizDespensa(
+      userId: user.uid,
+      despensaCompartidaId: compartidaId,
+    ).collection('alertas').get();
 
     final alertas = snapshot.docs
         .where((doc) => doc.id != '_meta')
