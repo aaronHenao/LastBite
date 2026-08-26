@@ -148,6 +148,23 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     );
   }
 
+  /// Texto bajo el titulo que explica por que la lista quedo en ese orden.
+  ///
+  /// El momento del dia manda sobre el orden siempre, incluso despues de que
+  /// el usuario toca "Menor tiempo", asi que su explicacion tambien se
+  /// muestra siempre. La del ritmo solo mientras el orden lo siga poniendo el
+  /// dia de la semana.
+  ///
+  /// Lee la hora una sola vez: las dos explicaciones tienen que hablar del
+  /// mismo instante.
+  String _explicacionOrden() {
+    final ahora = DateTime.now();
+    final momento = explicacionMomento(momentoComidaDe(ahora));
+
+    if (!_ritmoAutomatico) return momento;
+    return '$momento. ${explicacionRitmo(ahora)}';
+  }
+
   String _urgentesLabel(List<Producto> productos) {
     if (productos.isEmpty) {
       return 'No hay productos en tu despensa';
@@ -501,29 +518,26 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                         ),
                       ],
                     ),
-                    if (_ritmoAutomatico) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.event_available_outlined,
-                            size: 13,
-                            color: AppColors.textMuted,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              '${explicacionMomento(momentoComidaDe(DateTime.now()))}. '
-                              '${explicacionRitmo(DateTime.now())}',
-                              style: textTheme.bodyMedium?.copyWith(
-                                fontSize: 12,
-                                color: AppColors.textMuted,
-                              ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.event_available_outlined,
+                          size: 13,
+                          color: AppColors.textMuted,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _explicacionOrden(),
+                            style: textTheme.bodyMedium?.copyWith(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
                             ),
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                     if (_avisoTraduccion != null) ...[
                       const SizedBox(height: 8),
                       Container(
