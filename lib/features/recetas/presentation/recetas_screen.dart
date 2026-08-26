@@ -10,7 +10,10 @@ import 'package:lastbite/features/recetas/data/datasources/recetas_remote_data_s
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
 import 'package:lastbite/features/recetas/data/models/receta_detalle_remote_model.dart';
 import 'package:lastbite/core/responsive/responsive.dart';
+import '../../../core/constants/momento_comida.dart';
+import '../../../core/constants/ritmo_cocina.dart';
 import '../../../core/theme/app_theme.dart';
+import '../domain/orden_recetas.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -41,6 +44,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   bool _cargaInicial = false;
   bool _busquedaPorProducto = false;
   bool _ordenarPorTiempo = false;
+  bool _ritmoAutomatico = false;
 
   /// Se resuelve en cada carga porque la raiz cambia al entrar o salir de una
   /// despensa compartida. Espera el id en vez de leerlo del estado actual:
@@ -74,6 +78,11 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     super.initState();
     _busquedaDataSource = RecetasBusquedaRemoteDataSource();
     _detalleDataSource = RecetasDetalleRemoteDataSource();
+
+    // Entre semana la lista arranca ordenada por tiempo; el usuario puede
+    // cambiarlo con el boton "Menor tiempo" y ahi deja de ser automatico.
+    _ordenarPorTiempo = priorizarRecetasRapidas(DateTime.now());
+    _ritmoAutomatico = true;
   }
 
   @override
@@ -131,22 +140,12 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   }
 
   int _compararRecetas(Receta a, Receta b) {
-    if (!_ordenarPorTiempo) {
-      return b.porcentajeMatch.compareTo(a.porcentajeMatch);
-    }
-
-    final minutosA = a.minutosPreparacion;
-    final minutosB = b.minutosPreparacion;
-
-    if (minutosA == null && minutosB == null) {
-      return b.porcentajeMatch.compareTo(a.porcentajeMatch);
-    }
-    if (minutosA == null) return 1;
-    if (minutosB == null) return -1;
-
-    final porTiempo = minutosA.compareTo(minutosB);
-    if (porTiempo != 0) return porTiempo;
-    return b.porcentajeMatch.compareTo(a.porcentajeMatch);
+    return compararRecetas(
+      a,
+      b,
+      ordenarPorTiempo: _ordenarPorTiempo,
+      momento: momentoComidaDe(DateTime.now()),
+    );
   }
 
   String _urgentesLabel(List<Producto> productos) {
@@ -252,9 +251,22 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
     } catch (e) {
+      // Si Spoonacular falla (sin cuota, sin red) mostramos lo ultimo que
+      // haya quedado guardado, aunque sea de una version anterior del cache.
+      // Puede venir sin dishTypes o sin tiempo: esos criterios simplemente
+      // no opinan sobre esas recetas. Es mejor que dejar la pantalla vacia.
+      var respaldo = const <Receta>[];
+      try {
+        final cacheRepo = await _resolverCache();
+        if (cacheRepo != null) respaldo = await cacheRepo.cargarRecetas();
+      } catch (_) {
+        // Sin respaldo utilizable: se muestra el error original.
+      }
+
       if (!mounted) return;
       setState(() {
-        _errorCarga = e.toString();
+        _recetas = respaldo;
+        _errorCarga = respaldo.isEmpty ? e.toString() : null;
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
@@ -481,12 +493,37 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                         const SizedBox(width: 8),
                         _OrdenPorTiempoBoton(
                           activo: _ordenarPorTiempo,
-                          onTap: () => setState(
-                            () => _ordenarPorTiempo = !_ordenarPorTiempo,
-                          ),
+                          onTap: () => setState(() {
+                            _ordenarPorTiempo = !_ordenarPorTiempo;
+                            // Al elegir a mano deja de mandar el dia.
+                            _ritmoAutomatico = false;
+                          }),
                         ),
                       ],
                     ),
+                    if (_ritmoAutomatico) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.event_available_outlined,
+                            size: 13,
+                            color: AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '${explicacionMomento(momentoComidaDe(DateTime.now()))}. '
+                              '${explicacionRitmo(DateTime.now())}',
+                              style: textTheme.bodyMedium?.copyWith(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     if (_avisoTraduccion != null) ...[
                       const SizedBox(height: 8),
                       Container(

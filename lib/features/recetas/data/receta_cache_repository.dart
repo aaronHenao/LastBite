@@ -5,6 +5,16 @@ import 'package:lastbite/core/data/despensa_ref.dart';
 class RecetaCacheRepository {
   RecetaCacheRepository({required this.userId, this.despensaCompartidaId});
 
+  /// Version del formato guardado en Firestore.
+  ///
+  /// Subirla invalida el cache de todos los usuarios la proxima vez que
+  /// entren. Hay que subirla cada vez que se agrega un campo que viene de
+  /// Spoonacular: los documentos viejos no lo tienen y, como el cache no
+  /// expira por tiempo, se quedarian sin ese dato para siempre.
+  ///
+  /// v2: agrega `dishTypes`.
+  static const int versionCache = 2;
+
   final String userId;
 
   /// Si no es null, el repositorio opera sobre la despensa compartida
@@ -49,7 +59,7 @@ class RecetaCacheRepository {
           ingredientesUrgentesUsados: ingredientesUrgentes,
         );
         map['perfilKey'] = perfilKey;
-        batch.set(ref, map);
+        batch.set(ref, {...map, 'versionCache': versionCache});
       }
 
       await batch.commit();
@@ -93,6 +103,13 @@ class RecetaCacheRepository {
     if (snapshot.docs.any((doc) => doc.data()['perfilKey'] != perfilKey)) {
       return false;
     }
+
+    // Un documento guardado por una version anterior no tiene los campos
+    // nuevos, y como el cache no expira se quedaria asi para siempre.
+    final desactualizado = snapshot.docs.any(
+      (doc) => (doc.data()['versionCache'] as num?)?.toInt() != versionCache,
+    );
+    if (desactualizado) return false;
 
     // Obtiene todos los ingredientes urgentes guardados en el caché
     final ingredientesEnCache = <String>{};
