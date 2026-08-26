@@ -121,7 +121,6 @@ class _Sidebar extends StatelessWidget {
                       fit: BoxFit.contain,
                     ),
                     const SizedBox(width: 5),
-                    
                   ],
                 ),
               ),

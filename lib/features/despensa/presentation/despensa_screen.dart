@@ -11,6 +11,7 @@ import '../../compartida/presentation/compartida_screen.dart';
 import '../../perfil/presentation/perfil_screen.dart';
 import '../../perfil/domain/item_compra.dart';
 import '../../perfil/presentation/perfil_provider.dart';
+import '../../consulta_rapida/presentation/consulta_rapida_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:lastbite/core/responsive/responsive.dart';
 
@@ -538,6 +539,34 @@ class DespensaScreen extends ConsumerWidget {
             const Divider(color: AppColors.border),
             ListTile(
               leading: const Icon(
+                CupertinoIcons.search,
+                color: AppColors.accent,
+              ),
+              title: const Text(
+                'Consulta Rápida',
+                style: TextStyle(
+                  color: AppColors.textMain,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: const Text(
+                'Buscar productos de tu despensa',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ConsultaRapidaScreen(),
+                  ),
+                );
+              },
+            ),
+            const Divider(color: AppColors.border),
+            ListTile(
+              leading: const Icon(
                 Icons.logout_rounded,
                 color: AppColors.danger,
               ),
@@ -633,7 +662,12 @@ class DespensaScreen extends ConsumerWidget {
                       backgroundColor: AppColors.green,
                     ),
                   );
-                  _preguntarListaCompras(context, ref, producto);
+                  _preguntarListaCompras(
+                    context,
+                    ref,
+                    producto,
+                    fechaConsumido: DateTime.now(),
+                  );
                 }
               },
             ),
@@ -658,7 +692,14 @@ class DespensaScreen extends ConsumerWidget {
                 Navigator.pop(context);
                 await ref.read(despensaProvider.notifier).eliminar(producto.id);
                 if (context.mounted) {
-                  _preguntarListaCompras(context, ref, producto);
+                  _preguntarListaCompras(
+                    context,
+                    ref,
+                    producto,
+                    fechaVencido: producto.vencido
+                        ? producto.fechaCaducidad
+                        : null,
+                  );
                 }
               },
             ),
@@ -858,8 +899,10 @@ class _AhorroCard extends StatelessWidget {
 void _preguntarListaCompras(
   BuildContext context,
   WidgetRef ref,
-  Producto producto,
-) {
+  Producto producto, {
+  DateTime? fechaConsumido,
+  DateTime? fechaVencido,
+}) {
   showDialog(
     context: context,
     builder: (dialogContext) => AlertDialog(
@@ -902,6 +945,8 @@ void _preguntarListaCompras(
               emoji: producto.emoji,
               comprado: false,
               agregadoEn: DateTime.now(),
+              fechaConsumido: fechaConsumido,
+              fechaVencido: fechaVencido,
             );
             await ref.read(listaComprasProvider.notifier).agregar(item);
             if (context.mounted) {

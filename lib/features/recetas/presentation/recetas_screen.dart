@@ -16,6 +16,8 @@ import 'widgets/receta_card.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lastbite/features/compartida/presentation/compartida_provider.dart';
 import '../data/receta_cache_repository.dart';
+import 'package:lastbite/features/perfil/domain/perfil_nutricional.dart';
+import 'package:lastbite/features/perfil/presentation/perfil_nutricional_provider.dart';
 
 class RecetasScreen extends ConsumerStatefulWidget {
   const RecetasScreen({super.key});
@@ -174,6 +176,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     });
 
     try {
+      final perfil = ref.read(perfilNutricionalProvider).valueOrNull;
       final productosDespensa = ref.read(despensaProvider).value ?? [];
       if (productosDespensa.isEmpty) {
         if (!mounted) return;
@@ -195,7 +198,10 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       //intentar caché
       final cacheRepo = await _resolverCache();
       if (!forzar && cacheRepo != null) {
-        final valido = await cacheRepo.cacheEsValido(urgentes);
+        final valido = await cacheRepo.cacheEsValido(
+          ingredientesUrgentesActuales: urgentes,
+          perfilKey: perfil?.cacheKey ?? '',
+        );
         if (valido) {
           final recetasCache = await cacheRepo.cargarRecetas();
           if (recetasCache.isNotEmpty && mounted) {
@@ -221,6 +227,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         productosDespensa: nombres,
         number: 3,
         ignorePantry: false,
+        perfil: perfil,
       );
 
       final recetas =
@@ -234,6 +241,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         await cacheRepo.guardarRecetas(
           recetas: recetas,
           ingredientesUrgentes: urgentes,
+          perfilKey: perfil?.cacheKey ?? '',
         );
       }
 
@@ -261,10 +269,12 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     });
 
     try {
+      final perfil = ref.read(perfilNutricionalProvider).valueOrNull;
       final raw = await _busquedaDataSource.buscarRecetasPorDespensaRaw(
         productosDespensa: [query],
         number: 3,
         ignorePantry: false,
+        perfil: perfil,
       );
 
       final recetas =
@@ -316,6 +326,14 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       final nextList = next.value;
       if (prevList != null && nextList != null && prevList != nextList) {
         _cargarRecetasDesdeApi();
+      }
+    });
+    ref.listen<AsyncValue<PerfilNutricional?>>(perfilNutricionalProvider, (
+      previous,
+      next,
+    ) {
+      if (previous?.value != next.value && next.hasValue) {
+        _cargarRecetasDesdeApi(forzar: true);
       }
     });
     final textTheme = Theme.of(context).textTheme;

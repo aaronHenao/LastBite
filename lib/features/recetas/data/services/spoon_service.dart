@@ -41,6 +41,50 @@ class SpoonService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> searchComplex({
+    required List<String> ingredients,
+    required int number,
+    String? diet,
+    List<String> intolerances = const [],
+    List<String> excludedIngredients = const [],
+    String? sort,
+    String? sortDirection,
+  }) async {
+    _validateApiKey();
+
+    try {
+      final parameters = <String, dynamic>{
+        'includeIngredients': ingredients.join(','),
+        'fillIngredients': true,
+        'number': number,
+        'sort': sort ?? 'max-used-ingredients',
+        'sortDirection': sortDirection ?? 'desc',
+        'apiKey': _apiKey,
+      };
+      if (diet != null) parameters['diet'] = diet;
+      if (intolerances.isNotEmpty) {
+        parameters['intolerances'] = intolerances.join(',');
+      }
+      if (excludedIngredients.isNotEmpty) {
+        parameters['excludeIngredients'] = excludedIngredients.join(',');
+      }
+
+      final response = await _dio.get<Map<String, dynamic>>(
+        '$_recipesBaseUrl/complexSearch',
+        queryParameters: parameters,
+      );
+
+      final results = response.data?['results'];
+      if (results is! List) return const [];
+      return results
+          .whereType<Map<String, dynamic>>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+    } on DioException catch (e) {
+      throw _mapRemoteError(e);
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getRecipeInformationBulk({
     required List<int> recipeIds,
   }) async {

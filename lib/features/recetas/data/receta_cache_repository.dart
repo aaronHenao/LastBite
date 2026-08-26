@@ -32,13 +32,13 @@ class RecetaCacheRepository {
   Future<void> guardarRecetas({
     required List<Receta> recetas,
     required List<String> ingredientesUrgentes,
+    required String perfilKey,
   }) async {
-    
     try {
       final batch = _db.batch();
 
       final existing = await _col.get();
-      
+
       for (final doc in existing.docs) {
         batch.delete(doc.reference);
       }
@@ -48,11 +48,11 @@ class RecetaCacheRepository {
         final map = receta.toMap(
           ingredientesUrgentesUsados: ingredientesUrgentes,
         );
+        map['perfilKey'] = perfilKey;
         batch.set(ref, map);
       }
 
       await batch.commit();
-      
     } catch (e) {
       print('❌ Error guardando en Firestore: $e');
     }
@@ -82,10 +82,17 @@ class RecetaCacheRepository {
   }
 
   //verifica si el caché es válido para los ingredientes actuales
-  Future<bool> cacheEsValido(List<String> ingredientesUrgentesActuales) async {
+  Future<bool> cacheEsValido({
+    required List<String> ingredientesUrgentesActuales,
+    required String perfilKey,
+  }) async {
     final snapshot = await _col.get();
-    
+
     if (snapshot.docs.isEmpty) return false;
+
+    if (snapshot.docs.any((doc) => doc.data()['perfilKey'] != perfilKey)) {
+      return false;
+    }
 
     // Obtiene todos los ingredientes urgentes guardados en el caché
     final ingredientesEnCache = <String>{};

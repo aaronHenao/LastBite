@@ -9,6 +9,7 @@ import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import '../domain/item_compra.dart';
 import 'perfil_provider.dart';
 import 'package:lastbite/core/responsive/responsive.dart';
+import 'perfil_nutricional_screen.dart';
 
 class PerfilScreen extends ConsumerWidget {
   const PerfilScreen({super.key});
@@ -134,6 +135,57 @@ class PerfilScreen extends ConsumerWidget {
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      InkWell(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PerfilNutricionalScreen(),
+                          ),
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.restaurant_menu_outlined,
+                                color: AppColors.accent,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Perfil nutricional',
+                                      style: textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Adapta las recetas a tus preferencias',
+                                      style: textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.chevron_right_rounded,
+                                color: AppColors.textMuted,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 28),
@@ -389,19 +441,46 @@ class _ItemCompraCard extends StatelessWidget {
               Text(item.emoji, style: const TextStyle(fontSize: 22)),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  item.nombre,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: item.comprado
-                        ? AppColors.textMuted
-                        : AppColors.textMain,
-                    decoration: item.comprado
-                        ? TextDecoration.lineThrough
-                        : null,
-                    decorationColor: AppColors.textMuted,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.nombre,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: item.comprado
+                            ? AppColors.textMuted
+                            : AppColors.textMain,
+                        decoration: item.comprado
+                            ? TextDecoration.lineThrough
+                            : null,
+                        decorationColor: AppColors.textMuted,
+                      ),
+                    ),
+                    if (item.fechaConsumido != null ||
+                        item.fechaVencido != null) ...[
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          if (item.fechaConsumido != null)
+                            _FechaPill(
+                              text:
+                                  'Consumido: ${_formatearFecha(item.fechaConsumido!)}',
+                              color: AppColors.green,
+                            ),
+                          if (item.fechaVencido != null)
+                            _FechaPill(
+                              text:
+                                  'Venció: ${_formatearFecha(item.fechaVencido!)}',
+                              color: AppColors.danger,
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
@@ -410,6 +489,40 @@ class _ItemCompraCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FechaPill extends StatelessWidget {
+  final String text;
+  final Color color;
+
+  const _FechaPill({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+String _formatearFecha(DateTime date) {
+  final day = date.day.toString().padLeft(2, '0');
+  final month = date.month.toString().padLeft(2, '0');
+  final year = date.year;
+  return '$day/$month/$year';
 }
 
 ImageProvider _buildImageProvider(String url) {
