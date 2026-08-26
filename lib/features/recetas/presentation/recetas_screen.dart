@@ -165,6 +165,14 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     return '$momento. ${explicacionRitmo(ahora)}';
   }
 
+  /// Icono que acompana a [_explicacionOrden].
+  ///
+  /// Calendario mientras el dia de la semana sigue decidiendo el orden; reloj
+  /// cuando ya solo queda la hora, porque ahi el texto no habla de dias.
+  IconData get _iconoOrden => _ritmoAutomatico
+      ? Icons.event_available_outlined
+      : Icons.schedule_outlined;
+
   String _urgentesLabel(List<Producto> productos) {
     if (productos.isEmpty) {
       return 'No hay productos en tu despensa';
@@ -522,7 +530,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                     Row(
                       children: [
                         Icon(
-                          Icons.event_available_outlined,
+                          _iconoOrden,
                           size: 13,
                           color: AppColors.textMuted,
                         ),
