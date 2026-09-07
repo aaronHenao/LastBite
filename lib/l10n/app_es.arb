@@ -1,0 +1,324 @@
+{
+  "@@locale": "es",
+  "appNombre": "LastBite",
+  "navDespensa": "Despensa",
+  "navAgregar": "Agregar",
+  "navRecetas": "Recetas",
+  "navAlertas": "Alertas",
+  "accionVolver": "Volver",
+  "accionReintentar": "Reintentar",
+  "accionCancelar": "Cancelar",
+  "accionAgregarProducto": "Agregar producto",
+  "accionLimpiarBusqueda": "Limpiar búsqueda",
+  "accionDetalleTecnico": "Detalle técnico",
+  "cuentaMenu": "Menú de cuenta",
+  "cuentaMia": "Mi cuenta",
+  "cuentaPerfil": "Perfil y lista de compras",
+  "cuentaCompartida": "Despensa compartida",
+  "cuentaConsultaRapida": "Consulta rápida",
+  "cuentaAccesibilidad": "Accesibilidad",
+  "cuentaCerrarSesion": "Cerrar sesión",
+  "despensaTitulo": "Mi Despensa",
+  "despensaProductos": "Productos",
+  "despensaSalvados": "Salvados",
+  "despensaPorVencer": "Por vencer",
+  "despensaProximosAVencer": "PRÓXIMOS A VENCER",
+  "despensaEnBuenEstado": "EN BUEN ESTADO",
+  "despensaVaciaTitulo": "Tu despensa está vacía",
+  "despensaVaciaDescripcion": "Agregá lo que tengas en casa y te avisamos antes de que se venza.",
+  "despensaErrorCarga": "No pudimos cargar tu despensa.",
+  "estadoVencido": "¡Vencido!",
+  "estadoHoy": "Hoy",
+  "estadoManana": "Mañana",
+  "estadoDias": "{dias}d",
+  "@estadoDias": {
+    "placeholders": {
+      "dias": {
+        "type": "int"
+      }
+    }
+  },
+  "lectorProducto": "{nombre}, {cantidad}, {categoria}, {estado}",
+  "@lectorProducto": {
+    "description": "Como anuncia un producto el lector de pantalla",
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      },
+      "cantidad": {
+        "type": "String"
+      },
+      "categoria": {
+        "type": "String"
+      },
+      "estado": {
+        "type": "String"
+      }
+    }
+  },
+  "lectorVenceHoy": "vence hoy",
+  "lectorVenceManana": "vence mañana",
+  "lectorVenceEnDias": "vence en {dias} días",
+  "@lectorVenceEnDias": {
+    "placeholders": {
+      "dias": {
+        "type": "int"
+      }
+    }
+  },
+  "lectorVencidoHace": "{dias, plural, one{vencido hace 1 día} other{vencido hace {dias} días}}",
+  "@lectorVencidoHace": {
+    "placeholders": {
+      "dias": {
+        "type": "int"
+      }
+    }
+  },
+  "ajustesTitulo": "Accesibilidad",
+  "ajustesDescripcion": "Ajustá la app a cómo la necesitás usar. Todo se guarda en tu cuenta, así que te acompaña al teléfono y a la web.",
+  "ajustesTamanoTexto": "TAMAÑO DEL TEXTO",
+  "ajustesTamanoTextoAyuda": "Toda la app crece con este ajuste, no solo esta pantalla.",
+  "ajustesEscalaNormal": "Normal",
+  "ajustesEscalaGrande": "Grande",
+  "ajustesEscalaMasGrande": "Más grande",
+  "ajustesEscalaMaxima": "Máximo",
+  "ajustesContraste": "CONTRASTE",
+  "ajustesContrasteAyuda": "Sube el contraste al máximo y refuerza los bordes. Ayuda con baja visión y a plena luz del sol.",
+  "ajustesAltoContraste": "Alto contraste",
+  "ajustesMovimiento": "MOVIMIENTO",
+  "ajustesMovimientoAyuda": "Apaga las transiciones. Útil si el movimiento en pantalla te marea o te distrae.",
+  "ajustesReducirMovimiento": "Reducir movimiento",
+  "ajustesApariencia": "APARIENCIA",
+  "ajustesAparienciaAyuda": "Automático sigue el ajuste de tu dispositivo.",
+  "ajustesTemaAutomatico": "Automático",
+  "ajustesTemaClaro": "Claro",
+  "ajustesTemaOscuro": "Oscuro",
+  "ajustesIdioma": "IDIOMA",
+  "ajustesIdiomaAyuda": "Automático usa el idioma de tu dispositivo.",
+  "ajustesIdiomaAutomatico": "Automático",
+  "ajustesLectorTitulo": "Lector de pantalla",
+  "ajustesLectorAyuda": "La app está preparada para TalkBack y VoiceOver: cada producto se anuncia con su nombre, su cantidad y cuánto le queda. Se activa desde los ajustes de tu dispositivo, no desde aquí.",
+  "alertaDescartar": "Descartar alerta de {producto}",
+  "@alertaDescartar": {
+    "placeholders": {
+      "producto": {
+        "type": "String"
+      }
+    }
+  },
+  "alertasVaciasTitulo": "Todo bajo control",
+  "alertasVaciasDescripcion": "Ningún producto de tu despensa está por vencerse. Te avisamos apenas alguno lo esté.",
+  "alertasErrorCarga": "No pudimos cargar tus alertas.",
+  "compartidaTitulo": "Despensa compartida",
+  "compartidaIntro": "Comparte una sola despensa con tu familia: los productos, las alertas y las recetas son los mismos para todos.",
+  "compartidaCrear": "Crear despensa",
+  "compartidaCrearAyuda": "Genera un código para que tu familia se una a tu despensa.",
+  "compartidaUnirme": "Unirme con código",
+  "compartidaUnirmeAyuda": "Ya tienes un código de 6 caracteres de tu familia.",
+  "compartidaNotaUnaSola": "Solo puedes estar en una despensa a la vez: la tuya personal o una compartida.",
+  "compartidaEresAdmin": "Eres el administrador de esta despensa.",
+  "compartidaAdministradaPor": "Administrada por {nombre}.",
+  "@compartidaAdministradaPor": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      }
+    }
+  },
+  "compartidaOtroMiembro": "otro miembro",
+  "compartidaCodigoRotulo": "CÓDIGO DE INVITACIÓN",
+  "compartidaCopiar": "Copiar",
+  "compartidaCodigoCopiado": "Código copiado",
+  "compartidaMiembros": "MIEMBROS ({cantidad})",
+  "@compartidaMiembros": {
+    "placeholders": {
+      "cantidad": {
+        "type": "int"
+      }
+    }
+  },
+  "compartidaSalir": "Salir de la despensa",
+  "compartidaSalirCeder": "Salir y ceder la administración",
+  "compartidaEliminar": "Eliminar despensa",
+  "compartidaCrearTitulo": "Crear despensa familiar",
+  "compartidaCrearDescripcion": "Ponle un nombre. Después compartes el código con tu familia.",
+  "compartidaNombreDefecto": "Despensa familiar",
+  "compartidaNombrePlaceholder": "Nombre de la despensa",
+  "compartidaAccionCrear": "Crear",
+  "compartidaUnirmeTitulo": "Unirme a una despensa",
+  "compartidaUnirmeDescripcion": "Escribe el código de 6 caracteres que te compartieron.",
+  "compartidaAccionUnirme": "Unirme",
+  "compartidaSinCodigo": "No existe una despensa con ese código.",
+  "compartidaMigrarTitulo": "Migrar tus productos",
+  "compartidaMigrarDescripcion": "{cantidad, plural, one{Tienes 1 producto en tu despensa personal. ¿Querés moverlo a la despensa compartida? Si no, se queda en tu despensa personal.} other{Tienes {cantidad} productos en tu despensa personal. ¿Querés moverlos a la despensa compartida? Si no, se quedan en tu despensa personal.}}",
+  "@compartidaMigrarDescripcion": {
+    "placeholders": {
+      "cantidad": {
+        "type": "int"
+      }
+    }
+  },
+  "compartidaMigrar": "Migrar",
+  "compartidaNoMigrar": "No migrar",
+  "compartidaEliminarDescripcion": "Todos los miembros volverán a su despensa personal y los productos compartidos pasarán a la tuya. Esta acción no se puede deshacer.",
+  "compartidaEliminarAccion": "Eliminar",
+  "compartidaExpulsarTitulo": "Eliminar miembro",
+  "compartidaExpulsarDescripcion": "{nombre} volverá a su despensa personal y dejará de ver esta despensa.",
+  "@compartidaExpulsarDescripcion": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      }
+    }
+  },
+  "compartidaSalirDescripcion": "Volverás a tu despensa personal. Los productos que agregaste se quedan en la despensa compartida.",
+  "compartidaSalirAccion": "Salir",
+  "compartidaNuevoAdminTitulo": "¿Quién administra la despensa?",
+  "compartidaNuevoAdminDescripcion": "Quien elijas va a poder agregar y sacar miembros, y eliminar la despensa.",
+  "compartidaContinuar": "Continuar",
+  "compartidaCederDescripcion": "{nombre} pasa a ser el administrador y vos volvés a tu despensa personal. Los productos que agregaste se quedan en la compartida.",
+  "@compartidaCederDescripcion": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      }
+    }
+  },
+  "compartidaCreada": "Despensa creada",
+  "compartidaTeUniste": "Te uniste a la despensa",
+  "compartidaSaliste": "Saliste de la despensa",
+  "compartidaSalisteConAdmin": "Saliste de la despensa. Ahora administra {nombre}.",
+  "@compartidaSalisteConAdmin": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      }
+    }
+  },
+  "compartidaEliminada": "Despensa eliminada",
+  "compartidaMiembroSalio": "{nombre} salió de la despensa",
+  "@compartidaMiembroSalio": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      }
+    }
+  },
+  "perfilUsuario": "Usuario",
+  "perfilSalvados": "{cantidad, plural, one{1 alimento salvado} other{{cantidad} alimentos salvados}}",
+  "@perfilSalvados": {
+    "placeholders": {
+      "cantidad": {
+        "type": "int"
+      }
+    }
+  },
+  "perfilNutricional": "Perfil nutricional",
+  "perfilNutricionalAyuda": "Adapta las recetas a tus preferencias",
+  "perfilListaCompras": "LISTA DE COMPRAS",
+  "perfilComprados": "COMPRADOS",
+  "perfilLimpiarComprados": "Limpiar comprados",
+  "perfilLimpiar": "Limpiar",
+  "perfilLimpiarPregunta": "¿Eliminar todos los productos marcados como comprados?",
+  "perfilListaVaciaTitulo": "Tu lista de compras está vacía",
+  "perfilListaVaciaDescripcion": "Los productos que consumas o elimines aparecerán aquí.",
+  "perfilMarcarComprado": "Marcar {nombre} como comprado",
+  "@perfilMarcarComprado": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      }
+    }
+  },
+  "perfilConsumido": "Consumido: {fecha}",
+  "@perfilConsumido": {
+    "placeholders": {
+      "fecha": {
+        "type": "String"
+      }
+    }
+  },
+  "perfilVencido": "Venció: {fecha}",
+  "@perfilVencido": {
+    "placeholders": {
+      "fecha": {
+        "type": "String"
+      }
+    }
+  },
+  "perfilErrorLista": "No pudimos cargar tu lista de compras.",
+  "recetasRotulo": "MOTOR DE RECETAS",
+  "recetasTitulo": "Residuo Cero",
+  "recetasBuscar": "Buscar por nombre...",
+  "recetasSugeridas": "RECETAS SUGERIDAS",
+  "recetasMenorTiempo": "Menor tiempo",
+  "recetasOrdenarMenorTiempo": "Ordenar por menor tiempo",
+  "recetasPriorizando": "Priorizando ingredientes urgentes",
+  "recetasSinProductos": "No hay productos en tu despensa",
+  "recetasSinUrgentes": "No hay productos urgentes en tu despensa",
+  "recetasErrorCarga": "No se pudieron cargar recetas",
+  "recetasSinResultados": "Sin resultados",
+  "recetasSinResultadosDescripcion": "Ninguna receta coincide con \"{busqueda}\".",
+  "@recetasSinResultadosDescripcion": {
+    "placeholders": {
+      "busqueda": {
+        "type": "String"
+      }
+    }
+  },
+  "recetasSinSugerenciasTitulo": "Todavía no hay sugerencias",
+  "recetasSinSugerenciasDescripcion": "Agregá productos a tu despensa y te proponemos recetas que los aprovechen.",
+  "recetasBuscarDeNuevo": "Buscar de nuevo",
+  "recetasCocinarTitulo": "¿Qué usaste por completo?",
+  "recetasCocinarDescripcion": "Lo que marques sale de tu despensa y suma a tus alimentos salvados. Destildá lo que todavía te quede.",
+  "recetasSinCoincidencias": "Ninguno de tus productos coincide con esta receta.",
+  "recetasConfirmar": "Confirmar",
+  "recetasSalvados": "{cantidad, plural, one{1 producto salvado. ¡Buen provecho!} other{{cantidad} productos salvados. ¡Buen provecho!}}",
+  "@recetasSalvados": {
+    "placeholders": {
+      "cantidad": {
+        "type": "int"
+      }
+    }
+  },
+  "agregarRotulo": "AGREGAR ALIMENTO",
+  "agregarTitulo": "Entrada Híbrida",
+  "agregarEscanear": "Escanear",
+  "agregarManual": "Manual",
+  "agregarApuntaCodigo": "Apunta al código de barras",
+  "agregarTocaCamara": "Tocá para abrir la cámara",
+  "agregarBuscando": "Buscando el producto…",
+  "agregarUltimoCodigo": "Último código: {codigo}",
+  "@agregarUltimoCodigo": {
+    "placeholders": {
+      "codigo": {
+        "type": "String"
+      }
+    }
+  },
+  "agregarNoEncontrado": "Producto no encontrado. Ingrésalo manualmente.",
+  "agregarSinConexion": "Sin conexión. No pudimos consultar el código.",
+  "agregarGuardado": "{nombre} agregado a la despensa.",
+  "@agregarGuardado": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      }
+    }
+  },
+  "agregarNombre": "Nombre",
+  "agregarNombreProducto": "Nombre del producto",
+  "agregarNombreEjemplo": "Ej: Yogur griego",
+  "agregarCategoria": "Selecciona una categoría",
+  "agregarElegirCategoria": "Elige categoría",
+  "agregarCantidad": "Cantidad",
+  "agregarUnidad": "Unidad",
+  "agregarFecha": "Fecha de vencimiento",
+  "agregarElegirFecha": "Selecciona una fecha",
+  "agregarFechaRecomendada": "Esta es la fecha de caducidad recomendada para este producto",
+  "agregarGuardar": "Guardar producto",
+  "agregarFaltanCampos": "Completa nombre y fecha.",
+  "agregarNombreVacio": "El nombre no puede estar vacío.",
+  "agregarConfirmar": "CONFIRMAR PRODUCTO",
+  "agregarAgregarADespensa": "Agregar a mi despensa"
+}
