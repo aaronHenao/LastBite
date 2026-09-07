@@ -53,8 +53,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Notas locales, no forman parte del proyecto
+# Notas y configuracion local de Claude, no forman parte del proyecto
 CLAUDE.md
+.claude/
 
 # Artefactos de analisis local
 .ua/
