@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/core/widgets/pastilla_estado.dart';
 import 'package:lastbite/features/alertas/domain/alerta.dart';
@@ -15,7 +16,17 @@ class AlertaCard extends StatelessWidget {
   final Alerta alerta;
   final ValueChanged<Receta>? onVerReceta;
 
-  const AlertaCard({super.key, required this.alerta, this.onVerReceta});
+  /// Descartar la alerta. Existe como boton ademas del gesto de arrastre:
+  /// quien usa lector de pantalla, un switch o un puntero de cabeza no puede
+  /// arrastrar, y antes ese era el unico camino.
+  final VoidCallback? onDescartar;
+
+  const AlertaCard({
+    super.key,
+    required this.alerta,
+    this.onVerReceta,
+    this.onDescartar,
+  });
 
   /// Dias que le quedan al producto. El color se calcula sobre esto y no
   /// sobre el tipo de alerta, para que coincida con la despensa.
@@ -83,6 +94,22 @@ class AlertaCard extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 PastillaEstado(dias: _dias),
+                if (onDescartar != null) ...[
+                  const SizedBox(width: AppSpacing.xs),
+                  // La etiqueta va explicita y no solo en el tooltip: es la
+                  // unica alternativa al gesto de arrastre y tiene que
+                  // anunciarse siempre.
+                  Semantics(
+                    button: true,
+                    container: true,
+                    label: context.t.alertaDescartar(alerta.nombreProducto),
+                    child: IconButton(
+                      onPressed: onDescartar,
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      tooltip: 'Descartar alerta',
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: AppSpacing.md),

@@ -208,6 +208,8 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                                   _descartar(context, ref, alerta),
                               child: AlertaCard(
                                 alerta: alerta,
+                                onDescartar: () =>
+                                    _descartar(context, ref, alerta),
                                 onVerReceta: alerta.recetaSugerida == null
                                     ? null
                                     : (receta) => _abrirDetalle(receta),

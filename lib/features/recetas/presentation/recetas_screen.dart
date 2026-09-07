@@ -15,6 +15,7 @@ import 'package:lastbite/core/responsive/responsive.dart';
 import '../../../core/constants/momento_comida.dart';
 import '../../../core/constants/ritmo_cocina.dart';
 import '../../../core/theme/app_theme.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import '../domain/orden_recetas.dart';
 import '../domain/receta.dart';
 import 'widgets/receta_card.dart';
@@ -168,7 +169,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
 
   String _urgentesLabel(List<Producto> productos) {
     if (productos.isEmpty) {
-      return 'No hay productos en tu despensa';
+      return context.t.recetasSinProductos;
     }
 
     final urgentes = [...productos]
@@ -176,7 +177,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
 
     final topUrgentes = urgentes.where((p) => p.urgente).take(5).toList();
     if (topUrgentes.isEmpty) {
-      return 'No hay productos urgentes en tu despensa';
+      return context.t.recetasSinUrgentes;
     }
 
     return topUrgentes
@@ -390,7 +391,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'MOTOR DE RECETAS',
+                      context.t.recetasRotulo,
                       style: textTheme.titleSmall?.copyWith(
                         letterSpacing: 2.4,
                         color: context.paleta.apagado,
@@ -398,7 +399,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Residuo Cero',
+                      context.t.recetasTitulo,
                       style: textTheme.bodyLarge?.copyWith(
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
@@ -416,7 +417,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                         color: context.paleta.apagado,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'Buscar por nombre...',
+                        hintText: context.t.recetasBuscar,
                         hintStyle: textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w500,
                           color: context.paleta.apagado.withValues(alpha: 0.9),
@@ -487,7 +488,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Priorizando ingredientes urgentes',
+                                  context.t.recetasPriorizando,
                                   style: textTheme.titleSmall?.copyWith(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
@@ -515,7 +516,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                       children: [
                         Flexible(
                           child: Text(
-                            'RECETAS SUGERIDAS',
+                            context.t.recetasSugeridas,
                             style: textTheme.titleSmall?.copyWith(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -625,7 +626,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'No se pudieron cargar recetas',
+                              context.t.recetasErrorCarga,
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
@@ -644,7 +645,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                             FilledButton(
                               onPressed: () =>
                                   _cargarRecetasDesdeApi(forzar: true),
-                              child: const Text('Reintentar'),
+                              child: Text(context.t.accionReintentar),
                             ),
                           ],
                         ),
@@ -661,10 +662,10 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                       child: _query.isNotEmpty
                           ? EstadoVacio(
                               icono: Icons.search_off_rounded,
-                              titulo: 'Sin resultados',
-                              descripcion:
-                                  'Ninguna receta coincide con "$_query".',
-                              textoAccion: 'Limpiar búsqueda',
+                              titulo: context.t.recetasSinResultados,
+                              descripcion: context.t
+                                  .recetasSinResultadosDescripcion(_query),
+                              textoAccion: context.t.accionLimpiarBusqueda,
                               onAccion: () {
                                 _searchDebounce?.cancel();
                                 _searchCtrl.clear();
@@ -677,11 +678,10 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                             )
                           : EstadoVacio(
                               icono: Icons.restaurant_menu_rounded,
-                              titulo: 'Todavía no hay sugerencias',
+                              titulo: context.t.recetasSinSugerenciasTitulo,
                               descripcion:
-                                  'Agregá productos a tu despensa y te '
-                                  'proponemos recetas que los aprovechen.',
-                              textoAccion: 'Buscar de nuevo',
+                                  context.t.recetasSinSugerenciasDescripcion,
+                              textoAccion: context.t.recetasBuscarDeNuevo,
                               onAccion: () =>
                                   _cargarRecetasDesdeApi(forzar: true),
                             ),
@@ -702,6 +702,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   Future<void> _cocinar(Receta receta) async {
     final messenger = ScaffoldMessenger.of(context);
     final colorExito = context.paleta.marca;
+    final t = context.t;
     final ingredientes = (receta.ingredientes ?? [])
         .map((i) => i.toLowerCase())
         .toList();
@@ -716,10 +717,8 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
 
     if (usados.isEmpty) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Ninguno de tus productos coincide con esta receta.',
-          ),
+        SnackBar(
+          content: Text(context.t.recetasSinCoincidencias),
         ),
       );
       return;
@@ -740,11 +739,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     messenger.showSnackBar(
       SnackBar(
         backgroundColor: colorExito,
-        content: Text(
-          elegidos.length == 1
-              ? '1 producto salvado. ¡Buen provecho!'
-              : '${elegidos.length} productos salvados. ¡Buen provecho!',
-        ),
+        content: Text(t.recetasSalvados(elegidos.length)),
       ),
     );
   }
@@ -857,12 +852,21 @@ class _OrdenPorTiempoBoton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = activo ? context.paleta.marca : context.paleta.apagado;
 
-    return InkWell(
+    return Semantics(
+      button: true,
+      selected: activo,
+      label: context.t.recetasOrdenarMenorTiempo,
+      child: InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppRadius.chip),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        duration: AppMotion.duracion(context, AppMotion.pulsa),
+        constraints: const BoxConstraints(minHeight: 48),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
         decoration: BoxDecoration(
           color: activo
               ? context.paleta.marca.withValues(alpha: 0.12)
@@ -876,7 +880,7 @@ class _OrdenPorTiempoBoton extends StatelessWidget {
             Icon(Icons.timer_outlined, size: 14, color: color),
             const SizedBox(width: 6),
             Text(
-              'Menor tiempo',
+              context.t.recetasMenorTiempo,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -885,6 +889,7 @@ class _OrdenPorTiempoBoton extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -910,7 +915,7 @@ class _DialogoCocinarState extends State<_DialogoCocinar> {
       backgroundColor: context.paleta.marcaSuave,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(
-        '¿Qué usaste por completo?',
+        context.t.recetasCocinarTitulo,
         style: TextStyle(
           color: context.paleta.tinta,
           fontWeight: FontWeight.w800,
@@ -923,8 +928,7 @@ class _DialogoCocinarState extends State<_DialogoCocinar> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Lo que marques sale de tu despensa y suma a tus alimentos '
-              'salvados. Destildá lo que todavía te quede.',
+              context.t.recetasCocinarDescripcion,
               style: TextStyle(color: context.paleta.apagado, fontSize: 13),
             ),
             const SizedBox(height: 8),
@@ -972,7 +976,7 @@ class _DialogoCocinarState extends State<_DialogoCocinar> {
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
-            'Cancelar',
+            context.t.accionCancelar,
             style: TextStyle(color: context.paleta.apagado),
           ),
         ),
@@ -981,7 +985,7 @@ class _DialogoCocinarState extends State<_DialogoCocinar> {
               ? null
               : () => Navigator.pop(context, _elegidos),
           style: FilledButton.styleFrom(backgroundColor: context.paleta.marca),
-          child: const Text('Confirmar'),
+          child: Text(context.t.recetasConfirmar),
         ),
       ],
     );

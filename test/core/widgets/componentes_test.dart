@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lastbite/l10n/app_localizations.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/core/widgets/boton_volver.dart';
 import 'package:lastbite/core/widgets/estado_error.dart';
@@ -17,6 +18,13 @@ Future<void> _montar(
 
   await tester.pumpWidget(
     MaterialApp(
+      // Idioma fijo: las aserciones comparan textos concretos y el entorno
+
+      // de pruebas arranca en ingles.
+      locale: const Locale('es'),
+
+      localizationsDelegates: L10n.localizationsDelegates,
+      supportedLocales: L10n.supportedLocales,
       theme: AppTheme.light,
       home: Scaffold(body: ListView(children: [hijo])),
     ),
@@ -37,7 +45,12 @@ void main() {
     });
 
     testWidgets('cada tramo dice su estado con palabras', (tester) async {
-      for (final caso in {-2: '¡Vencido!', 0: 'Hoy', 1: 'Mañana', 5: '5d'}.entries) {
+      for (final caso in {
+        -2: '¡Vencido!',
+        0: 'Hoy',
+        1: 'Mañana',
+        5: '5d',
+      }.entries) {
         await _montar(tester, PastillaEstado(dias: caso.key));
         expect(find.text(caso.value), findsOneWidget);
       }
@@ -104,10 +117,7 @@ void main() {
       expect(find.text('No pudimos cargar tus alertas.'), findsOneWidget);
       expect(find.text('Reintentar'), findsOneWidget);
       // El texto tecnico existe pero no se muestra hasta desplegarlo.
-      expect(
-        find.textContaining('permission-denied'),
-        findsNothing,
-      );
+      expect(find.textContaining('permission-denied'), findsNothing);
 
       await tester.tap(find.text('Detalle técnico'));
       await tester.pumpAndSettle();

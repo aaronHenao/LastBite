@@ -12,6 +12,7 @@ import '../domain/producto.dart';
 import 'widgets/producto_card.dart';
 import '../../compartida/presentation/compartida_provider.dart';
 import '../../compartida/presentation/compartida_screen.dart';
+import '../../ajustes/presentation/ajustes_screen.dart';
 import '../../perfil/presentation/perfil_screen.dart';
 import '../../perfil/domain/item_compra.dart';
 import '../../perfil/presentation/perfil_provider.dart';
@@ -382,6 +383,27 @@ class DespensaScreen extends ConsumerWidget {
                 );
               },
             ),
+            ListTile(
+              leading: Icon(
+                Icons.accessibility_new_rounded,
+                color: context.paleta.marca,
+              ),
+              title: Text(
+                'Accesibilidad',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              subtitle: Text(
+                'Tamaño de texto, contraste y movimiento',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AjustesScreen()),
+                );
+              },
+            ),
             Divider(color: context.paleta.contorno),
             ListTile(
               leading: Icon(
@@ -570,7 +592,7 @@ class _StatCard extends StatelessWidget {
           Text(
             label.toUpperCase(),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontSize: 10,
+              fontSize: 11,
               color: context.paleta.apagado,
             ),
           ),
@@ -807,7 +829,7 @@ class _BotonPerfil extends StatelessWidget {
         onTap: onTap,
         customBorder: const CircleBorder(),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xs),
+          padding: const EdgeInsets.all(6),
           child: CircleAvatar(
             radius: 18,
             backgroundColor: paleta.marcaSuave,

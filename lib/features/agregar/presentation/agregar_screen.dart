@@ -7,6 +7,7 @@ import 'package:lastbite/core/constants/vida_util.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
 import 'package:lastbite/core/utils/categoria_mapper.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import 'scan_producto_screen.dart';
@@ -53,9 +54,9 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: context.paleta.vencido,
-          content: const Text('Sin conexión. No pudimos consultar el código.'),
+          content: Text(context.t.agregarSinConexion),
           action: SnackBarAction(
-            label: 'Reintentar',
+            label: context.t.accionReintentar,
             textColor: Colors.white,
             onPressed: () => _buscarPorCodigo(codigo),
           ),
@@ -70,7 +71,7 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
     if (producto == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Producto no encontrado. Ingrésalo manualmente.'),
+          content: Text(context.t.agregarNoEncontrado),
           backgroundColor: context.paleta.vencido,
         ),
       );
@@ -118,7 +119,7 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'AGREGAR ALIMENTO',
+                context.t.agregarRotulo,
                 style: textTheme.titleSmall?.copyWith(
                   letterSpacing: 2.4,
                   color: context.paleta.apagado,
@@ -126,7 +127,7 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Entrada Híbrida',
+                context.t.agregarTitulo,
                 style: textTheme.bodyLarge?.copyWith(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
@@ -140,7 +141,7 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
               ),
               const SizedBox(height: 20),
               AnimatedSwitcher(
-                duration: const Duration(milliseconds: 240),
+                duration: AppMotion.duracion(context, AppMotion.entra),
                 switchInCurve: Curves.easeOut,
                 switchOutCurve: Curves.easeIn,
                 child: _mode == _EntryMode.scan
@@ -159,15 +160,16 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
                         onGuardar: (producto) async {
                           final messenger = ScaffoldMessenger.of(context);
                           final colorExito = context.paleta.marca;
+                          final aviso = context.t.agregarGuardado(
+                            producto.nombre,
+                          );
                           await ref
                               .read(despensaProvider.notifier)
                               .agregar(producto);
                           widget.onBackToPantry?.call();
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text(
-                                '${producto.nombre} agregado a la despensa.',
-                              ),
+                              content: Text(aviso),
                               backgroundColor: colorExito,
                             ),
                           );
@@ -204,7 +206,7 @@ class _HybridModeSwitch extends StatelessWidget {
           _modeButton(
             context: context,
             textTheme: textTheme,
-            label: 'Escanear',
+            label: context.t.agregarEscanear,
             icon: CupertinoIcons.photo_camera_solid,
             selected: mode == _EntryMode.scan,
             onTap: () => onChanged(_EntryMode.scan),
@@ -212,7 +214,7 @@ class _HybridModeSwitch extends StatelessWidget {
           _modeButton(
             context: context,
             textTheme: textTheme,
-            label: 'Manual',
+            label: context.t.agregarManual,
             icon: Icons.eco,
             selected: mode == _EntryMode.manual,
             onTap: () => onChanged(_EntryMode.manual),
@@ -235,9 +237,11 @@ class _HybridModeSwitch extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          duration: AppMotion.duracion(context, AppMotion.pulsa),
+          curve: AppMotion.curvaEntra,
+          constraints: const BoxConstraints(minHeight: 48),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             color: selected ? context.paleta.marca : Colors.transparent,
@@ -250,11 +254,17 @@ class _HybridModeSwitch extends StatelessWidget {
                 color: selected ? Colors.white : context.paleta.apagado,
                 size: 20,
               ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: textTheme.titleMedium?.copyWith(
-                  color: selected ? Colors.white : context.paleta.apagado,
+              const SizedBox(width: AppSpacing.sm),
+              // Con texto ampliado, "Escanear" y "Manual" no entraban en su
+              // mitad del conmutador.
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: selected ? Colors.white : context.paleta.apagado,
+                  ),
                 ),
               ),
             ],
@@ -296,30 +306,32 @@ class _ScanEntryCard extends StatelessWidget {
                   : Icon(
                       CupertinoIcons.camera_viewfinder,
                       size: 56,
-                      color: context.paleta.apagado.withValues(alpha: 0.85),
+                      color: context.paleta.apagado,
                     ),
               const SizedBox(height: 18),
               Text(
-                'Apunta al codigo de barras',
+                context.t.agregarApuntaCodigo,
                 style: textTheme.titleLarge?.copyWith(
-                  color: context.paleta.tinta.withValues(alpha: 0.9),
+                  color: context.paleta.tinta,
                 ),
               ),
               const SizedBox(height: 10),
               Text(
-                'Toca para abrir la camara',
+                cargando
+                    ? context.t.agregarBuscando
+                    : context.t.agregarTocaCamara,
                 style: textTheme.titleMedium?.copyWith(
-                  color: context.paleta.apagado.withValues(alpha: 0.9),
+                  color: context.paleta.apagado,
                 ),
               ),
               if (ultimoCodigo != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Ultimo codigo: $ultimoCodigo',
+                  context.t.agregarUltimoCodigo(ultimoCodigo!),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.bodySmall?.copyWith(
-                    color: context.paleta.apagado.withValues(alpha: 0.85),
+                    color: context.paleta.apagado,
                   ),
                 ),
               ],
@@ -362,7 +374,7 @@ class _FakeBarcode extends StatelessWidget {
                 height: 50,
                 margin: const EdgeInsets.symmetric(horizontal: 1.5),
                 decoration: BoxDecoration(
-                  color: context.paleta.apagado.withValues(alpha: 0.52),
+                  color: context.paleta.apagado,
                   borderRadius: BorderRadius.circular(1),
                 ),
               ),
@@ -376,7 +388,7 @@ class _FakeBarcode extends StatelessWidget {
             color: context.paleta.marca,
             boxShadow: [
               BoxShadow(
-                color: context.paleta.marca.withValues(alpha: 0.6),
+                color: context.paleta.marca,
                 blurRadius: 8,
                 spreadRadius: 1,
               ),
@@ -470,8 +482,8 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
       child: Column(
         children: [
           _InputField(
-            label: 'Nombre del producto',
-            hint: 'Ej: Yogur griego',
+            label: context.t.agregarNombreProducto,
+            hint: context.t.agregarNombreEjemplo,
             controller: _nombreCtrl,
           ),
           const SizedBox(height: 12),
@@ -500,7 +512,7 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
               Expanded(
                 flex: 2,
                 child: _InputField(
-                  label: 'Cantidad',
+                  label: context.t.agregarCantidad,
                   hint: 'Ej: 1',
                   controller: _cantidadCtrl,
                 ),
@@ -522,8 +534,8 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
           ),
           const SizedBox(height: 12),
           _InputField(
-            label: 'Fecha de vencimiento',
-            hint: 'Selecciona una fecha',
+            label: context.t.agregarFecha,
+            hint: context.t.agregarElegirFecha,
             controller: _fechaCtrl,
             readOnly: true,
             onTap: () => _seleccionarFecha(context),
@@ -535,9 +547,9 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
               child: Padding(
                 padding: const EdgeInsets.only(left: 2),
                 child: Text(
-                  'Esta es la fecha de caducidad recomendada para este producto',
+                  context.t.agregarFechaRecomendada,
                   style: textTheme.bodySmall?.copyWith(
-                    color: context.paleta.marca.withValues(alpha: 0.8),
+                    color: context.paleta.marca,
                     fontWeight: FontWeight.w500,
                     height: 1.2,
                   ),
@@ -550,7 +562,7 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
             onPressed: () {
               if (_nombreCtrl.text.isEmpty || _fechaCtrl.text.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Completa nombre y fecha.')),
+                  SnackBar(content: Text(context.t.agregarFaltanCampos)),
                 );
                 return;
               }
@@ -621,7 +633,7 @@ class _InputField extends StatelessWidget {
           color: context.paleta.apagado,
         ),
         hintStyle: textTheme.bodySmall?.copyWith(
-          color: context.paleta.apagado.withValues(alpha: 0.75),
+          color: context.paleta.apagado,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -667,7 +679,7 @@ class _CategoriaDropdown extends StatelessWidget {
         elevation: 8,
 
         hint: Text(
-          'Selecciona una categoría',
+          context.t.agregarCategoria,
           style: textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w500,
             color: context.paleta.apagado,
@@ -728,7 +740,9 @@ class _UnidadDropdown extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         elevation: 8,
         hint: Text(
-          categoria == null ? 'Elige categoría' : 'Unidad',
+          categoria == null
+              ? context.t.agregarElegirCategoria
+              : context.t.agregarUnidad,
           style: textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w500,
             color: context.paleta.apagado,
@@ -777,7 +791,7 @@ class _SaveButton extends StatelessWidget {
           ),
         ),
         label: Text(
-          'Guardar producto',
+          context.t.agregarGuardar,
           style: textTheme.titleMedium?.copyWith(
             color: context.paleta.papel,
             fontWeight: FontWeight.w700,
@@ -913,7 +927,7 @@ class _ConfirmacionProductoSheetState
               ),
 
               Text(
-                'CONFIRMAR PRODUCTO',
+                context.t.agregarConfirmar,
                 style: textTheme.titleSmall?.copyWith(
                   letterSpacing: 2,
                   color: context.paleta.apagado,
@@ -929,7 +943,7 @@ class _ConfirmacionProductoSheetState
                   fontWeight: FontWeight.w600,
                 ),
                 decoration: InputDecoration(
-                  labelText: 'Nombre',
+                  labelText: context.t.agregarNombre,
                   filled: true,
                   fillColor: context.paleta.superficie,
                   labelStyle: TextStyle(color: context.paleta.apagado),
@@ -1042,8 +1056,8 @@ class _ConfirmacionProductoSheetState
                   onPressed: () {
                     if (_nombreCtrl.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('El nombre no puede estar vacío.'),
+                        SnackBar(
+                          content: Text(context.t.agregarNombreVacio),
                         ),
                       );
                       return;
@@ -1064,8 +1078,8 @@ class _ConfirmacionProductoSheetState
                     widget.onConfirmar(productoEditado);
                   },
                   icon: const Icon(Icons.check_rounded),
-                  label: const Text(
-                    'Agregar a mi despensa',
+                  label: Text(
+                    context.t.agregarAgregarADespensa,
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: FilledButton.styleFrom(

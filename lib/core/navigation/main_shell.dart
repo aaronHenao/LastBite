@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:lastbite/l10n/app_localizations.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
@@ -16,14 +18,19 @@ import 'package:lastbite/core/widgets/menu_cuenta.dart';
 /// sin etiqueta: la barra movil no anunciaba nada a un lector de pantalla, y
 /// una camara para "Agregar" o un gorro de chef para "Recetas" no son iconos
 /// que se entiendan solos.
-typedef _Destino = ({IconData icono, String etiqueta});
+typedef _EtiquetaDestino = String Function(L10n);
 
-const List<_Destino> _destinos = [
-  (icono: HugeIcons.strokeRoundedHome04, etiqueta: 'Despensa'),
-  (icono: CupertinoIcons.camera, etiqueta: 'Agregar'),
-  (icono: HugeIcons.strokeRoundedChefHat, etiqueta: 'Recetas'),
-  (icono: CupertinoIcons.bell, etiqueta: 'Alertas'),
+const List<({IconData icono, _EtiquetaDestino etiqueta})> _destinos = [
+  (icono: HugeIcons.strokeRoundedHome04, etiqueta: _despensa),
+  (icono: CupertinoIcons.camera, etiqueta: _agregar),
+  (icono: HugeIcons.strokeRoundedChefHat, etiqueta: _recetas),
+  (icono: CupertinoIcons.bell, etiqueta: _alertas),
 ];
+
+String _despensa(L10n t) => t.navDespensa;
+String _agregar(L10n t) => t.navAgregar;
+String _recetas(L10n t) => t.navRecetas;
+String _alertas(L10n t) => t.navAlertas;
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -140,7 +147,7 @@ class _FloatingMenuBar extends StatelessWidget {
             for (final (indice, destino) in _destinos.indexed)
               _MenuItem(
                 icon: destino.icono,
-                label: destino.etiqueta,
+                label: destino.etiqueta(context.t),
                 selected: selectedIndex == indice,
                 onTap: () => onTap(indice),
               ),
@@ -185,7 +192,7 @@ class _MenuItem extends StatelessWidget {
                 Icon(icon, size: 24, color: color),
                 const SizedBox(height: AppSpacing.xs),
                 AnimatedContainer(
-                  duration: AppMotion.pulsa,
+                  duration: AppMotion.duracion(context, AppMotion.pulsa),
                   curve: AppMotion.curvaPulsa,
                   width: selected ? 22 : 0,
                   height: 2,
@@ -236,7 +243,7 @@ class _BarraNavegacion extends StatelessWidget {
               for (final (indice, destino) in _destinos.indexed) ...[
                 _ItemBarra(
                   icono: destino.icono,
-                  etiqueta: destino.etiqueta,
+                  etiqueta: destino.etiqueta(context.t),
                   seleccionado: selectedIndex == indice,
                   onTap: () => onTap(indice),
                 ),
@@ -287,9 +294,9 @@ class _ItemBarra extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.sm),
         child: AnimatedContainer(
-          duration: AppMotion.pulsa,
+          duration: AppMotion.duracion(context, AppMotion.pulsa),
           curve: AppMotion.curvaPulsa,
-          constraints: const BoxConstraints(minHeight: 44),
+          constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm,

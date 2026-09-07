@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lastbite/l10n/app_localizations.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/recetas/domain/receta.dart';
 import 'package:lastbite/features/recetas/presentation/widgets/receta_card.dart';
@@ -27,6 +28,13 @@ Future<void> _montarEnCelda(WidgetTester tester, double ancho) async {
 
   await tester.pumpWidget(
     MaterialApp(
+      // Idioma fijo: las aserciones comparan textos concretos y el entorno
+
+      // de pruebas arranca en ingles.
+      locale: const Locale('es'),
+
+      localizationsDelegates: L10n.localizationsDelegates,
+      supportedLocales: L10n.supportedLocales,
       theme: AppTheme.light,
       home: Scaffold(
         body: GridView(

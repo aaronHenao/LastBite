@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lastbite/l10n/app_localizations.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/core/widgets/estado_vacio.dart';
 import 'package:lastbite/core/widgets/pastilla_estado.dart';
@@ -23,6 +24,13 @@ Future<void> _montar(WidgetTester tester, ThemeData tema) async {
 
   await tester.pumpWidget(
     MaterialApp(
+      // Idioma fijo: las aserciones comparan textos concretos y el entorno
+
+      // de pruebas arranca en ingles.
+      locale: const Locale('es'),
+
+      localizationsDelegates: L10n.localizationsDelegates,
+      supportedLocales: L10n.supportedLocales,
       theme: tema,
       home: Scaffold(
         body: ListView(

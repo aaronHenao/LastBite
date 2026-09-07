@@ -36,10 +36,11 @@ class AppColors {
   /// Texto principal. 15.75:1 sobre `papel`.
   static const tinta = Color(0xFF1C2114);
 
-  /// Texto secundario. 5.42:1 sobre `papel` — opaco a proposito: la version
-  /// anterior era negro con alfa, y cualquier `withValues` encima lo volvia
-  /// ilegible o, peor, mas oscuro de lo buscado.
-  static const apagado = Color(0xFF5F6B52);
+  /// Texto secundario. 6.77:1 sobre `papel` y nunca por debajo de 5.8 sobre
+  /// el resto de las superficies, incluidas las tenidas por un color de
+  /// estado. Opaco a proposito: la version anterior era negro con alfa, y
+  /// cualquier `withValues` encima lo volvia ilegible.
+  static const apagado = Color(0xFF525C42);
 
   /// Separadores y contornos.
   static const contorno = Color(0xFFE2E0D2);
@@ -56,7 +57,7 @@ class AppColors {
   static const urgente = Color(0xFF946509);
 
   /// Vence esta semana. Informa sin alarmar, por eso es neutro.
-  static const proximo = Color(0xFF5F6B52);
+  static const proximo = Color(0xFF525C42);
 
 }
 
@@ -80,6 +81,44 @@ class AppColorsOscuro {
   static const critico = Color(0xFFF0883E); // 7.11:1
   static const urgente = Color(0xFFE3B341); // 9.24:1
   static const proximo = Color(0xFF9BA88C);
+}
+
+/// Paletas de alto contraste. Todas las combinaciones superan 9:1, muy por
+/// encima del 4.5 que pide la norma: sirven a quien tiene baja visión severa,
+/// y tambien a cualquiera bajo el sol directo.
+class AppPaletasContraste {
+  static const clara = AppPalette(
+    marca: Color(0xFF24391A),
+    marcaClara: Color(0xFF24391A),
+    marcaSuave: Color(0xFFE8F0DE),
+    papel: Color(0xFFFFFFFF),
+    superficie: Color(0xFFFFFFFF),
+    superficieSuave: Color(0xFFF0F0EC),
+    tinta: Color(0xFF000000),
+    apagado: Color(0xFF2E3423),
+    // El borde deja de ser una insinuacion: separa de verdad.
+    contorno: Color(0xFF2E3423),
+    vencido: Color(0xFF8E1B15),
+    critico: Color(0xFF7A3208),
+    urgente: Color(0xFF5C3D04),
+    proximo: Color(0xFF2E3423),
+  );
+
+  static const oscura = AppPalette(
+    marca: Color(0xFFC3E3A0),
+    marcaClara: Color(0xFFC3E3A0),
+    marcaSuave: Color(0xFF1C2814),
+    papel: Color(0xFF000000),
+    superficie: Color(0xFF0B0F08),
+    superficieSuave: Color(0xFF141A10),
+    tinta: Color(0xFFFFFFFF),
+    apagado: Color(0xFFD3DCC4),
+    contorno: Color(0xFFD3DCC4),
+    vencido: Color(0xFFFFA79E),
+    critico: Color(0xFFFFB067),
+    urgente: Color(0xFFFFD470),
+    proximo: Color(0xFFD3DCC4),
+  );
 }
 
 /// Escala de espaciado. Cualquier separacion sale de aca; no se inventan
@@ -124,6 +163,11 @@ abstract final class AppMotion {
 
   /// Para el gesto que celebra algo, como salvar un alimento.
   static const curvaExpresiva = Cubic(0.23, 1, 0.32, 1);
+
+  /// Respeta el ajuste de "reducir movimiento" del sistema. Quien lo activa
+  /// suele hacerlo por mareo o sensibilidad vestibular, no por gusto.
+  static Duration duracion(BuildContext context, Duration valor) =>
+      MediaQuery.disableAnimationsOf(context) ? Duration.zero : valor;
 }
 
 /// Paleta accesible desde el contexto, para que una pantalla se pinte sola en
@@ -318,6 +362,13 @@ abstract final class AppTextStyles {
 class AppTheme {
   static ThemeData get light => _construir(AppPalette.clara, Brightness.light);
 
+  /// Variantes de alto contraste, para el ajuste que ofrece la app.
+  static ThemeData get lightContraste =>
+      _construir(AppPaletasContraste.clara, Brightness.light);
+
+  static ThemeData get darkContraste =>
+      _construir(AppPaletasContraste.oscura, Brightness.dark);
+
   /// Lista para usarse. Todavia no se conecta en `MaterialApp` porque las
   /// pantallas leen las constantes estaticas de [AppColors], que no cambian
   /// con el tema: se activa cuando cada pantalla pase a `context.paleta`.
@@ -378,7 +429,7 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: p.marca,
           foregroundColor: brillo == Brightness.light ? Colors.white : p.papel,
-          // 44 de alto minimo: siete controles de la app estaban por debajo.
+          // 48 de alto minimo, que es lo que pide la pauta de Android.
           minimumSize: const Size(0, 48),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           textStyle: textTheme.labelLarge,
@@ -403,14 +454,14 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: p.marca,
-          minimumSize: const Size(0, 44),
+          minimumSize: const Size(0, 48),
           textStyle: textTheme.labelLarge,
         ),
       ),
 
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
-          minimumSize: const Size(44, 44),
+          minimumSize: const Size(48, 48),
           foregroundColor: p.apagado,
         ),
       ),

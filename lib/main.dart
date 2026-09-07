@@ -5,7 +5,9 @@ import 'package:lastbite/core/navigation/main_shell.dart';
 import 'package:lastbite/core/notifications/notification_service.dart';
 import 'package:lastbite/core/notifications/vencimiento_checker.dart';
 import 'core/theme/app_theme.dart';
-import 'core/theme/tema_provider.dart';
+import 'core/preferencias/preferencias.dart';
+import 'l10n/app_localizations.dart';
+import 'core/preferencias/preferencias_provider.dart';
 import 'features/auth/presentation/auth_provider.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'firebase_options.dart';
@@ -24,16 +26,42 @@ class LastBiteApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tema = ref.watch(temaProvider).valueOrNull ?? ThemeMode.system;
+    final prefs =
+        ref.watch(preferenciasProvider).valueOrNull ?? const Preferencias();
 
     return MaterialApp(
       title: 'LastBite',
-      theme: AppTheme.light,
-      // Todas las pantallas leen la paleta del contexto, asi que el modo
-      // oscuro ya se pinta solo. Sigue al ajuste del sistema.
-      darkTheme: AppTheme.dark,
-      themeMode: tema,
+      // Todas las pantallas leen la paleta del contexto, asi que basta con
+      // elegir el tema aca para que el modo oscuro y el alto contraste se
+      // pinten solos.
+      theme: prefs.altoContraste ? AppTheme.lightContraste : AppTheme.light,
+      darkTheme: prefs.altoContraste ? AppTheme.darkContraste : AppTheme.dark,
+      themeMode: prefs.tema,
+      // null deja que Flutter elija segun el idioma del dispositivo.
+      locale: prefs.idioma == null ? null : Locale(prefs.idioma!),
+      localizationsDelegates: L10n.localizationsDelegates,
+      supportedLocales: L10n.supportedLocales,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        final sistema = MediaQuery.of(context);
+
+        // Mientras el ajuste de la app este en Normal manda el del sistema:
+        // quien ya configuro su telefono no pierde esa eleccion. Al elegir un
+        // tamaño aqui, esa eleccion pasa a mandar. El tope de 2.0 es hasta
+        // donde estan probadas las pantallas.
+        final escala = prefs.escalaTexto == 1.0
+            ? sistema.textScaler
+            : TextScaler.linear(prefs.escalaTexto);
+
+        return MediaQuery(
+          data: sistema.copyWith(
+            textScaler: escala.clamp(maxScaleFactor: 2.0),
+            disableAnimations:
+                sistema.disableAnimations || prefs.reducirMovimiento,
+          ),
+          child: child!,
+        );
+      },
       home: const _AuthGate(),
     );
   }

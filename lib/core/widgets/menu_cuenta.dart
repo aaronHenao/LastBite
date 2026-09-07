@@ -1,10 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
+import 'package:lastbite/features/ajustes/presentation/ajustes_screen.dart';
 import 'package:lastbite/features/compartida/presentation/compartida_screen.dart';
 import 'package:lastbite/features/consulta_rapida/presentation/consulta_rapida_screen.dart';
 import 'package:lastbite/features/perfil/presentation/perfil_screen.dart';
@@ -30,9 +32,9 @@ class MenuCuenta extends ConsumerWidget {
     return MenuAnchor(
       builder: (context, controller, _) => Semantics(
         button: true,
-        label: 'Menú de cuenta',
+        label: context.t.cuentaMenu,
         child: Tooltip(
-          message: user?.nombre ?? 'Mi cuenta',
+          message: user?.nombre ?? context.t.cuentaMia,
           child: InkWell(
             onTap: () =>
                 controller.isOpen ? controller.close() : controller.open(),
@@ -57,22 +59,30 @@ class MenuCuenta extends ConsumerWidget {
         MenuItemButton(
           leadingIcon: const Icon(Icons.person_outline_rounded),
           onPressed: () => abrir(const PerfilScreen()),
-          child: const Text('Perfil y lista de compras'),
+          child: Text(context.t.cuentaPerfil),
         ),
         MenuItemButton(
           leadingIcon: const Icon(Icons.groups_rounded),
           onPressed: () => abrir(const DespensaCompartidaScreen()),
-          child: const Text('Despensa compartida'),
+          child: Text(context.t.cuentaCompartida),
         ),
         MenuItemButton(
           leadingIcon: const Icon(CupertinoIcons.search),
           onPressed: () => abrir(const ConsultaRapidaScreen()),
-          child: const Text('Consulta rápida'),
+          child: Text(context.t.cuentaConsultaRapida),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.accessibility_new_rounded),
+          onPressed: () => abrir(const AjustesScreen()),
+          child: Text(context.t.cuentaAccesibilidad),
         ),
         MenuItemButton(
           leadingIcon: Icon(Icons.logout_rounded, color: paleta.vencido),
           onPressed: () => ref.read(authServiceProvider).cerrarSesion(),
-          child: Text('Cerrar sesión', style: TextStyle(color: paleta.vencido)),
+          child: Text(
+            context.t.cuentaCerrarSesion,
+            style: TextStyle(color: paleta.vencido),
+          ),
         ),
       ],
     );

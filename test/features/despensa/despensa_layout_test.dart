@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lastbite/l10n/app_localizations.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/compartida/presentation/compartida_provider.dart';
@@ -54,7 +55,13 @@ Future<void> _montar(
         despensaCompartidaProvider.overrideWith((ref) => Stream.value(null)),
         despensaProvider.overrideWith(() => _DespensaFalsa(productos)),
       ],
-      child: MaterialApp(theme: AppTheme.light, home: const DespensaScreen()),
+      child: MaterialApp(
+        locale: const Locale('es'),
+        localizationsDelegates: L10n.localizationsDelegates,
+        supportedLocales: L10n.supportedLocales,
+        theme: AppTheme.light,
+        home: const DespensaScreen(),
+      ),
     ),
   );
   await tester.pump();
@@ -96,9 +103,7 @@ void main() {
     // el rail ocupe su alto en vez de amontonarse contra el borde superior.
     final cifra = tester.getRect(find.text('PRODUCTOS'));
     // Sin consumos todavia, la tarjeta muestra su texto de arranque.
-    final ahorro = tester.getRect(
-      find.textContaining('empezar a sumar').first,
-    );
+    final ahorro = tester.getRect(find.textContaining('empezar a sumar').first);
     expect(ahorro.top, greaterThan(cifra.bottom + 200));
     expect(tester.takeException(), isNull);
   });

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:lastbite/core/theme/tema_provider.dart';
+import 'package:lastbite/core/preferencias/preferencias_provider.dart';
 
 /// Alterna entre claro, oscuro y el ajuste del sistema.
 class InterruptorTema extends ConsumerWidget {
@@ -9,7 +9,8 @@ class InterruptorTema extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final modo = ref.watch(temaProvider).valueOrNull ?? ThemeMode.system;
+    final modo =
+        ref.watch(preferenciasProvider).valueOrNull?.tema ?? ThemeMode.system;
 
     final (icono, etiqueta, siguiente) = switch (modo) {
       ThemeMode.system => (
@@ -30,7 +31,8 @@ class InterruptorTema extends ConsumerWidget {
     };
 
     return IconButton(
-      onPressed: () => ref.read(temaProvider.notifier).cambiar(siguiente),
+      onPressed: () =>
+          ref.read(preferenciasProvider.notifier).cambiarTema(siguiente),
       icon: Icon(icono),
       tooltip: '$etiqueta. Tocá para cambiar.',
     );

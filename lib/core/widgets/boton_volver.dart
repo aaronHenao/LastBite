@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import '../theme/app_theme.dart';
 
 /// Vuelve a la pantalla anterior.
@@ -8,9 +9,10 @@ import '../theme/app_theme.dart';
 /// con una zona de toque de unos 28px de alto. Aca es una sola, con los 44x44
 /// minimos.
 class BotonVolver extends StatelessWidget {
-  const BotonVolver({super.key, this.texto = 'Volver', this.onTap});
+  const BotonVolver({super.key, this.texto, this.onTap});
 
-  final String texto;
+  /// Por defecto, el texto traducido de "volver".
+  final String? texto;
 
   /// Por defecto hace `Navigator.pop`.
   final VoidCallback? onTap;
@@ -18,6 +20,7 @@ class BotonVolver extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final paleta = context.paleta;
+    final etiqueta = texto ?? context.t.accionVolver;
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -26,9 +29,9 @@ class BotonVolver extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.sm),
         child: Semantics(
           button: true,
-          label: texto,
+          label: etiqueta,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 44),
+            constraints: const BoxConstraints(minHeight: 48),
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.sm,
               vertical: AppSpacing.sm,
@@ -43,7 +46,7 @@ class BotonVolver extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
-                  texto,
+                  etiqueta,
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(color: paleta.apagado),

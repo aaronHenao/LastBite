@@ -10,11 +10,7 @@ void main() {
         AppColors.marcaClara,
         AppColors.marcaSuave,
       };
-      final estados = {
-        AppColors.vencido,
-        AppColors.critico,
-        AppColors.urgente,
-      };
+      final estados = {AppColors.vencido, AppColors.critico, AppColors.urgente};
 
       expect(marca.intersection(estados), isEmpty);
     });

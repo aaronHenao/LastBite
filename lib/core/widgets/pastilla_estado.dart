@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import '../theme/app_theme.dart';
 
 /// Estado de un alimento segun los dias que le quedan.
@@ -23,7 +24,7 @@ class PastillaEstado extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final paleta = context.paleta;
     final color = paleta.urgenciaPorDias(dias);
-    final etiqueta = AppTheme.diasLabel(dias);
+    final etiqueta = etiquetaDias(context, dias);
 
     if (color == null) {
       return Text(
@@ -70,4 +71,13 @@ class PastillaEstado extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Cuanto le queda a un producto, en palabras y en el idioma activo.
+String etiquetaDias(BuildContext context, int dias) {
+  final t = context.t;
+  if (dias < 0) return t.estadoVencido;
+  if (dias == 0) return t.estadoHoy;
+  if (dias == 1) return t.estadoManana;
+  return t.estadoDias(dias);
 }

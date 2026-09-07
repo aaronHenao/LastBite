@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/responsive/responsive.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import 'package:lastbite/core/widgets/boton_volver.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 
@@ -84,21 +85,21 @@ class _SinDespensa extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
+    final t = context.t;
     final anchoAmplio = Responsive.isTabletOrWeb(context);
 
     final acciones = [
       _AccionCard(
         icono: CupertinoIcons.house_alt,
-        titulo: 'Crear despensa',
-        descripcion:
-            'Genera un código para que tu familia se una a tu despensa.',
+        titulo: t.compartidaCrear,
+        descripcion: t.compartidaCrearAyuda,
         principal: true,
         onTap: () => _dialogoCrear(context, ref),
       ),
       _AccionCard(
         icono: CupertinoIcons.person_badge_plus,
-        titulo: 'Unirme con código',
-        descripcion: 'Ya tienes un código de 6 caracteres de tu familia.',
+        titulo: t.compartidaUnirme,
+        descripcion: t.compartidaUnirmeAyuda,
         principal: false,
         onTap: () => _dialogoUnirse(context, ref),
       ),
@@ -107,11 +108,10 @@ class _SinDespensa extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Despensa compartida', style: textTheme.displaySmall),
+        Text(t.compartidaTitulo, style: textTheme.displaySmall),
         const SizedBox(height: 8),
         Text(
-          'Comparte una sola despensa con tu familia: los productos, las '
-          'alertas y las recetas son los mismos para todos.',
+          t.compartidaIntro,
           style: textTheme.bodyMedium?.copyWith(color: context.paleta.apagado),
         ),
         const SizedBox(height: 24),
@@ -163,8 +163,7 @@ class _NotaUnaDespensa extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Solo puedes estar en una despensa a la vez: la tuya personal o '
-              'una compartida.',
+              context.t.compartidaNotaUnaSola,
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: context.paleta.apagado),
@@ -244,6 +243,7 @@ class _ConDespensa extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
+    final t = context.t;
     final esAdmin = despensa.esAdmin(uid);
 
     return Column(
@@ -253,8 +253,11 @@ class _ConDespensa extends ConsumerWidget {
         const SizedBox(height: 6),
         Text(
           esAdmin
-              ? 'Eres el administrador de esta despensa.'
-              : 'Administrada por ${despensa.miembro(despensa.adminUid)?.nombre ?? 'otro miembro'}.',
+              ? t.compartidaEresAdmin
+              : t.compartidaAdministradaPor(
+                  despensa.miembro(despensa.adminUid)?.nombre ??
+                      t.compartidaOtroMiembro,
+                ),
           style: textTheme.bodySmall?.copyWith(color: context.paleta.apagado),
         ),
         const SizedBox(height: 20),
@@ -269,7 +272,7 @@ class _ConDespensa extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              'MIEMBROS (${despensa.miembros.length})',
+              t.compartidaMiembros(despensa.miembros.length),
               style: textTheme.titleSmall?.copyWith(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -288,20 +291,20 @@ class _ConDespensa extends ConsumerWidget {
           if (despensa.miembros.length > 1) ...[
             _BotonPeligro(
               icono: CupertinoIcons.square_arrow_left,
-              texto: 'Salir y ceder la administración',
+              texto: t.compartidaSalirCeder,
               onTap: () => _confirmarSalirComoAdmin(context, ref, despensa, uid),
             ),
             const SizedBox(height: 10),
           ],
           _BotonPeligro(
             icono: CupertinoIcons.delete,
-            texto: 'Eliminar despensa',
+            texto: t.compartidaEliminar,
             onTap: () => _confirmarEliminar(context, ref, despensa),
           ),
         ] else
           _BotonPeligro(
             icono: CupertinoIcons.square_arrow_left,
-            texto: 'Salir de la despensa',
+            texto: t.compartidaSalir,
             onTap: () => _confirmarSalir(context, ref, despensa),
           ),
       ],
@@ -322,7 +325,7 @@ class _CodigoCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'CÓDIGO DE INVITACIÓN',
+          context.t.compartidaCodigoRotulo,
           style: textTheme.labelSmall?.copyWith(color: context.paleta.apagado),
         ),
         const SizedBox(height: 6),
@@ -341,12 +344,12 @@ class _CodigoCard extends StatelessWidget {
         await Clipboard.setData(ClipboardData(text: codigo));
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Código copiado')),
+          SnackBar(content: Text(context.t.compartidaCodigoCopiado)),
         );
       },
       style: FilledButton.styleFrom(backgroundColor: context.paleta.marca),
       icon: const Icon(CupertinoIcons.doc_on_doc, size: 16),
-      label: const Text('Copiar'),
+      label: Text(context.t.compartidaCopiar),
     );
 
     return Container(
@@ -458,13 +461,12 @@ class _BotonPeligro extends StatelessWidget {
 Future<void> _dialogoCrear(BuildContext context, WidgetRef ref) async {
   final nombre = await showDialog<String>(
     context: context,
-    builder: (dialogContext) => const _DialogoTexto(
-      titulo: 'Crear despensa familiar',
-      descripcion:
-          'Ponle un nombre. Después compartes el código con tu familia.',
-      inicial: 'Despensa familiar',
-      hint: 'Nombre de la despensa',
-      textoBoton: 'Crear',
+    builder: (dialogContext) => _DialogoTexto(
+      titulo: context.t.compartidaCrearTitulo,
+      descripcion: context.t.compartidaCrearDescripcion,
+      inicial: context.t.compartidaNombreDefecto,
+      hint: context.t.compartidaNombrePlaceholder,
+      textoBoton: context.t.compartidaAccionCrear,
     ),
   );
   if (nombre == null || !context.mounted) return;
@@ -478,18 +480,18 @@ Future<void> _dialogoCrear(BuildContext context, WidgetRef ref) async {
       nombre: nombre,
       migrar: migrar,
     ),
-    exito: 'Despensa creada',
+    exito: context.t.compartidaCreada,
   );
 }
 
 Future<void> _dialogoUnirse(BuildContext context, WidgetRef ref) async {
   final codigo = await showDialog<String>(
     context: context,
-    builder: (dialogContext) => const _DialogoTexto(
-      titulo: 'Unirme a una despensa',
-      descripcion: 'Escribe el código de 6 caracteres que te compartieron.',
-      hint: 'ABC123',
-      textoBoton: 'Unirme',
+    builder: (dialogContext) => _DialogoTexto(
+      titulo: context.t.compartidaUnirmeTitulo,
+      descripcion: context.t.compartidaUnirmeDescripcion,
+      hint: 'ABC234',
+      textoBoton: context.t.compartidaAccionUnirme,
       mayusculas: true,
       maxLength: 6,
     ),
@@ -504,7 +506,7 @@ Future<void> _dialogoUnirse(BuildContext context, WidgetRef ref) async {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: context.paleta.vencido,
-        content: Text('No existe una despensa con ese código.'),
+        content: Text(context.t.compartidaSinCodigo),
       ),
     );
     return;
@@ -519,7 +521,7 @@ Future<void> _dialogoUnirse(BuildContext context, WidgetRef ref) async {
       codigo: codigo,
       migrar: migrar,
     ),
-    exito: 'Te uniste a la despensa',
+    exito: context.t.compartidaTeUniste,
   );
 }
 
@@ -538,34 +540,32 @@ Future<bool?> _preguntarMigracion(BuildContext context, WidgetRef ref) async {
       backgroundColor: context.paleta.marcaSuave,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(
-        'Migrar tus productos',
+        context.t.compartidaMigrarTitulo,
         style: TextStyle(color: context.paleta.tinta, fontWeight: FontWeight.w800),
       ),
       content: Text(
-        'Tienes $cantidad producto${cantidad == 1 ? '' : 's'} en tu despensa '
-        'personal. ¿Quieres moverlos a la despensa compartida? Si no, se '
-        'quedan en tu despensa personal y volverás a verlos cuando salgas.',
+        context.t.compartidaMigrarDescripcion(cantidad),
         style: TextStyle(color: context.paleta.apagado),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext),
           child: Text(
-            'Cancelar',
+            context.t.accionCancelar,
             style: TextStyle(color: context.paleta.apagado),
           ),
         ),
         TextButton(
           onPressed: () => Navigator.pop(dialogContext, false),
           child: Text(
-            'No migrar',
+            context.t.compartidaNoMigrar,
             style: TextStyle(color: context.paleta.apagado),
           ),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(dialogContext, true),
           style: FilledButton.styleFrom(backgroundColor: context.paleta.marca),
-          child: const Text('Migrar'),
+          child: Text(context.t.compartidaMigrar),
         ),
       ],
     ),
@@ -579,18 +579,16 @@ Future<void> _confirmarSalir(
 ) async {
   final ok = await _confirmar(
     context,
-    titulo: 'Salir de la despensa',
-    mensaje:
-        'Volverás a tu despensa personal. Los productos que agregaste se '
-        'quedan en la despensa compartida.',
-    textoBoton: 'Salir',
+    titulo: context.t.compartidaSalir,
+    mensaje: context.t.compartidaSalirDescripcion,
+    textoBoton: context.t.compartidaSalirAccion,
   );
   if (ok != true || !context.mounted) return;
 
   await _ejecutar(
     context,
     () => ref.read(compartidaProvider.notifier).salir(despensa.id),
-    exito: 'Saliste de la despensa',
+    exito: context.t.compartidaSaliste,
   );
 }
 
@@ -609,14 +607,13 @@ Future<void> _confirmarSalirComoAdmin(
   );
   if (nuevoAdmin == null || !context.mounted) return;
 
-  final nombre = despensa.miembro(nuevoAdmin)?.nombre ?? 'ese miembro';
+  final nombre =
+      despensa.miembro(nuevoAdmin)?.nombre ?? context.t.compartidaOtroMiembro;
   final ok = await _confirmar(
     context,
-    titulo: 'Salir de la despensa',
-    mensaje:
-        '$nombre pasa a ser el administrador y vos volvés a tu despensa '
-        'personal. Los productos que agregaste se quedan en la compartida.',
-    textoBoton: 'Salir',
+    titulo: context.t.compartidaSalir,
+    mensaje: context.t.compartidaCederDescripcion(nombre),
+    textoBoton: context.t.compartidaSalirAccion,
   );
   if (ok != true || !context.mounted) return;
 
@@ -625,7 +622,7 @@ Future<void> _confirmarSalirComoAdmin(
     () => ref
         .read(compartidaProvider.notifier)
         .salir(despensa.id, nuevoAdminUid: nuevoAdmin),
-    exito: 'Saliste de la despensa. Ahora administra $nombre.',
+    exito: context.t.compartidaSalisteConAdmin(nombre),
   );
 }
 
@@ -647,7 +644,7 @@ class _DialogoNuevoAdminState extends State<_DialogoNuevoAdmin> {
       backgroundColor: context.paleta.marcaSuave,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(
-        '¿Quién administra la despensa?',
+        context.t.compartidaNuevoAdminTitulo,
         style: TextStyle(
           color: context.paleta.tinta,
           fontWeight: FontWeight.w800,
@@ -658,8 +655,7 @@ class _DialogoNuevoAdminState extends State<_DialogoNuevoAdmin> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Quien elijas va a poder agregar y sacar miembros, y eliminar la '
-            'despensa.',
+            context.t.compartidaNuevoAdminDescripcion,
             style: TextStyle(color: context.paleta.apagado, fontSize: 13),
           ),
           const SizedBox(height: 12),
@@ -700,14 +696,14 @@ class _DialogoNuevoAdminState extends State<_DialogoNuevoAdmin> {
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
-            'Cancelar',
+            context.t.accionCancelar,
             style: TextStyle(color: context.paleta.apagado),
           ),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(context, _elegido),
           style: FilledButton.styleFrom(backgroundColor: context.paleta.marca),
-          child: const Text('Continuar'),
+          child: Text(context.t.compartidaContinuar),
         ),
       ],
     );
@@ -721,18 +717,16 @@ Future<void> _confirmarEliminar(
 ) async {
   final ok = await _confirmar(
     context,
-    titulo: 'Eliminar despensa',
-    mensaje:
-        'Todos los miembros volverán a su despensa personal y los productos '
-        'compartidos pasarán a la tuya. Esta acción no se puede deshacer.',
-    textoBoton: 'Eliminar',
+    titulo: context.t.compartidaEliminar,
+    mensaje: context.t.compartidaEliminarDescripcion,
+    textoBoton: context.t.compartidaEliminarAccion,
   );
   if (ok != true || !context.mounted) return;
 
   await _ejecutar(
     context,
     () => ref.read(compartidaProvider.notifier).eliminar(despensa.id),
-    exito: 'Despensa eliminada',
+    exito: context.t.compartidaEliminada,
   );
 }
 
@@ -744,11 +738,9 @@ Future<void> _confirmarExpulsar(
 ) async {
   final ok = await _confirmar(
     context,
-    titulo: 'Eliminar miembro',
-    mensaje:
-        '${miembro.nombre} volverá a su despensa personal y dejará de ver esta '
-        'despensa.',
-    textoBoton: 'Eliminar',
+    titulo: context.t.compartidaExpulsarTitulo,
+    mensaje: context.t.compartidaExpulsarDescripcion(miembro.nombre),
+    textoBoton: context.t.compartidaEliminarAccion,
   );
   if (ok != true || !context.mounted) return;
 
@@ -758,7 +750,7 @@ Future<void> _confirmarExpulsar(
       despensaId: despensa.id,
       userId: miembro.uid,
     ),
-    exito: '${miembro.nombre} salió de la despensa',
+    exito: context.t.compartidaMiembroSalio(miembro.nombre),
   );
 }
 
@@ -788,7 +780,7 @@ Future<bool?> _confirmar(
         TextButton(
           onPressed: () => Navigator.pop(dialogContext, false),
           child: Text(
-            'Cancelar',
+            context.t.accionCancelar,
             style: TextStyle(color: context.paleta.apagado),
           ),
         ),
@@ -938,7 +930,7 @@ class _DialogoTextoState extends State<_DialogoTexto> {
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
-            'Cancelar',
+            context.t.accionCancelar,
             style: TextStyle(color: context.paleta.apagado),
           ),
         ),

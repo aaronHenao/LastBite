@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lastbite/l10n/app_localizations.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/compartida/presentation/compartida_provider.dart';
@@ -62,6 +63,13 @@ Future<void> _montarConDespensa(
         productosPersonalesCountProvider.overrideWith((ref) async => 0),
       ],
       child: MaterialApp(
+        // Idioma fijo: las aserciones comparan textos concretos y el entorno
+
+        // de pruebas arranca en ingles.
+        locale: const Locale('es'),
+
+        localizationsDelegates: L10n.localizationsDelegates,
+        supportedLocales: L10n.supportedLocales,
         theme: AppTheme.light,
         home: const DespensaCompartidaScreen(),
       ),
@@ -83,6 +91,9 @@ Future<void> _montar(WidgetTester tester, {required double ancho}) async {
         productosPersonalesCountProvider.overrideWith((ref) async => 0),
       ],
       child: MaterialApp(
+        locale: const Locale('es'),
+        localizationsDelegates: L10n.localizationsDelegates,
+        supportedLocales: L10n.supportedLocales,
         theme: AppTheme.light,
         home: const DespensaCompartidaScreen(),
       ),

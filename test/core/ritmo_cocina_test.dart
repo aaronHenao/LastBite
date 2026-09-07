@@ -40,8 +40,9 @@ void main() {
       // 2026-08-24 lunes .. 2026-08-30 domingo
       for (var dia = 24; dia <= 30; dia++) {
         final fecha = DateTime(2026, 8, dia);
-        (priorizarRecetasRapidas(fecha) ? rapidas : elaboradas)
-            .add(fecha.weekday);
+        (priorizarRecetasRapidas(fecha) ? rapidas : elaboradas).add(
+          fecha.weekday,
+        );
       }
 
       expect(rapidas, hasLength(5));

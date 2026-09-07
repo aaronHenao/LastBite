@@ -32,14 +32,15 @@ List<String> _ordenar(
   bool ordenarPorTiempo = false,
   MomentoComida? momento,
 }) {
-  final copia = [...recetas]..sort(
-    (a, b) => compararRecetas(
-      a,
-      b,
-      ordenarPorTiempo: ordenarPorTiempo,
-      momento: momento,
-    ),
-  );
+  final copia = [...recetas]
+    ..sort(
+      (a, b) => compararRecetas(
+        a,
+        b,
+        ordenarPorTiempo: ordenarPorTiempo,
+        momento: momento,
+      ),
+    );
   return copia.map((r) => r.titulo).toList();
 }
 
@@ -55,10 +56,11 @@ void main() {
         _receta(id: 1021260, titulo: 'de 20', minutos: 20),
       ];
 
-      expect(
-        _ordenar(recetas, ordenarPorTiempo: true),
-        ['de 10', 'de 20', 'de 45'],
-      );
+      expect(_ordenar(recetas, ordenarPorTiempo: true), [
+        'de 10',
+        'de 20',
+        'de 45',
+      ]);
     });
 
     test('despensa lentils/pepper/cumin: la de 25 sube sobre las de 45', () {
@@ -88,10 +90,11 @@ void main() {
         _receta(id: 3, titulo: 'match medio', minutos: 45, usados: 2),
       ];
 
-      expect(
-        _ordenar(recetas, ordenarPorTiempo: true),
-        ['match alto', 'match medio', 'match bajo'],
-      );
+      expect(_ordenar(recetas, ordenarPorTiempo: true), [
+        'match alto',
+        'match medio',
+        'match bajo',
+      ]);
     });
 
     test('las recetas sin tiempo conocido quedan al final', () {
@@ -100,10 +103,10 @@ void main() {
         _receta(id: 2, titulo: 'con tiempo', minutos: 45, usados: 1),
       ];
 
-      expect(
-        _ordenar(recetas, ordenarPorTiempo: true),
-        ['con tiempo', 'sin tiempo'],
-      );
+      expect(_ordenar(recetas, ordenarPorTiempo: true), [
+        'con tiempo',
+        'sin tiempo',
+      ]);
     });
   });
 
@@ -137,12 +140,7 @@ void main() {
 
     test('pasado el mediodia sube el plato fuerte', () {
       final recetas = [
-        _receta(
-          id: 1,
-          titulo: 'desayuno',
-          dishTypes: tiposDesayuno,
-          usados: 4,
-        ),
+        _receta(id: 1, titulo: 'desayuno', dishTypes: tiposDesayuno, usados: 4),
         _receta(
           id: 2,
           titulo: 'plato fuerte',
@@ -218,10 +216,10 @@ void main() {
       ];
 
       // Ninguna encaja, asi que decide el match.
-      expect(
-        _ordenar(recetas, momento: MomentoComida.principal),
-        ['sin tipos', 'tambien sin tipos'],
-      );
+      expect(_ordenar(recetas, momento: MomentoComida.principal), [
+        'sin tipos',
+        'tambien sin tipos',
+      ]);
     });
 
     test('sin momento definido el criterio no se aplica', () {
@@ -233,7 +231,12 @@ void main() {
           usados: 1,
           faltantes: 4,
         ),
-        _receta(id: 2, titulo: 'match alto', dishTypes: tiposPrincipal, usados: 4),
+        _receta(
+          id: 2,
+          titulo: 'match alto',
+          dishTypes: tiposPrincipal,
+          usados: 4,
+        ),
       ];
 
       expect(_ordenar(recetas).first, 'match alto');
@@ -264,32 +267,33 @@ void main() {
   group('encajaConMomento', () {
     test('reconoce los tipos reales de desayuno', () {
       expect(
-        encajaConMomento(['morning meal', 'brunch', 'breakfast'],
-            MomentoComida.desayuno),
+        encajaConMomento([
+          'morning meal',
+          'brunch',
+          'breakfast',
+        ], MomentoComida.desayuno),
         isTrue,
       );
     });
 
     test('reconoce los tipos reales de plato fuerte', () {
       expect(
-        encajaConMomento(['lunch', 'main course', 'main dish', 'dinner'],
-            MomentoComida.principal),
+        encajaConMomento([
+          'lunch',
+          'main course',
+          'main dish',
+          'dinner',
+        ], MomentoComida.principal),
         isTrue,
       );
     });
 
     test('side dish y soup no cuentan como plato fuerte por si solos', () {
-      expect(
-        encajaConMomento(['side dish'], MomentoComida.principal),
-        isFalse,
-      );
+      expect(encajaConMomento(['side dish'], MomentoComida.principal), isFalse);
     });
 
     test('ignora mayusculas y espacios', () {
-      expect(
-        encajaConMomento([' BREAKFAST '], MomentoComida.desayuno),
-        isTrue,
-      );
+      expect(encajaConMomento([' BREAKFAST '], MomentoComida.desayuno), isTrue);
     });
 
     test('null y vacio no encajan con nada', () {

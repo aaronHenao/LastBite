@@ -5,6 +5,7 @@ import 'package:lastbite/core/widgets/boton_volver.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import '../domain/item_compra.dart';
@@ -79,7 +80,7 @@ class PerfilScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        user?.nombre ?? 'Usuario',
+                        user?.nombre ?? context.t.perfilUsuario,
                         style: textTheme.bodyLarge?.copyWith(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
@@ -117,11 +118,15 @@ class PerfilScreen extends ConsumerWidget {
                               size: 20,
                             ),
                             const SizedBox(width: 8),
-                            Text(
-                              '$salvados alimentos salvados',
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: context.paleta.marca,
-                                fontWeight: FontWeight.w700,
+                            // Flexible: con el texto al doble de tamaño esta
+                            // fila se salia 275px de la pantalla.
+                            Flexible(
+                              child: Text(
+                                context.t.perfilSalvados(salvados),
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: context.paleta.marca,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ],
@@ -157,14 +162,14 @@ class PerfilScreen extends ConsumerWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Perfil nutricional',
+                                      context.t.perfilNutricional,
                                       style: textTheme.titleMedium?.copyWith(
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Adapta las recetas a tus preferencias',
+                                      context.t.perfilNutricionalAyuda,
                                       style: textTheme.bodySmall,
                                     ),
                                   ],
@@ -188,16 +193,18 @@ class PerfilScreen extends ConsumerWidget {
                             color: context.paleta.marca,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            'LISTA DE COMPRAS',
-                            style: textTheme.titleSmall?.copyWith(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.5,
-                              color: context.paleta.apagado,
+                          Expanded(
+                            child: Text(
+                              context.t.perfilListaCompras,
+                              style: textTheme.titleSmall?.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.5,
+                                color: context.paleta.apagado,
+                              ),
                             ),
                           ),
-                          const Spacer(),
+                          const SizedBox(width: AppSpacing.sm),
                           asyncLista.maybeWhen(
                             data: (items) {
                               final comprados = items.where((i) => i.comprado);
@@ -209,8 +216,8 @@ class PerfilScreen extends ConsumerWidget {
                                   foregroundColor: context.paleta.marca,
                                   padding: EdgeInsets.zero,
                                 ),
-                                child: const Text(
-                                  'Limpiar comprados',
+                                child: Text(
+                                  context.t.perfilLimpiarComprados,
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
@@ -234,14 +241,16 @@ class PerfilScreen extends ConsumerWidget {
                   child: Center(
                     child: Padding(
                       padding: EdgeInsets.only(top: 40),
-                      child: CircularProgressIndicator(color: context.paleta.marca),
+                      child: CircularProgressIndicator(
+                        color: context.paleta.marca,
+                      ),
                     ),
                   ),
                 ),
                 error: (e, _) => SliverToBoxAdapter(
                   child: Center(
                     child: Text(
-                      'Error: $e',
+                      context.t.perfilErrorLista,
                       style: TextStyle(color: context.paleta.vencido),
                     ),
                   ),
@@ -261,14 +270,14 @@ class PerfilScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'Tu lista de compras está vacía',
+                              context.t.perfilListaVaciaTitulo,
                               style: textTheme.bodyMedium?.copyWith(
                                 color: context.paleta.apagado,
                               ),
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Los productos que consumas o elimines\naparecerán aquí',
+                              context.t.perfilListaVaciaDescripcion,
                               textAlign: TextAlign.center,
                               style: textTheme.bodySmall?.copyWith(
                                 color: context.paleta.apagado.withValues(
@@ -305,7 +314,7 @@ class PerfilScreen extends ConsumerWidget {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                           child: Text(
-                            'COMPRADOS',
+                            context.t.perfilComprados,
                             style: textTheme.titleSmall?.copyWith(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
@@ -345,21 +354,21 @@ class PerfilScreen extends ConsumerWidget {
         backgroundColor: context.paleta.marcaSuave,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          'Limpiar comprados',
+          context.t.perfilLimpiarComprados,
           style: TextStyle(
             color: context.paleta.tinta,
             fontWeight: FontWeight.w800,
           ),
         ),
         content: Text(
-          '¿Eliminar todos los productos marcados como comprados?',
+          context.t.perfilLimpiarPregunta,
           style: TextStyle(color: context.paleta.apagado),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Cancelar',
+              context.t.accionCancelar,
               style: TextStyle(color: context.paleta.apagado),
             ),
           ),
@@ -368,8 +377,10 @@ class PerfilScreen extends ConsumerWidget {
               Navigator.pop(context);
               await ref.read(listaComprasProvider.notifier).limpiarComprados();
             },
-            style: FilledButton.styleFrom(backgroundColor: context.paleta.marca),
-            child: const Text('Limpiar'),
+            style: FilledButton.styleFrom(
+              backgroundColor: context.paleta.marca,
+            ),
+            child: Text(context.t.perfilLimpiar),
           ),
         ],
       ),
@@ -407,27 +418,44 @@ class _ItemCompraCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              GestureDetector(
-                onTap: onToggle,
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: item.comprado ? context.paleta.marca : Colors.transparent,
-                    border: Border.all(
-                      color: item.comprado
-                          ? context.paleta.marca
-                          : context.paleta.apagado,
-                      width: 2,
+              Semantics(
+                checked: item.comprado,
+                // container: el nodo no se funde con el resto de la fila, que
+                // tiene su propio gesto de pulsacion larga.
+                container: true,
+                label: context.t.perfilMarcarComprado(item.nombre),
+                child: InkWell(
+                  onTap: onToggle,
+                  customBorder: const CircleBorder(),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: item.comprado
+                            ? context.paleta.marca
+                            : Colors.transparent,
+                        border: Border.all(
+                          color: item.comprado
+                              ? context.paleta.marca
+                              : context.paleta.apagado,
+                          width: 2,
+                        ),
+                      ),
+                      child: item.comprado
+                          ? const Icon(
+                              Icons.check,
+                              size: 14,
+                              color: Colors.white,
+                            )
+                          : null,
                     ),
                   ),
-                  child: item.comprado
-                      ? const Icon(Icons.check, size: 14, color: Colors.white)
-                      : null,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 4),
               Text(item.emoji, style: const TextStyle(fontSize: 22)),
               const SizedBox(width: 10),
               Expanded(
@@ -458,13 +486,13 @@ class _ItemCompraCard extends StatelessWidget {
                           if (item.fechaConsumido != null)
                             _FechaPill(
                               text:
-                                  'Consumido: ${_formatearFecha(item.fechaConsumido!)}',
+                                  context.t.perfilConsumido(_formatearFecha(item.fechaConsumido!)),
                               color: context.paleta.marca,
                             ),
                           if (item.fechaVencido != null)
                             _FechaPill(
                               text:
-                                  'Venció: ${_formatearFecha(item.fechaVencido!)}',
+                                  context.t.perfilVencido(_formatearFecha(item.fechaVencido!)),
                               color: context.paleta.vencido,
                             ),
                         ],

@@ -26,7 +26,10 @@ void main() {
 
   group('emojiParaCategoria', () {
     test('da el mismo emoji sin importar como venga escrita la categoria', () {
-      expect(emojiParaCategoria('Mantequilla'), emojiParaCategoria('mantequilla'));
+      expect(
+        emojiParaCategoria('Mantequilla'),
+        emojiParaCategoria('mantequilla'),
+      );
       expect(emojiParaCategoria('Mantequilla'), '🧈');
     });
 
