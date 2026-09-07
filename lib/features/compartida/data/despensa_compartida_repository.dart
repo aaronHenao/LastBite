@@ -77,6 +77,19 @@ class DespensaCompartidaRepository {
     return DespensaCompartida.fromMap({...data, 'id': doc.id});
   }
 
+  /// Resuelve un codigo sin unirse todavia. La pantalla lo usa para validar
+  /// antes de preguntar por la migracion: preguntar primero hacia que el
+  /// usuario decidiera sobre sus productos para una despensa inexistente.
+  Future<String?> buscarPorCodigo(String codigo) async {
+    final normalizado = _normalizarCodigo(codigo);
+    if (normalizado.length != _largoCodigo) return null;
+    final indice = await _codigos.doc(normalizado).get();
+    return indice.data()?['despensaId'] as String?;
+  }
+
+  static String _normalizarCodigo(String codigo) =>
+      codigo.replaceAll(RegExp(r'\s'), '').toUpperCase();
+
   Future<int> contarProductosPersonales(String userId) async {
     final snapshot = await docUsuario(userId).collection('productos').get();
     return snapshot.docs.length;
@@ -119,7 +132,7 @@ class DespensaCompartidaRepository {
   }) async {
     await _verificarSinDespensa(usuario.uid);
 
-    final normalizado = codigo.replaceAll(RegExp(r'\s'), '').toUpperCase();
+    final normalizado = _normalizarCodigo(codigo);
     if (normalizado.length != _largoCodigo) {
       throw DespensaCompartidaException(
         'El código debe tener $_largoCodigo caracteres.',
@@ -166,16 +179,41 @@ class DespensaCompartidaRepository {
 
   /// Un miembro deja la despensa y vuelve a la suya personal. Los productos
   /// que aporto se quedan en la compartida.
+  ///
+  /// El administrador tambien puede salir, pero antes tiene que pasarle la
+  /// administracion a otro miembro con [nuevoAdminUid]: una despensa sin admin
+  /// no tendria quien agregue ni saque gente.
   Future<void> salir({
     required String despensaId,
     required String userId,
+    String? nuevoAdminUid,
   }) async {
     final despensa = await cargar(despensaId);
-    if (despensa != null && despensa.esAdmin(userId)) {
-      throw DespensaCompartidaException(
-        'El administrador no puede salir: debe eliminar la despensa.',
-      );
+    if (despensa == null) {
+      throw DespensaCompartidaException('La despensa ya no existe.');
     }
+
+    if (despensa.esAdmin(userId)) {
+      if (despensa.miembros.length == 1) {
+        throw DespensaCompartidaException(
+          'Eres el único miembro. Elimina la despensa en vez de salir.',
+        );
+      }
+      if (nuevoAdminUid == null) {
+        throw DespensaCompartidaException(
+          'Elige a quién le dejas la administración antes de salir.',
+        );
+      }
+      if (nuevoAdminUid == userId || despensa.miembro(nuevoAdminUid) == null) {
+        throw DespensaCompartidaException(
+          'El nuevo administrador debe ser otro miembro de la despensa.',
+        );
+      }
+      // Primero la transferencia, todavia como admin; despues la salida, que
+      // las reglas permiten porque cada quien puede quitarse a si mismo.
+      await _col.doc(despensaId).update({'adminUid': nuevoAdminUid});
+    }
+
     await _quitarMiembro(despensaId: despensaId, userId: userId);
   }
 

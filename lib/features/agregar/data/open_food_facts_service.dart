@@ -3,6 +3,17 @@ import '../../despensa/domain/producto.dart';
 import '../../../core/constants/vida_util.dart';
 import '../../../core/utils/categoria_mapper.dart';
 
+/// Se lanza cuando ninguna consulta llego a responder. Distinta de devolver
+/// null, que significa que el producto no existe en el catalogo: antes ambos
+/// casos se mostraban como "producto no encontrado" y mandaban al usuario a
+/// tipear todo a mano por un problema de red.
+class SinConexionException implements Exception {
+  const SinConexionException();
+
+  @override
+  String toString() => 'Sin conexión con el catálogo de productos.';
+}
+
 class OpenFoodFactsService {
   final _dio = Dio();
 
@@ -12,6 +23,8 @@ class OpenFoodFactsService {
       'https://co.openfoodfacts.org/api/v2/product/$codigoBarras.json',
       'https://world.openfoodfacts.org/api/v2/product/$codigoBarras.json',
     ];
+
+    var falloLaRed = false;
 
     for (final url in urls) {
       try {
@@ -48,57 +61,23 @@ class OpenFoodFactsService {
         return Producto(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           nombre: nombre,
-          emoji: _emojiParaCategoria(categoria),
+          emoji: emojiParaCategoria(categoria),
           categoria: categoria,
           cantidad: cantidad,
           fechaCaducidad: fechaCaducidad,
-          esFresco: categoria == 'Fruta' || categoria == 'Verdura',
+          esFresco: esCategoriaFresca(categoria),
           imagenUrl: imagenUrl,
         );
       } on DioException {
+        falloLaRed = true;
         continue; // ← si falla la red prueba la siguiente
       } catch (_) {
         continue;
       }
     }
 
+    if (falloLaRed) throw const SinConexionException();
     return null; // ninguna URL encontró el producto
   }
 
-  String _emojiParaCategoria(String categoria) {
-    switch (categoria) {
-      case 'Verdura':
-        return '🥦';
-      case 'Fruta':
-        return '🍎';
-      case 'Pollo':
-        return '🍗';
-      case 'Carne':
-        return '🥩';
-      case 'Pescado':
-        return '🐟';
-      case 'Huevo':
-        return '🥚';
-      case 'Leche':
-        return '🥛';
-      case 'Yogur':
-        return '🥛';
-      case 'Queso':
-        return '🧀';
-      case 'Mantequilla':
-        return '🧈';
-      case 'Pan':
-        return '🍞';
-      case 'Grano':
-        return '🍝';
-      case 'Jugo':
-        return '🧃';
-      case 'Embutido':
-        return '🌭';
-      case 'Conserva':
-        return '🥫';
-      default:
-        return '🥫';
-    }
-  }
 }

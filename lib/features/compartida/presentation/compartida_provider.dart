@@ -42,6 +42,13 @@ final productosPersonalesCountProvider = FutureProvider<int>((ref) async {
       .contarProductosPersonales(user.uid);
 });
 
+/// Valida un codigo de invitacion sin unirse. Devuelve el id de la despensa o
+/// null si el codigo no existe.
+final buscarPorCodigoProvider = FutureProvider.family<String?, String>((
+  ref,
+  codigo,
+) => ref.read(despensaCompartidaRepoProvider).buscarPorCodigo(codigo));
+
 class CompartidaNotifier extends AsyncNotifier<void> {
   DespensaCompartidaRepository get _repo =>
       ref.read(despensaCompartidaRepoProvider);
@@ -105,11 +112,15 @@ class CompartidaNotifier extends AsyncNotifier<void> {
     _propagarError();
   }
 
-  Future<void> salir(String despensaId) async {
+  Future<void> salir(String despensaId, {String? nuevoAdminUid}) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final user = await _usuario();
-      await _repo.salir(despensaId: despensaId, userId: user.uid);
+      await _repo.salir(
+        despensaId: despensaId,
+        userId: user.uid,
+        nuevoAdminUid: nuevoAdminUid,
+      );
       _refrescarDependientes();
     });
     _propagarError();

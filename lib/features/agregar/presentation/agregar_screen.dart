@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/constants/unidades_medida.dart';
 import 'package:lastbite/core/constants/vida_util.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
+import 'package:lastbite/core/utils/categoria_mapper.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
@@ -34,21 +35,43 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
 
     if (!mounted || codigo == null || codigo.trim().isEmpty) return;
 
+    await _buscarPorCodigo(codigo.trim());
+  }
+
+  Future<void> _buscarPorCodigo(String codigo) async {
     setState(() {
-      _ultimoCodigoEscaneado = codigo.trim();
+      _ultimoCodigoEscaneado = codigo;
       _buscandoProducto = true;
     });
 
-    final producto = await _openFoodFacts.buscarPorCodigo(codigo.trim());
+    Producto? producto;
+    try {
+      producto = await _openFoodFacts.buscarPorCodigo(codigo);
+    } on SinConexionException {
+      if (!mounted) return;
+      setState(() => _buscandoProducto = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: context.paleta.vencido,
+          content: const Text('Sin conexión. No pudimos consultar el código.'),
+          action: SnackBarAction(
+            label: 'Reintentar',
+            textColor: Colors.white,
+            onPressed: () => _buscarPorCodigo(codigo),
+          ),
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
     setState(() => _buscandoProducto = false);
 
     if (producto == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Producto no encontrado. Ingrésalo manualmente.'),
-          backgroundColor: AppColors.danger,
+          backgroundColor: context.paleta.vencido,
         ),
       );
       // Cambia al modo manual para que el usuario lo ingrese
@@ -74,7 +97,7 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('${productoEditado.nombre} agregado'),
-                backgroundColor: AppColors.green,
+                backgroundColor: context.paleta.marca,
               ),
             );
           }
@@ -94,22 +117,11 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              InkWell(
-                onTap: widget.onBackToPantry,
-                borderRadius: BorderRadius.circular(10),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 4,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 11),
               Text(
                 'AGREGAR ALIMENTO',
                 style: textTheme.titleSmall?.copyWith(
                   letterSpacing: 2.4,
-                  color: AppColors.textMuted,
+                  color: context.paleta.apagado,
                 ),
               ),
               const SizedBox(height: 6),
@@ -118,7 +130,7 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
                 style: textTheme.bodyLarge?.copyWith(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textMain,
+                  color: context.paleta.tinta,
                 ),
               ),
               const SizedBox(height: 18),
@@ -145,16 +157,18 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
                     : _ManualEntryForm(
                         key: ValueKey('manual'),
                         onGuardar: (producto) async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          final colorExito = context.paleta.marca;
                           await ref
                               .read(despensaProvider.notifier)
                               .agregar(producto);
                           widget.onBackToPantry?.call();
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             SnackBar(
                               content: Text(
                                 '${producto.nombre} agregado a la despensa.',
                               ),
-                              backgroundColor: AppColors.green,
+                              backgroundColor: colorExito,
                             ),
                           );
                         },
@@ -180,14 +194,15 @@ class _HybridModeSwitch extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.paleta.marcaSuave,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.paleta.contorno),
       ),
       padding: const EdgeInsets.all(4),
       child: Row(
         children: [
           _modeButton(
+            context: context,
             textTheme: textTheme,
             label: 'Escanear',
             icon: CupertinoIcons.photo_camera_solid,
@@ -195,6 +210,7 @@ class _HybridModeSwitch extends StatelessWidget {
             onTap: () => onChanged(_EntryMode.scan),
           ),
           _modeButton(
+            context: context,
             textTheme: textTheme,
             label: 'Manual',
             icon: Icons.eco,
@@ -207,6 +223,7 @@ class _HybridModeSwitch extends StatelessWidget {
   }
 
   Widget _modeButton({
+    required BuildContext context,
     required TextTheme textTheme,
     required String label,
     required IconData icon,
@@ -223,21 +240,21 @@ class _HybridModeSwitch extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: selected ? AppColors.accent : Colors.transparent,
+            color: selected ? context.paleta.marca : Colors.transparent,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                color: selected ? Colors.white : AppColors.textMuted,
+                color: selected ? Colors.white : context.paleta.apagado,
                 size: 20,
               ),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: textTheme.titleMedium?.copyWith(
-                  color: selected ? Colors.white : AppColors.textMuted,
+                  color: selected ? Colors.white : context.paleta.apagado,
                 ),
               ),
             ],
@@ -268,31 +285,31 @@ class _ScanEntryCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(24),
       child: CustomPaint(
-        painter: _DashedRoundedRectPainter(color: AppColors.accent, radius: 24),
+        painter: _DashedRoundedRectPainter(color: context.paleta.marca, radius: 24),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(20, 50, 20, 50),
           child: Column(
             children: [
               cargando
-                  ? const CircularProgressIndicator(color: AppColors.accent)
+                  ? CircularProgressIndicator(color: context.paleta.marca)
                   : Icon(
                       CupertinoIcons.camera_viewfinder,
                       size: 56,
-                      color: AppColors.textMuted.withValues(alpha: 0.85),
+                      color: context.paleta.apagado.withValues(alpha: 0.85),
                     ),
               const SizedBox(height: 18),
               Text(
                 'Apunta al codigo de barras',
                 style: textTheme.titleLarge?.copyWith(
-                  color: AppColors.textMain.withValues(alpha: 0.9),
+                  color: context.paleta.tinta.withValues(alpha: 0.9),
                 ),
               ),
               const SizedBox(height: 10),
               Text(
                 'Toca para abrir la camara',
                 style: textTheme.titleMedium?.copyWith(
-                  color: AppColors.textMuted.withValues(alpha: 0.9),
+                  color: context.paleta.apagado.withValues(alpha: 0.9),
                 ),
               ),
               if (ultimoCodigo != null) ...[
@@ -302,7 +319,7 @@ class _ScanEntryCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.bodySmall?.copyWith(
-                    color: AppColors.textMuted.withValues(alpha: 0.85),
+                    color: context.paleta.apagado.withValues(alpha: 0.85),
                   ),
                 ),
               ],
@@ -312,8 +329,8 @@ class _ScanEntryCard extends StatelessWidget {
                 height: 92,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.green, width: 1),
-                  color: AppColors.surface,
+                  border: Border.all(color: context.paleta.marca, width: 1),
+                  color: context.paleta.marcaSuave,
                 ),
                 child: const Center(child: _FakeBarcode()),
               ),
@@ -345,7 +362,7 @@ class _FakeBarcode extends StatelessWidget {
                 height: 50,
                 margin: const EdgeInsets.symmetric(horizontal: 1.5),
                 decoration: BoxDecoration(
-                  color: AppColors.textMuted.withValues(alpha: 0.52),
+                  color: context.paleta.apagado.withValues(alpha: 0.52),
                   borderRadius: BorderRadius.circular(1),
                 ),
               ),
@@ -356,10 +373,10 @@ class _FakeBarcode extends StatelessWidget {
           width: 160,
           height: 2,
           decoration: BoxDecoration(
-            color: AppColors.accent,
+            color: context.paleta.marca,
             boxShadow: [
               BoxShadow(
-                color: AppColors.accent.withValues(alpha: 0.6),
+                color: context.paleta.marca.withValues(alpha: 0.6),
                 blurRadius: 8,
                 spreadRadius: 1,
               ),
@@ -380,9 +397,24 @@ class _ManualEntryForm extends StatefulWidget {
 }
 
 class _ManualEntryFormState extends State<_ManualEntryForm> {
+  /// La pantalla vive dentro de un IndexedStack, asi que sobrevive al cambio
+  /// de pestaña: sin esto el producto anterior sigue escrito al volver y se
+  /// guarda duplicado.
+  void _limpiar() {
+    setState(() {
+      _nombreCtrl.clear();
+      _cantidadCtrl.clear();
+      _fechaCtrl.clear();
+      _categoriaSeleccionada = null;
+      _unidadSeleccionada = null;
+      _mostrarMensajeRecomendacion = false;
+    });
+  }
+
   final _nombreCtrl = TextEditingController();
   final _cantidadCtrl = TextEditingController();
   final _fechaCtrl = TextEditingController();
+
   bool _mostrarMensajeRecomendacion = false;
   String? _categoriaSeleccionada;
   UnidadMedida? _unidadSeleccionada;
@@ -394,21 +426,16 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
       initialDate: hoy.add(const Duration(days: 7)),
       firstDate: hoy,
       lastDate: hoy.add(const Duration(days: 365 * 2)),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: AppColors.surface,
-            surface: AppColors.green,
-          ),
-        ),
-        child: child!,
-      ),
     );
     if (fecha != null) {
-      _fechaCtrl.text =
-          '${fecha.day.toString().padLeft(2, '0')}/'
-          '${fecha.month.toString().padLeft(2, '0')}/'
-          '${fecha.year}';
+      setState(() {
+        _fechaCtrl.text =
+            '${fecha.day.toString().padLeft(2, '0')}/'
+            '${fecha.month.toString().padLeft(2, '0')}/'
+            '${fecha.year}';
+        // La fecha ya no es la recomendada: la eligio el usuario.
+        _mostrarMensajeRecomendacion = false;
+      });
     }
   }
 
@@ -436,9 +463,9 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.paleta.marcaSuave,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.paleta.contorno),
       ),
       child: Column(
         children: [
@@ -510,7 +537,7 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
                 child: Text(
                   'Esta es la fecha de caducidad recomendada para este producto',
                   style: textTheme.bodySmall?.copyWith(
-                    color: AppColors.green.withValues(alpha: 0.8),
+                    color: context.paleta.marca.withValues(alpha: 0.8),
                     fontWeight: FontWeight.w500,
                     height: 1.2,
                   ),
@@ -538,18 +565,17 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
               final producto = Producto(
                 id: DateTime.now().millisecondsSinceEpoch.toString(),
                 nombre: _nombreCtrl.text.trim(),
-                emoji: _emojiParaCategoria(_categoriaSeleccionada ?? ''),
+                emoji: emojiParaCategoria(_categoriaSeleccionada ?? ''),
                 categoria: _categoriaSeleccionada ?? 'Otro',
                 cantidad: _cantidadCtrl.text.trim().isEmpty
                     ? '1 unidad'
                     : '${_cantidadCtrl.text.trim()} ${_unidadSeleccionada?.abreviatura ?? ''}',
                 fechaCaducidad: fecha,
-                esFresco:
-                    _categoriaSeleccionada == 'Fruta' ||
-                    _categoriaSeleccionada == 'Verdura',
+                esFresco: esCategoriaFresca(_categoriaSeleccionada ?? ''),
               );
 
               widget.onGuardar(producto);
+              _limpiar();
             },
           ),
         ],
@@ -557,40 +583,6 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
     );
   }
 
-  String _emojiParaCategoria(String categoria) {
-    switch (categoria) {
-      case 'Verdura':
-        return '🥦';
-      case 'Fruta':
-        return '🍎';
-      case 'Pollo':
-        return '🍗';
-      case 'Carne':
-        return '🥩';
-      case 'Pescado':
-        return '🐟';
-      case 'Huevo':
-        return '🥚';
-      case 'Leche':
-        return '🥛';
-      case 'Yogur':
-        return '🥛';
-      case 'Queso':
-        return '🧀';
-      case 'Pan':
-        return '🍞';
-      case 'Grano':
-        return '🍝';
-      case 'Jugo':
-        return '🧃';
-      case 'Embutido':
-        return '🌭';
-      case 'Conserva':
-        return '🥫';
-      default:
-        return '🥫';
-    }
-  }
 }
 
 class _InputField extends StatelessWidget {
@@ -617,31 +609,31 @@ class _InputField extends StatelessWidget {
       onTap: onTap,
       style: textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.w500,
-        color: AppColors.textMain,
+        color: context.paleta.tinta,
       ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         filled: true,
-        fillColor: AppColors.card,
+        fillColor: context.paleta.superficie,
         labelStyle: textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w500,
-          color: AppColors.textMuted,
+          color: context.paleta.apagado,
         ),
         hintStyle: textTheme.bodySmall?.copyWith(
-          color: AppColors.textMuted.withValues(alpha: 0.75),
+          color: context.paleta.apagado.withValues(alpha: 0.75),
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: context.paleta.contorno),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: context.paleta.contorno),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+          borderSide: BorderSide(color: context.paleta.marca, width: 1.5),
         ),
       ),
     );
@@ -664,8 +656,8 @@ class _CategoriaDropdown extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        border: Border.all(color: AppColors.border),
+        color: context.paleta.superficie,
+        border: Border.all(color: context.paleta.contorno),
         borderRadius: BorderRadius.circular(14),
       ),
       child: DropdownButton<String>(
@@ -678,7 +670,7 @@ class _CategoriaDropdown extends StatelessWidget {
           'Selecciona una categoría',
           style: textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w500,
-            color: AppColors.textMuted,
+            color: context.paleta.apagado,
           ),
         ),
         value: categoriaSeleccionada,
@@ -689,15 +681,15 @@ class _CategoriaDropdown extends StatelessWidget {
               categoria,
               style: textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w500,
-                color: AppColors.textMain,
+                color: context.paleta.tinta,
               ),
             ),
           );
         }).toList(),
         onChanged: onCategoriaChanged,
-        dropdownColor: AppColors.surface,
+        dropdownColor: context.paleta.marcaSuave,
         icon: const Icon(CupertinoIcons.chevron_down, size: 16),
-        iconEnabledColor: AppColors.textMuted,
+        iconEnabledColor: context.paleta.apagado,
       ),
     );
   }
@@ -726,8 +718,8 @@ class _UnidadDropdown extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        border: Border.all(color: AppColors.border),
+        color: context.paleta.superficie,
+        border: Border.all(color: context.paleta.contorno),
         borderRadius: BorderRadius.circular(14),
       ),
       child: DropdownButton<UnidadMedida>(
@@ -739,7 +731,7 @@ class _UnidadDropdown extends StatelessWidget {
           categoria == null ? 'Elige categoría' : 'Unidad',
           style: textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w500,
-            color: AppColors.textMuted,
+            color: context.paleta.apagado,
           ),
         ),
         value: unidadSeleccionada,
@@ -750,15 +742,15 @@ class _UnidadDropdown extends StatelessWidget {
               unidad.abreviatura,
               style: textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w500,
-                color: AppColors.textMain,
+                color: context.paleta.tinta,
               ),
             ),
           );
         }).toList(),
         onChanged: opciones.isEmpty ? null : onUnidadChanged,
-        dropdownColor: AppColors.surface,
+        dropdownColor: context.paleta.marcaSuave,
         icon: const Icon(CupertinoIcons.chevron_down, size: 16),
-        iconEnabledColor: AppColors.textMuted,
+        iconEnabledColor: context.paleta.apagado,
       ),
     );
   }
@@ -777,8 +769,8 @@ class _SaveButton extends StatelessWidget {
         onPressed: onPressed,
         icon: const Icon(CupertinoIcons.check_mark_circled, size: 20),
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.green,
-          foregroundColor: AppColors.bg,
+          backgroundColor: context.paleta.marca,
+          foregroundColor: context.paleta.papel,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -787,7 +779,7 @@ class _SaveButton extends StatelessWidget {
         label: Text(
           'Guardar producto',
           style: textTheme.titleMedium?.copyWith(
-            color: AppColors.bg,
+            color: context.paleta.papel,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -879,55 +871,10 @@ class _ConfirmacionProductoSheetState
       initialDate: _fechaSeleccionada,
       firstDate: hoy,
       lastDate: hoy.add(const Duration(days: 365 * 2)),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: AppColors.accent,
-            surface: AppColors.surface,
-          ),
-        ),
-        child: child!,
-      ),
     );
     if (fecha != null) setState(() => _fechaSeleccionada = fecha);
   }
 
-  String _emojiParaCategoria(String categoria) {
-    switch (categoria) {
-      case 'Verdura':
-        return '🥦';
-      case 'Fruta':
-        return '🍎';
-      case 'Pollo':
-        return '🍗';
-      case 'Carne':
-        return '🥩';
-      case 'Pescado':
-        return '🐟';
-      case 'Huevo':
-        return '🥚';
-      case 'Leche':
-        return '🥛';
-      case 'Yogur':
-        return '🥛';
-      case 'Queso':
-        return '🧀';
-      case 'Mantequilla':
-        return '🧈';
-      case 'Pan':
-        return '🍞';
-      case 'Grano':
-        return '🍝';
-      case 'Jugo':
-        return '🧃';
-      case 'Embutido':
-        return '🌭';
-      case 'Conserva':
-        return '🥫';
-      default:
-        return '🥫';
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -942,9 +889,9 @@ class _ConfirmacionProductoSheetState
       child: Container(
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: context.paleta.marcaSuave,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.paleta.contorno),
         ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -959,7 +906,7 @@ class _ConfirmacionProductoSheetState
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: context.paleta.contorno,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -969,7 +916,7 @@ class _ConfirmacionProductoSheetState
                 'CONFIRMAR PRODUCTO',
                 style: textTheme.titleSmall?.copyWith(
                   letterSpacing: 2,
-                  color: AppColors.textMuted,
+                  color: context.paleta.apagado,
                 ),
               ),
               const SizedBox(height: 16),
@@ -978,26 +925,26 @@ class _ConfirmacionProductoSheetState
               TextField(
                 controller: _nombreCtrl,
                 style: textTheme.titleMedium?.copyWith(
-                  color: AppColors.textMain,
+                  color: context.paleta.tinta,
                   fontWeight: FontWeight.w600,
                 ),
                 decoration: InputDecoration(
                   labelText: 'Nombre',
                   filled: true,
-                  fillColor: AppColors.card,
-                  labelStyle: TextStyle(color: AppColors.textMuted),
+                  fillColor: context.paleta.superficie,
+                  labelStyle: TextStyle(color: context.paleta.apagado),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: BorderSide(color: context.paleta.contorno),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: BorderSide(color: context.paleta.contorno),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: AppColors.accent,
+                    borderSide: BorderSide(
+                      color: context.paleta.marca,
                       width: 1.5,
                     ),
                   ),
@@ -1009,8 +956,8 @@ class _ConfirmacionProductoSheetState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.card,
-                  border: Border.all(color: AppColors.border),
+                  color: context.paleta.superficie,
+                  border: Border.all(color: context.paleta.contorno),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: DropdownButton<String>(
@@ -1026,7 +973,7 @@ class _ConfirmacionProductoSheetState
                       child: Text(
                         cat,
                         style: textTheme.titleMedium?.copyWith(
-                          color: AppColors.textMain,
+                          color: context.paleta.tinta,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1043,11 +990,11 @@ class _ConfirmacionProductoSheetState
                       );
                     });
                   },
-                  dropdownColor: AppColors.surface,
-                  icon: const Icon(
+                  dropdownColor: context.paleta.marcaSuave,
+                  icon: Icon(
                     CupertinoIcons.chevron_down,
                     size: 16,
-                    color: AppColors.textMuted,
+                    color: context.paleta.apagado,
                   ),
                 ),
               ),
@@ -1063,22 +1010,22 @@ class _ConfirmacionProductoSheetState
                     vertical: 14,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.card,
-                    border: Border.all(color: AppColors.border),
+                    color: context.paleta.superficie,
+                    border: Border.all(color: context.paleta.contorno),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.calendar_today_outlined,
                         size: 16,
-                        color: AppColors.textMuted,
+                        color: context.paleta.apagado,
                       ),
                       const SizedBox(width: 10),
                       Text(
                         _fechaFormateada,
                         style: textTheme.titleMedium?.copyWith(
-                          color: AppColors.textMain,
+                          color: context.paleta.tinta,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1105,13 +1052,11 @@ class _ConfirmacionProductoSheetState
                     final productoEditado = Producto(
                       id: widget.producto.id,
                       nombre: _nombreCtrl.text.trim(),
-                      emoji: _emojiParaCategoria(_categoriaSeleccionada),
+                      emoji: emojiParaCategoria(_categoriaSeleccionada),
                       categoria: _categoriaSeleccionada,
                       cantidad: widget.producto.cantidad,
                       fechaCaducidad: _fechaSeleccionada,
-                      esFresco:
-                          _categoriaSeleccionada == 'fruta' ||
-                          _categoriaSeleccionada == 'verdura',
+                      esFresco: esCategoriaFresca(_categoriaSeleccionada),
                       imagenUrl: widget.producto.imagenUrl,
                     );
 
@@ -1124,7 +1069,7 @@ class _ConfirmacionProductoSheetState
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accent,
+                    backgroundColor: context.paleta.marca,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(

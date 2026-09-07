@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lastbite/core/widgets/boton_volver.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
@@ -35,15 +36,27 @@ class _PerfilNutricionalScreenState
     final textTheme = Theme.of(context).textTheme;
 
     perfilState.whenData((perfil) {
-      if (perfil != null && !_inicializado) {
-        _userType = perfil.userType;
-        _goal = perfil.goal;
-        _dietaryType = perfil.dietaryType;
-        _restriccionesController.text = perfil.restrictions.join(', ');
-        _alergiasController.text = perfil.allergies.join(', ');
+      if (!_inicializado) {
+        if (perfil != null) {
+          _userType = perfil.userType;
+          _goal = perfil.goal;
+          _dietaryType = perfil.dietaryType;
+          _restriccionesController.text = perfil.restrictions.join(', ');
+          _alergiasController.text = perfil.allergies.join(', ');
+        }
+        // Se marca aunque el perfil venga vacio: si no, cualquier re-emision
+        // posterior pisaba lo que el usuario ya hubiera elegido.
         _inicializado = true;
       }
     });
+
+    // Hasta que el perfil resuelva no se muestra un formulario con valores por
+    // defecto que no son los del usuario.
+    if (perfilState.isLoading && !_inicializado) {
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator(color: context.paleta.marca)),
+      );
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -52,32 +65,13 @@ class _PerfilNutricionalScreenState
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: InkWell(
-                  onTap: () => Navigator.pop(context),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 6,
-                    ),
-                    child: Text(
-                      '← Volver',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: AppColors.textMuted.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              const BotonVolver(),
               const SizedBox(height: 24),
               Text(
                 'PERFIL NUTRICIONAL',
                 style: textTheme.titleSmall?.copyWith(
                   letterSpacing: 1.5,
-                  color: AppColors.textMuted,
+                  color: context.paleta.apagado,
                 ),
               ),
               const SizedBox(height: 6),
@@ -134,9 +128,9 @@ class _PerfilNutricionalScreenState
                 onPressed: perfilState.isLoading ? null : _guardar,
                 icon: const Icon(Icons.save_outlined),
                 label: const Text('Guardar perfil'),
+                // Colores del tema: con la paleta nueva, texto oscuro sobre
+                // el verde de marca no llegaba al contraste minimo.
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: AppColors.textMain,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                 ),
               ),
@@ -144,7 +138,7 @@ class _PerfilNutricionalScreenState
                 const SizedBox(height: 12),
                 Text(
                   'No se pudo guardar el perfil: ${perfilState.error}',
-                  style: const TextStyle(color: AppColors.danger),
+                  style: TextStyle(color: context.paleta.vencido),
                 ),
               ],
             ],
@@ -163,7 +157,7 @@ class _PerfilNutricionalScreenState
     return DropdownButtonFormField<String>(
       initialValue: value,
       decoration: InputDecoration(labelText: label),
-      dropdownColor: AppColors.card,
+      dropdownColor: context.paleta.superficie,
       items: items.entries
           .map(
             (item) => DropdownMenuItem<String>(

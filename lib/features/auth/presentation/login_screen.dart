@@ -28,7 +28,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  /// True mientras corre cualquiera de las dos vias: sin esto se podian
+  /// disparar dos autenticaciones simultaneas, porque cada boton miraba solo
+  /// su propia bandera.
+  bool get _autenticando => _cargando || _cargandoGoogle;
+
   Future<void> _login() async {
+    if (_autenticando) return;
     if (_emailCtrl.text.isEmpty || _passwordCtrl.text.isEmpty) {
       setState(() => _error = 'Completa todos los campos.');
       return;
@@ -42,13 +48,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           .read(authServiceProvider)
           .login(email: _emailCtrl.text, password: _passwordCtrl.text);
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = _mensajeDeError(e));
     } finally {
       if (mounted) setState(() => _cargando = false);
     }
   }
 
   Future<void> _loginGoogle() async {
+    if (_autenticando) return;
     setState(() {
       _cargandoGoogle = true;
       _error = null;
@@ -56,10 +63,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await ref.read(authServiceProvider).loginConGoogle();
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = _mensajeDeError(e));
     } finally {
       if (mounted) setState(() => _cargandoGoogle = false);
     }
+  }
+
+  /// AuthService ya devuelve mensajes en español para los errores de Firebase.
+  /// El resto llegaba como "Exception: Login cancelado", que le decia al
+  /// usuario que rompio algo cuando solo cerro la hoja de Google.
+  String? _mensajeDeError(Object error) {
+    if (error is String) return error;
+    final texto = error.toString();
+    if (texto.contains('cancelado')) return null;
+    return texto.replaceFirst(RegExp(r'^Exception:\s*'), '');
   }
 
   @override
@@ -83,7 +100,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       'Bienvenido a',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 16,
-                        color: AppColors.textMuted,
+                        color: context.paleta.apagado,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -114,7 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           _verPassword
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
-                          color: AppColors.textMuted,
+                          color: context.paleta.apagado,
                           size: 20,
                         ),
                         onPressed: () =>
@@ -129,16 +146,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.danger.withValues(alpha: 0.12),
+                          color: context.paleta.vencido.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: AppColors.danger.withValues(alpha: 0.4),
+                            color: context.paleta.vencido.withValues(alpha: 0.4),
                           ),
                         ),
                         child: Text(
                           _error!,
-                          style: const TextStyle(
-                            color: AppColors.danger,
+                          style: TextStyle(
+                            color: context.paleta.vencido,
                             fontSize: 13,
                           ),
                         ),
@@ -152,7 +169,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: FilledButton(
                         onPressed: _cargando ? null : _login,
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.accent,
+                          backgroundColor: context.paleta.marca,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -182,18 +199,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     //divisor
                     Row(
                       children: [
-                        const Expanded(child: Divider(color: AppColors.border)),
+                        Expanded(child: Divider(color: context.paleta.contorno)),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
                             'o continúa con',
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.textMuted,
+                              color: context.paleta.apagado,
                             ),
                           ),
                         ),
-                        const Expanded(child: Divider(color: AppColors.border)),
+                        Expanded(child: Divider(color: context.paleta.contorno)),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -204,32 +221,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: OutlinedButton.icon(
                         onPressed: _cargandoGoogle ? null : _loginGoogle,
                         icon: _cargandoGoogle
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 18,
                                 height: 18,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: AppColors.textMuted,
+                                  color: context.paleta.apagado,
                                 ),
                               )
-                            : const Text(
+                            : Text(
                                 'G',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.textMain,
+                                  color: context.paleta.tinta,
                                 ),
                               ),
                         label: Text(
                           'Continuar con Google',
                           style: textTheme.titleMedium?.copyWith(
-                            color: AppColors.textMain,
+                            color: context.paleta.tinta,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(color: AppColors.border),
+                          side: BorderSide(color: context.paleta.contorno),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -245,7 +262,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Text(
                           '¿No tienes cuenta? ',
                           style: TextStyle(
-                            color: AppColors.textMuted,
+                            color: context.paleta.apagado,
                             fontSize: 14,
                           ),
                         ),
@@ -256,10 +273,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               builder: (_) => const RegisterScreen(),
                             ),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Regístrate',
                             style: TextStyle(
-                              color: AppColors.accent,
+                              color: context.paleta.marca,
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                             ),

@@ -97,21 +97,21 @@ class _RecetaCardState extends State<RecetaCard> {
     final receta = widget.receta;
     final match = receta.porcentajeMatch;
     final matchColor = match >= 80
-        ? AppColors.green
+        ? context.paleta.marca
         : match >= 50
-        ? AppColors.yellow
-        : AppColors.textMuted;
+        ? context.paleta.urgente
+        : context.paleta.apagado;
 
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: context.paleta.superficie,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: match == 100
-                ? AppColors.accent.withValues(alpha: 0.5)
-                : AppColors.border,
+                ? context.paleta.marca.withValues(alpha: 0.5)
+                : context.paleta.contorno,
           ),
         ),
         child: Column(
@@ -121,7 +121,7 @@ class _RecetaCardState extends State<RecetaCard> {
             Container(
               height: 130,
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: context.paleta.marcaSuave,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(18),
                 ),
@@ -169,10 +169,10 @@ class _RecetaCardState extends State<RecetaCard> {
                             _titulo,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.textMain,
+                              color: context.paleta.tinta,
                             ),
                           ),
                         ),
@@ -210,14 +210,14 @@ class _RecetaCardState extends State<RecetaCard> {
                         Icon(
                           Icons.timer_outlined,
                           size: 14,
-                          color: AppColors.textMuted,
+                          color: context.paleta.apagado,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${receta.minutosPreparacion} min',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: AppColors.textMuted,
+                            color: context.paleta.apagado,
                           ),
                         ),
                         const SizedBox(width: 14),
@@ -225,14 +225,14 @@ class _RecetaCardState extends State<RecetaCard> {
                       Icon(
                         Icons.favorite_border_rounded,
                         size: 14,
-                        color: AppColors.textMuted,
+                        color: context.paleta.apagado,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '${receta.likes}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.textMuted,
+                          color: context.paleta.apagado,
                         ),
                       ),
                     ],
@@ -240,22 +240,33 @@ class _RecetaCardState extends State<RecetaCard> {
                   const SizedBox(height: 10),
 
                   // Tags de ingredientes
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      ...List.generate(_ingredientes.length, (i) {
-                        return _IngredientTag(
-                          label: _ingredientes[i],
-                          tienes: true,
-                        );
-                      }),
-                      if (receta.ingredientesFaltantes > 0)
-                        _IngredientTag(
-                          label: '+${receta.ingredientesFaltantes} más',
-                          tienes: false,
-                        ),
-                    ],
+                  Builder(
+                    builder: (context) {
+                      const visibles = 2;
+                      final mostrados = _ingredientes.take(visibles).toList();
+                      final ocultos =
+                          receta.ingredientesFaltantes +
+                          (_ingredientes.length - mostrados.length);
+
+                      return Row(
+                        children: [
+                          for (final ingrediente in mostrados) ...[
+                            Flexible(
+                              child: _IngredientTag(
+                                label: ingrediente,
+                                tienes: true,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          if (ocultos > 0)
+                            _IngredientTag(
+                              label: '+$ocultos más',
+                              tienes: false,
+                            ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -287,7 +298,7 @@ class _IngredientTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = tienes ? AppColors.green : AppColors.textMuted;
+    final color = tienes ? context.paleta.marca : context.paleta.apagado;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -295,8 +306,11 @@ class _IngredientTag extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
+      // Un ingrediente largo se recorta en vez de empujar la fila.
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
@@ -311,12 +325,24 @@ class _IngredientTag extends StatelessWidget {
 class RecetaDetalleSheet extends StatefulWidget {
   final Receta receta;
   final Future<Receta>? detalleFuture;
+
+  /// Nombres de los productos de la despensa, en minusculas. Las marcas
+  /// "Tienes / Falta" se calculan contra esto y no por posicion en la lista:
+  /// al llegar el detalle, los ingredientes vienen en otro orden y el conteo
+  /// del buscador pasaba a señalar ingredientes al azar.
+  final Set<String> productosEnDespensa;
+
+  /// Marca la receta como cocinada: consume de la despensa los productos que
+  /// se usaron. Antes el boton principal solo cerraba la hoja.
+  final Future<void> Function(Receta receta)? onCocinar;
   final bool isDialog;
 
   const RecetaDetalleSheet({
     super.key,
     required this.receta,
     this.detalleFuture,
+    this.productosEnDespensa = const {},
+    this.onCocinar,
     this.isDialog = false,
   });
 
@@ -327,6 +353,7 @@ class RecetaDetalleSheet extends StatefulWidget {
 class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
   late Receta _receta;
   bool _cargandoDetalle = false;
+  String? _errorDetalle;
 
   @override
   void initState() {
@@ -335,16 +362,31 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
     _cargarDetalleSiExiste();
   }
 
+  bool _tieneIngrediente(String ingrediente) {
+    final texto = ingrediente.toLowerCase();
+    return widget.productosEnDespensa.any(
+      (producto) => producto.isNotEmpty && texto.contains(producto),
+    );
+  }
+
   Future<void> _cargarDetalleSiExiste() async {
     final future = widget.detalleFuture;
     if (future == null) return;
 
-    setState(() => _cargandoDetalle = true);
+    setState(() {
+      _cargandoDetalle = true;
+      _errorDetalle = null;
+    });
     try {
       final detalle = await future;
       if (!mounted) return;
       setState(() => _receta = detalle);
     } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _errorDetalle =
+            'No pudimos cargar la preparación. Revisa tu conexión.',
+      );
     } finally {
       if (mounted) setState(() => _cargandoDetalle = false);
     }
@@ -358,7 +400,7 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
     if (widget.isDialog) {
       return Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: context.paleta.marcaSuave,
           borderRadius: BorderRadius.circular(24),
         ),
         child: contenido,
@@ -370,8 +412,8 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (_, controller) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
+        decoration: BoxDecoration(
+          color: context.paleta.marcaSuave,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: ListView(
@@ -400,7 +442,7 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.border,
+              color: context.paleta.contorno,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -413,7 +455,7 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
             padding: const EdgeInsets.only(top: 12, right: 4),
             child: IconButton(
               onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+              icon: Icon(Icons.close_rounded, color: context.paleta.apagado),
             ),
           ),
         ),
@@ -423,7 +465,7 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
         width: double.infinity,
         height: 120,
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: context.paleta.superficie,
           borderRadius: BorderRadius.circular(18),
         ),
         child: receta.imagenUrl.isEmpty
@@ -459,28 +501,28 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
           Expanded(
             child: Text(
               receta.titulo,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: AppColors.textMain,
+                color: context.paleta.tinta,
               ),
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.green.withValues(alpha: 0.15),
+              color: context.paleta.marca.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: AppColors.green.withValues(alpha: 0.4),
+                color: context.paleta.marca.withValues(alpha: 0.4),
               ),
             ),
             child: Text(
               '${receta.porcentajeMatch}% match',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
-                color: AppColors.green,
+                color: context.paleta.marca,
               ),
             ),
           ),
@@ -492,50 +534,76 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
       Row(
         children: [
           if (receta.minutosPreparacion != null) ...[
-            const Icon(
+            Icon(
               Icons.timer_outlined,
               size: 16,
-              color: AppColors.textMuted,
+              color: context.paleta.apagado,
             ),
             const SizedBox(width: 4),
             Text(
               '${receta.minutosPreparacion} min',
-              style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+              style: TextStyle(fontSize: 13, color: context.paleta.apagado),
             ),
             const SizedBox(width: 16),
           ],
-          const Icon(
+          Icon(
             Icons.favorite_border_rounded,
             size: 16,
-            color: AppColors.textMuted,
+            color: context.paleta.apagado,
           ),
           const SizedBox(width: 4),
           Text(
             '${receta.likes} likes',
-            style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+            style: TextStyle(fontSize: 13, color: context.paleta.apagado),
           ),
         ],
       ),
       if (_cargandoDetalle) ...[
         const SizedBox(height: 12),
-        const LinearProgressIndicator(minHeight: 2),
+        LinearProgressIndicator(
+          minHeight: 2,
+          color: context.paleta.marca,
+        ),
+      ],
+      if (_errorDetalle != null) ...[
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 16,
+              color: context.paleta.vencido,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _errorDetalle!,
+                style: TextStyle(fontSize: 13, color: context.paleta.vencido),
+              ),
+            ),
+            TextButton(
+              onPressed: _cargarDetalleSiExiste,
+              child: const Text('Reintentar'),
+            ),
+          ],
+        ),
       ],
       const SizedBox(height: 20),
 
       // Ingredientes
-      const Text(
+      Text(
         'INGREDIENTES',
         style: TextStyle(
           fontSize: 11,
           letterSpacing: 1.5,
           fontWeight: FontWeight.w700,
-          color: AppColors.textMuted,
+          color: context.paleta.apagado,
         ),
       ),
       const SizedBox(height: 10),
       if (receta.ingredientes != null)
         ...receta.ingredientes!.asMap().entries.map((e) {
-          final tienes = e.key < receta.ingredientesUsados;
+          final tienes = _tieneIngrediente(e.value);
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Container(
@@ -544,12 +612,12 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
                 vertical: 10,
               ),
               decoration: BoxDecoration(
-                color: AppColors.card,
+                color: context.paleta.superficie,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: tienes
-                      ? AppColors.green.withValues(alpha: 0.4)
-                      : AppColors.border,
+                      ? context.paleta.marca.withValues(alpha: 0.4)
+                      : context.paleta.contorno,
                 ),
               ),
               child: Row(
@@ -557,9 +625,9 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
                 children: [
                   Text(
                     e.value,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.textMain,
+                      color: context.paleta.tinta,
                     ),
                   ),
                   Text(
@@ -567,7 +635,7 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: tienes ? AppColors.green : AppColors.textMuted,
+                      color: tienes ? context.paleta.marca : context.paleta.apagado,
                     ),
                   ),
                 ],
@@ -579,28 +647,28 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
 
       // Instrucciones
       if (receta.instrucciones != null) ...[
-        const Text(
+        Text(
           'PREPARACIÓN',
           style: TextStyle(
             fontSize: 11,
             letterSpacing: 1.5,
             fontWeight: FontWeight.w700,
-            color: AppColors.textMuted,
+            color: context.paleta.apagado,
           ),
         ),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: context.paleta.superficie,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: context.paleta.contorno),
           ),
           child: Text(
             receta.instrucciones!,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: AppColors.textMain,
+              color: context.paleta.tinta,
               height: 1.6,
             ),
           ),
@@ -612,19 +680,26 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
       SizedBox(
         width: double.infinity,
         child: FilledButton.icon(
-          onPressed: () => Navigator.pop(context),
+          onPressed: widget.onCocinar == null
+              ? () => Navigator.pop(context)
+              : () async {
+                  final navigator = Navigator.of(context);
+                  final cocinar = widget.onCocinar!;
+                  navigator.pop();
+                  await cocinar(receta);
+                },
           icon: const Icon(Icons.restaurant_menu_rounded),
           style: FilledButton.styleFrom(
-            backgroundColor: AppColors.accent,
+            backgroundColor: context.paleta.marca,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
           ),
-          label: const Text(
-            '¡Vamos a cocinar!',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          label: Text(
+            widget.onCocinar == null ? 'Cerrar' : 'Ya la cociné',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
         ),
       ),

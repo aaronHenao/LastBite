@@ -19,3 +19,45 @@ String mapearCategoria(List<String> categoriasApi) {
 
   return 'Otro';
 }
+/// Emoji de cada categoria. Fuente unica: antes vivia duplicado en el
+/// formulario manual, en la hoja de confirmacion y en el servicio de Open Food
+/// Facts, con listas distintas, asi que el mismo producto quedaba guardado con
+/// un emoji u otro segun por donde se agregara.
+const Map<String, String> _emojiPorCategoria = {
+  'Verdura': '🥬',
+  'Fruta': '🍎',
+  'Hierba': '🌿',
+  'Carne': '🥩',
+  'Pollo': '🍗',
+  'Pescado': '🐟',
+  'Huevo': '🥚',
+  'Leche': '🥛',
+  'Yogur': '🥣',
+  'Queso': '🧀',
+  'Mantequilla': '🧈',
+  'Pan': '🍞',
+  'Embutido': '🌭',
+  'Jugo': '🧃',
+  'Grano': '🌾',
+  'Conserva': '🥫',
+  'Cereal': '🥣',
+  'Otro': '🥫',
+};
+
+String emojiParaCategoria(String categoria) {
+  final normalizada = categoria.trim().toLowerCase();
+  for (final entry in _emojiPorCategoria.entries) {
+    if (entry.key.toLowerCase() == normalizada) return entry.value;
+  }
+  return '🥫';
+}
+
+/// Las categorias reales llevan mayuscula inicial ('Fruta', 'Verdura'). La
+/// comparacion se hace normalizada porque compararlas en minuscula contra el
+/// valor crudo hacia que todo producto escaneado se guardara como no fresco.
+bool esCategoriaFresca(String categoria) {
+  final normalizada = categoria.trim().toLowerCase();
+  return normalizada == 'fruta' ||
+      normalizada == 'verdura' ||
+      normalizada == 'hierba';
+}

@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/interruptor_tema.dart';
+import '../../../core/widgets/estado_vacio.dart';
+import '../../../core/widgets/estado_error.dart';
+import '../../../core/responsive/responsive_container.dart';
 import '../../../core/constants/precio_promedio.dart';
 import '../domain/producto.dart';
 import 'widgets/producto_card.dart';
@@ -23,7 +27,6 @@ class DespensaScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final textTheme = Theme.of(context).textTheme;
     final authState = ref.watch(authStateProvider);
     final nombreUsuario = authState.when(
       data: (user) =>
@@ -32,386 +35,196 @@ class DespensaScreen extends ConsumerWidget {
       error: (_, __) => 'Mi cuenta',
     );
 
-    final despensaCompartida = ref.watch(despensaCompartidaProvider).valueOrNull;
+    final despensaCompartida = ref
+        .watch(despensaCompartidaProvider)
+        .valueOrNull;
     final tituloDespensa = despensaCompartida?.nombre ?? 'Mi Despensa';
 
     final asyncProductos = ref.watch(despensaProvider);
+    final paleta = context.paleta;
+
     return asyncProductos.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
-        body: Center(
-          child: Text(
-            'Error cargando despensa: $e',
-            style: const TextStyle(color: AppColors.danger),
-          ),
+        body: EstadoError(
+          mensaje: 'No pudimos cargar tu despensa.',
+          detalle: e,
+          onReintentar: () => ref.invalidate(despensaProvider),
         ),
       ),
       data: (productos) {
-        final sorted = [...productos]
+        final ordenados = [...productos]
           ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
-        final urgentes = sorted.where((p) => p.urgente).toList();
-        final enBuenEstado = sorted.where((p) => !p.urgente).toList();
+        final urgentes = ordenados.where((p) => p.urgente).toList();
+        final enBuenEstado = ordenados.where((p) => !p.urgente).toList();
+
         final notifier = ref.read(despensaProvider.notifier);
         final salvados = notifier.salvados;
         final ahorro = notifier.ahorroMes;
         final conteoAhorro = notifier.conteoMes;
 
         final user = authState.valueOrNull;
+        final anchoAmplio = Responsive.isTabletOrWeb(context);
+        // El rail solo entra cuando sobra ancho de verdad: en tablet dejaria
+        // el contenido en poco mas de 400px.
+        final conRail = Responsive.isWeb(context);
+
+        final encabezado = _Encabezado(
+          titulo: tituloDespensa,
+          fotoUrl: user?.fotoUrl,
+          enColumna: conRail,
+          productos: productos.length,
+          salvados: salvados,
+          porVencer: urgentes.length,
+          ahorro: ahorro,
+          conteoAhorro: conteoAhorro,
+          onPerfil: () => _mostrarMenuPerfil(context, ref, nombreUsuario),
+        );
+
+        final secciones = <Widget>[
+          if (productos.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: EstadoVacio(
+                icono: CupertinoIcons.cube_box,
+                titulo: 'Tu despensa está vacía',
+                descripcion:
+                    'Agregá lo que tengas en casa y te avisamos antes '
+                    'de que se venza.',
+                textoAccion: 'Agregar producto',
+                onAccion: onAgregar,
+              ),
+            )
+          else ...[
+            // Cada seccion se dibuja solo si tiene contenido: antes el
+            // encabezado "EN BUEN ESTADO" quedaba solo, sin lista
+            // debajo, cuando todo estaba por vencer.
+            if (urgentes.isNotEmpty)
+              ..._seccion(
+                context: context,
+                ref: ref,
+                icono: CupertinoIcons.exclamationmark_triangle_fill,
+                titulo: 'PRÓXIMOS A VENCER',
+                color: paleta.critico,
+                productos: urgentes,
+                anchoAmplio: anchoAmplio,
+              ),
+            if (enBuenEstado.isNotEmpty)
+              ..._seccion(
+                context: context,
+                ref: ref,
+                icono: CupertinoIcons.cube_box_fill,
+                titulo: 'EN BUEN ESTADO',
+                color: paleta.apagado,
+                productos: enBuenEstado,
+                anchoAmplio: anchoAmplio,
+              ),
+            // Solo en movil hay barra flotante que tapar.
+            SliverToBoxAdapter(
+              child: SizedBox(height: anchoAmplio ? AppSpacing.xl : 100),
+            ),
+          ],
+        ];
 
         return Scaffold(
           body: SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                //Header
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Image.asset(
-                                    'lib/assets/images/logo.png',
-                                    height: 38,
-                                    fit: BoxFit.contain,
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Flexible(
-                                    child: Text(
-                                      tituloDespensa,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: textTheme.bodyLarge?.copyWith(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.textMain,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-
-                            GestureDetector(
-                              onTap: () => _mostrarMenuPerfil(
-                                context,
-                                ref,
-                                nombreUsuario,
-                              ),
-                              child: Builder(
-                                builder: (context) {
-                                  final isWeb = Responsive.isTabletOrWeb(
-                                    context,
-                                  );
-                                  final fotoUrl = user?.fotoUrl;
-
-                                  if (!isWeb && fotoUrl != null) {
-                                    return CircleAvatar(
-                                      radius: 20,
-                                      backgroundColor: AppColors.surface,
-                                      backgroundImage:
-                                          CachedNetworkImageProvider(fotoUrl),
-                                    );
-                                  }
-                                  return CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor: AppColors.surface,
-                                    child: const Icon(
-                                      Icons.person,
-                                      size: 20,
-                                      color: AppColors.textMuted,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 25),
-
-                        //Stats bar
-                        Row(
-                          children: [
-                            _StatCard(
-                              icon: CupertinoIcons.archivebox,
-                              value: '${productos.length}',
-                              label: 'Productos',
-                              color: AppColors.textMain,
-                              bg: AppColors.surface,
-                            ),
-                            const SizedBox(width: 10),
-                            _StatCard(
-                              icon: CupertinoIcons.check_mark_circled,
-                              value: '$salvados',
-                              label: 'Salvados',
-                              color: AppColors.green,
-                              bg: AppColors.green.withValues(alpha: 0.15),
-                            ),
-                            const SizedBox(width: 10),
-                            _StatCard(
-                              icon: CupertinoIcons.clock,
-                              value: '${urgentes.length}',
-                              label: 'Por vencer',
-                              color: AppColors.danger,
-                              bg: AppColors.danger.withValues(alpha: 0.15),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 12),
-                        _AhorroCard(ahorro: ahorro, conteo: conteoAhorro),
-
-                        const SizedBox(height: 24),
+            child: conRail
+                // Las cifras quedan fijas a la izquierda mientras recorres la
+                // despensa, y los productos se llevan el ancho restante.
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(width: 260, child: encabezado),
+                      Expanded(child: CustomScrollView(slivers: secciones)),
+                    ],
+                  )
+                : ResponsiveContainer(
+                    maxWidth: 900,
+                    child: CustomScrollView(
+                      slivers: [
+                        SliverToBoxAdapter(child: encabezado),
+                        ...secciones,
                       ],
                     ),
                   ),
-                ),
-
-                if (productos.isEmpty) ...[
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 40),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            GestureDetector(
-                              onTap: onAgregar,
-                              child: const Icon(
-                                CupertinoIcons.add_circled,
-                                size: 48,
-                                color: AppColors.green,
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-                            Text(
-                              'Aún no tienes productos agregados. \nAgrega uno.',
-                              textAlign: TextAlign.center,
-                              style: textTheme.bodyMedium?.copyWith(
-                                fontSize: 14,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  if (Responsive.isTabletOrWeb(context))
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      sliver: SliverToBoxAdapter(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            //columna prox a vencer
-                            if (urgentes.isNotEmpty)
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          CupertinoIcons
-                                              .exclamationmark_triangle,
-                                          size: 16,
-                                          color: AppColors.danger,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'PRÓXIMOS A VENCER',
-                                          style: textTheme.titleSmall?.copyWith(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 1,
-                                            color: AppColors.danger,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    ...urgentes.map(
-                                      (producto) => Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 8,
-                                        ),
-                                        child: ProductoCard(
-                                          producto: producto,
-                                          onTap: () => _mostrarAcciones(
-                                            context,
-                                            ref,
-                                            producto,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            if (urgentes.isNotEmpty) const SizedBox(width: 20),
-
-                            //columna en buen estado
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        CupertinoIcons.cube_box_fill,
-                                        size: 16,
-                                        color: AppColors.green,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'EN BUEN ESTADO',
-                                        style: textTheme.titleSmall?.copyWith(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 1,
-                                          color: AppColors.textMuted,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  ...enBuenEstado.map(
-                                    (producto) => Padding(
-                                      padding: const EdgeInsets.only(bottom: 8),
-                                      child: ProductoCard(
-                                        producto: producto,
-                                        onTap: () => _mostrarAcciones(
-                                          context,
-                                          ref,
-                                          producto,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else ...[
-                    //vists mobile (secuencial)
-                    if (urgentes.isNotEmpty) ...[
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                CupertinoIcons.exclamationmark_triangle,
-                                size: 16,
-                                color: AppColors.danger,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'PRÓXIMOS A VENCER',
-                                style: textTheme.titleSmall?.copyWith(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1,
-                                  color: AppColors.danger,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) => Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                            child: ProductoCard(
-                              producto: urgentes[index],
-                              onTap: () => _mostrarAcciones(
-                                context,
-                                ref,
-                                urgentes[index],
-                              ),
-                            ),
-                          ),
-                          childCount: urgentes.length,
-                        ),
-                      ),
-                    ],
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Icon(
-                              CupertinoIcons.cube_box_fill,
-                              size: 16,
-                              color: AppColors.green,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'EN BUEN ESTADO',
-                              style: textTheme.titleSmall?.copyWith(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                          child: ProductoCard(
-                            producto: enBuenEstado[index],
-                            onTap: () => _mostrarAcciones(
-                              context,
-                              ref,
-                              enBuenEstado[index],
-                            ),
-                          ),
-                        ),
-                        childCount: enBuenEstado.length,
-                      ),
-                    ),
-                  ],
-
-                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
-                ],
-              ],
-            ),
           ),
         );
       },
     );
+  }
+
+  /// Encabezado y lista de una seccion. En pantallas anchas la lista pasa a
+  /// dos columnas, pero sigue siendo un sliver perezoso: la version anterior
+  /// instanciaba todas las tarjetas de una vez justo donde mas se ven.
+  List<Widget> _seccion({
+    required BuildContext context,
+    required WidgetRef ref,
+    required IconData icono,
+    required String titulo,
+    required Color color,
+    required List<Producto> productos,
+    required bool anchoAmplio,
+  }) {
+    final textTheme = Theme.of(context).textTheme;
+
+    Widget tarjeta(int index) => ProductoCard(
+      producto: productos[index],
+      onTap: () => _mostrarAcciones(context, ref, productos[index]),
+    );
+
+    return [
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            anchoAmplio ? AppSpacing.xl : AppSpacing.lg,
+            AppSpacing.lg,
+            anchoAmplio ? AppSpacing.xl : AppSpacing.lg,
+            AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Icon(icono, size: 16, color: color),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  titulo,
+                  style: textTheme.labelSmall?.copyWith(color: color),
+                ),
+              ),
+              Text('${productos.length}', style: AppTextStyles.rotulo(context)),
+            ],
+          ),
+        ),
+      ),
+      SliverPadding(
+        padding: EdgeInsets.symmetric(
+          horizontal: anchoAmplio ? AppSpacing.xl : AppSpacing.lg,
+        ),
+        sliver: anchoAmplio
+            ? SliverGrid(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => tarjeta(index),
+                  childCount: productos.length,
+                ),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 520,
+                  crossAxisSpacing: AppSpacing.md,
+                  mainAxisSpacing: AppSpacing.sm,
+                  mainAxisExtent: 76,
+                ),
+              )
+            : SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: tarjeta(index),
+                  ),
+                  childCount: productos.length,
+                ),
+              ),
+      ),
+    ];
   }
 
   void _mostrarMenuPerfil(
@@ -425,9 +238,9 @@ class DespensaScreen extends ConsumerWidget {
       builder: (_) => Container(
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: context.paleta.marcaSuave,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.paleta.contorno),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -437,7 +250,7 @@ class DespensaScreen extends ConsumerWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.border,
+                color: context.paleta.contorno,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -457,8 +270,13 @@ class DespensaScreen extends ConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 22,
-                      backgroundColor: AppColors.accent.withValues(alpha: 0.15),
-                      child: const Icon(Icons.person, color: AppColors.accent),
+                      backgroundColor: context.paleta.marcaClara.withValues(
+                        alpha: 0.15,
+                      ),
+                      child: Icon(
+                        Icons.person,
+                        color: context.paleta.marcaClara,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -467,17 +285,17 @@ class DespensaScreen extends ConsumerWidget {
                         children: [
                           Text(
                             nombreUsuario,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.textMain,
+                              color: context.paleta.tinta,
                             ),
                           ),
                           Text(
                             'Ver perfil y lista de compras',
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.textMuted,
+                              color: context.paleta.apagado,
                             ),
                           ),
                         ],
@@ -485,13 +303,13 @@ class DespensaScreen extends ConsumerWidget {
                     ),
                     Icon(
                       Icons.chevron_right_rounded,
-                      color: AppColors.textMuted,
+                      color: context.paleta.apagado,
                     ),
                   ],
                 ),
               ),
             ),
-            const Divider(color: AppColors.border),
+            Divider(color: context.paleta.contorno),
             Consumer(
               builder: (context, ref, _) {
                 final compartida = ref
@@ -499,14 +317,14 @@ class DespensaScreen extends ConsumerWidget {
                     .valueOrNull;
 
                 return ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.groups_rounded,
-                    color: AppColors.green,
+                    color: context.paleta.marca,
                   ),
-                  title: const Text(
+                  title: Text(
                     'Despensa compartida',
                     style: TextStyle(
-                      color: AppColors.textMain,
+                      color: context.paleta.tinta,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -515,14 +333,14 @@ class DespensaScreen extends ConsumerWidget {
                     compartida == null
                         ? 'Crea una o únete con un código'
                         : compartida.nombre,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textMuted,
+                      color: context.paleta.apagado,
                     ),
                   ),
-                  trailing: const Icon(
+                  trailing: Icon(
                     Icons.chevron_right_rounded,
-                    color: AppColors.textMuted,
+                    color: context.paleta.apagado,
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -536,23 +354,23 @@ class DespensaScreen extends ConsumerWidget {
                 );
               },
             ),
-            const Divider(color: AppColors.border),
+            Divider(color: context.paleta.contorno),
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 CupertinoIcons.search,
-                color: AppColors.accent,
+                color: context.paleta.marcaClara,
               ),
-              title: const Text(
+              title: Text(
                 'Consulta Rápida',
                 style: TextStyle(
-                  color: AppColors.textMain,
+                  color: context.paleta.tinta,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              subtitle: const Text(
+              subtitle: Text(
                 'Buscar productos de tu despensa',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                style: TextStyle(color: context.paleta.apagado, fontSize: 12),
               ),
               onTap: () {
                 Navigator.pop(context);
@@ -564,16 +382,16 @@ class DespensaScreen extends ConsumerWidget {
                 );
               },
             ),
-            const Divider(color: AppColors.border),
+            Divider(color: context.paleta.contorno),
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.logout_rounded,
-                color: AppColors.danger,
+                color: context.paleta.vencido,
               ),
-              title: const Text(
+              title: Text(
                 'Cerrar sesión',
                 style: TextStyle(
-                  color: AppColors.danger,
+                  color: context.paleta.vencido,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -601,9 +419,9 @@ class DespensaScreen extends ConsumerWidget {
       builder: (_) => Container(
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: context.paleta.marcaSuave,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.paleta.contorno),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -613,7 +431,7 @@ class DespensaScreen extends ConsumerWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.border,
+                color: context.paleta.contorno,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -625,32 +443,32 @@ class DespensaScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Text(
                     producto.nombre,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textMain,
+                      color: context.paleta.tinta,
                     ),
                   ),
                 ],
               ),
             ),
-            const Divider(color: AppColors.border),
+            Divider(color: context.paleta.contorno),
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 CupertinoIcons.check_mark_circled,
-                color: AppColors.green,
+                color: context.paleta.marca,
               ),
-              title: const Text(
+              title: Text(
                 'Marcar como consumido',
                 style: TextStyle(
-                  color: AppColors.textMain,
+                  color: context.paleta.tinta,
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              subtitle: const Text(
+              subtitle: Text(
                 'Suma a tus alimentos salvados',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                style: TextStyle(color: context.paleta.apagado, fontSize: 12),
               ),
               onTap: () async {
                 Navigator.pop(context);
@@ -659,7 +477,7 @@ class DespensaScreen extends ConsumerWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('¡${producto.nombre} salvado! ✅'),
-                      backgroundColor: AppColors.green,
+                      backgroundColor: context.paleta.marca,
                     ),
                   );
                   _preguntarListaCompras(
@@ -672,21 +490,21 @@ class DespensaScreen extends ConsumerWidget {
               },
             ),
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 CupertinoIcons.delete,
-                color: AppColors.danger,
+                color: context.paleta.vencido,
               ),
-              title: const Text(
+              title: Text(
                 'Eliminar',
                 style: TextStyle(
-                  color: AppColors.danger,
+                  color: context.paleta.vencido,
                   fontWeight: FontWeight.w600,
                   fontSize: 18,
                 ),
               ),
-              subtitle: const Text(
+              subtitle: Text(
                 'No suma a alimentos salvados',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                style: TextStyle(color: context.paleta.apagado, fontSize: 12),
               ),
               onTap: () async {
                 Navigator.pop(context);
@@ -717,6 +535,7 @@ class _StatCard extends StatelessWidget {
   final String label;
   final Color color;
   final Color bg;
+  final bool expandido;
 
   const _StatCard({
     required this.icon,
@@ -724,40 +543,42 @@ class _StatCard extends StatelessWidget {
     required this.label,
     required this.color,
     required this.bg,
+    this.expandido = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 25, color: color),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontSize: 25,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
+    final tarjeta = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 25, color: color),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontSize: 25,
+              fontWeight: FontWeight.w700,
+              color: color,
             ),
-            Text(
-              label.toUpperCase(),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontSize: 10,
-                color: AppColors.textMuted,
-              ),
+          ),
+          Text(
+            label.toUpperCase(),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontSize: 10,
+              color: context.paleta.apagado,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+
+    return expandido ? Expanded(child: tarjeta) : tarjeta;
   }
 }
 
@@ -824,7 +645,7 @@ class _AhorroCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.green.withValues(alpha: 0.15),
+        color: context.paleta.marca.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -835,7 +656,7 @@ class _AhorroCard extends StatelessWidget {
               Icon(
                 CupertinoIcons.money_dollar_circle,
                 size: 16,
-                color: AppColors.green,
+                color: context.paleta.marca,
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -843,7 +664,7 @@ class _AhorroCard extends StatelessWidget {
                   'Ahorro estimado de $mes'.toUpperCase(),
                   style: textTheme.labelSmall?.copyWith(
                     fontSize: 10,
-                    color: AppColors.textMuted,
+                    color: context.paleta.apagado,
                   ),
                 ),
               ),
@@ -855,7 +676,7 @@ class _AhorroCard extends StatelessWidget {
             style: textTheme.titleLarge?.copyWith(
               fontSize: 28,
               fontWeight: FontWeight.w700,
-              color: AppColors.green,
+              color: context.paleta.marca,
             ),
           ),
           if (top.isEmpty)
@@ -865,7 +686,7 @@ class _AhorroCard extends StatelessWidget {
                 'Consume un producto antes de que venza para empezar a sumar',
                 style: textTheme.bodySmall?.copyWith(
                   fontSize: 11,
-                  color: AppColors.textMuted,
+                  color: context.paleta.apagado,
                 ),
               ),
             )
@@ -878,7 +699,7 @@ class _AhorroCard extends StatelessWidget {
                   .join('  ·  '),
               style: textTheme.bodySmall?.copyWith(
                 fontSize: 11,
-                color: AppColors.textMuted,
+                color: context.paleta.apagado,
               ),
             ),
             const SizedBox(height: 4),
@@ -886,7 +707,7 @@ class _AhorroCard extends StatelessWidget {
               'Estimado según precios promedio por categoría',
               style: textTheme.labelSmall?.copyWith(
                 fontSize: 9,
-                color: AppColors.textMuted,
+                color: context.paleta.apagado,
               ),
             ),
           ],
@@ -906,7 +727,7 @@ void _preguntarListaCompras(
   showDialog(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.paleta.marcaSuave,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
         children: [
@@ -915,8 +736,8 @@ void _preguntarListaCompras(
           Expanded(
             child: Text(
               '¿Añadir a lista de compras?',
-              style: const TextStyle(
-                color: AppColors.textMain,
+              style: TextStyle(
+                color: context.paleta.tinta,
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
               ),
@@ -926,14 +747,14 @@ void _preguntarListaCompras(
       ),
       content: Text(
         'Agregar ${producto.nombre} a tu lista para la próxima compra.',
-        style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+        style: TextStyle(color: context.paleta.apagado, fontSize: 13),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext),
-          child: const Text(
+          child: Text(
             'No, gracias',
-            style: TextStyle(color: AppColors.textMuted),
+            style: TextStyle(color: context.paleta.apagado),
           ),
         ),
         FilledButton(
@@ -953,15 +774,209 @@ void _preguntarListaCompras(
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('${producto.nombre} añadido a tu lista 🛒'),
-                  backgroundColor: AppColors.accent,
+                  backgroundColor: context.paleta.marcaClara,
                 ),
               );
             }
           },
-          style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
+          style: FilledButton.styleFrom(
+            backgroundColor: context.paleta.marcaClara,
+          ),
           child: const Text('Añadir'),
         ),
       ],
     ),
   );
+}
+
+class _BotonPerfil extends StatelessWidget {
+  const _BotonPerfil({required this.fotoUrl, required this.onTap});
+
+  final String? fotoUrl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final paleta = context.paleta;
+    final mostrarFoto = fotoUrl != null && !Responsive.isTabletOrWeb(context);
+
+    return Semantics(
+      button: true,
+      label: 'Abrir menú de cuenta',
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xs),
+          child: CircleAvatar(
+            radius: 18,
+            backgroundColor: paleta.marcaSuave,
+            backgroundImage: mostrarFoto
+                ? CachedNetworkImageProvider(fotoUrl!)
+                : null,
+            child: mostrarFoto
+                ? null
+                : Icon(Icons.person, size: 20, color: paleta.marca),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Cabecera de la despensa: identidad y cifras.
+///
+/// En web se dibuja como un rail fijo a la izquierda, para que las cifras
+/// queden a la vista mientras recorres los productos. En pantallas mas
+/// angostas vuelve a ser una franja horizontal arriba.
+class _Encabezado extends StatelessWidget {
+  const _Encabezado({
+    required this.titulo,
+    required this.fotoUrl,
+    required this.enColumna,
+    required this.productos,
+    required this.salvados,
+    required this.porVencer,
+    required this.ahorro,
+    required this.conteoAhorro,
+    required this.onPerfil,
+  });
+
+  final String titulo;
+  final String? fotoUrl;
+  final bool enColumna;
+  final int productos;
+  final int salvados;
+  final int porVencer;
+  final int ahorro;
+  final Map<String, double> conteoAhorro;
+  final VoidCallback onPerfil;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final paleta = context.paleta;
+
+    // En el rail la marca y la cuenta ya viven en la barra de navegacion:
+    // repetirlas aca solo gastaria espacio.
+    final identidad = Row(
+      children: [
+        if (!enColumna) ...[
+          Image.asset(
+            'lib/assets/images/logo_icono.png',
+            height: 30,
+            fit: BoxFit.contain,
+            excludeFromSemantics: true,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+        ],
+        Expanded(
+          child: Text(
+            titulo,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+            style: textTheme.displaySmall,
+          ),
+        ),
+        if (!enColumna) ...[
+          const SizedBox(width: AppSpacing.sm),
+          if (!Responsive.isTabletOrWeb(context)) const InterruptorTema(),
+          _BotonPerfil(fotoUrl: fotoUrl, onTap: onPerfil),
+        ],
+      ],
+    );
+
+    final cifras = [
+      _StatCard(
+        icon: CupertinoIcons.archivebox,
+        value: '$productos',
+        label: 'Productos',
+        color: paleta.tinta,
+        bg: paleta.superficieSuave,
+        expandido: !enColumna,
+      ),
+      _StatCard(
+        icon: CupertinoIcons.check_mark_circled,
+        value: '$salvados',
+        label: 'Salvados',
+        color: paleta.marca,
+        bg: paleta.marcaSuave,
+        expandido: !enColumna,
+      ),
+      _StatCard(
+        icon: CupertinoIcons.clock,
+        value: '$porVencer',
+        label: 'Por vencer',
+        color: paleta.critico,
+        bg: paleta.critico.withValues(alpha: 0.12),
+        expandido: !enColumna,
+      ),
+    ];
+
+    if (!enColumna) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          0,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            identidad,
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: [
+                cifras[0],
+                const SizedBox(width: AppSpacing.sm),
+                cifras[1],
+                const SizedBox(width: AppSpacing.sm),
+                cifras[2],
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _AhorroCard(ahorro: ahorro, conteo: conteoAhorro),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(right: BorderSide(color: paleta.contorno)),
+      ),
+      // La identidad y las cifras arriba, el ahorro anclado abajo: asi el
+      // rail ocupa su alto en vez de amontonarse contra el borde superior.
+      // Scrollea por su cuenta si la pantalla es muy baja.
+      child: LayoutBuilder(
+        builder: (context, restricciones) => SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: restricciones.maxHeight - AppSpacing.lg * 2,
+            ),
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  identidad,
+                  const SizedBox(height: AppSpacing.xl),
+                  cifras[0],
+                  const SizedBox(height: AppSpacing.sm),
+                  cifras[1],
+                  const SizedBox(height: AppSpacing.sm),
+                  cifras[2],
+                  const Spacer(),
+                  const SizedBox(height: AppSpacing.lg),
+                  _AhorroCard(ahorro: ahorro, conteo: conteoAhorro),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

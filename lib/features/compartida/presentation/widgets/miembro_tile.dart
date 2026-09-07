@@ -29,12 +29,12 @@ class MiembroTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.paleta.superficie,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: esAdminDelMiembro
-              ? AppColors.green.withValues(alpha: 0.35)
-              : AppColors.border,
+              ? context.paleta.marca.withValues(alpha: 0.35)
+              : context.paleta.contorno,
         ),
       ),
       child: Row(
@@ -65,7 +65,7 @@ class MiembroTile extends StatelessWidget {
                     miembro.email!,
                     overflow: TextOverflow.ellipsis,
                     style: textTheme.bodySmall?.copyWith(
-                      color: AppColors.textMuted,
+                      color: context.paleta.apagado,
                     ),
                   ),
               ],
@@ -75,10 +75,10 @@ class MiembroTile extends StatelessWidget {
             IconButton(
               onPressed: onExpulsar,
               tooltip: 'Eliminar miembro',
-              icon: const Icon(
+              icon: Icon(
                 CupertinoIcons.person_badge_minus,
                 size: 20,
-                color: AppColors.danger,
+                color: context.paleta.vencido,
               ),
             ),
         ],
@@ -97,14 +97,14 @@ class _Avatar extends StatelessWidget {
     if (fotoUrl != null && !Responsive.isTabletOrWeb(context)) {
       return CircleAvatar(
         radius: 20,
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.paleta.marcaSuave,
         backgroundImage: CachedNetworkImageProvider(fotoUrl!),
       );
     }
-    return const CircleAvatar(
+    return CircleAvatar(
       radius: 20,
-      backgroundColor: AppColors.surface,
-      child: Icon(Icons.person, size: 20, color: AppColors.textMuted),
+      backgroundColor: context.paleta.marcaSuave,
+      child: Icon(Icons.person, size: 20, color: context.paleta.apagado),
     );
   }
 }
@@ -117,13 +117,13 @@ class _BadgeAdmin extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: AppColors.green.withValues(alpha: 0.15),
+        color: context.paleta.marca.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         'ADMIN',
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: AppColors.green,
+          color: context.paleta.marca,
           fontSize: 9,
         ),
       ),

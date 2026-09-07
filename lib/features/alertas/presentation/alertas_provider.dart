@@ -98,7 +98,14 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     final visibles = todasLasAlertas
         .where((alerta) => !alerta.estaOculta)
         .toList();
-    visibles.sort((a, b) => b.creadaEn.compareTo(a.creadaEn));
+    // Primero lo mas urgente; a igual urgencia, lo mas reciente. Antes se
+    // ordenaba solo por creadaEn, asi que un producto ya vencido quedaba
+    // debajo de un primer aviso de hoy.
+    visibles.sort((a, b) {
+      final porUrgencia = b.prioridad.compareTo(a.prioridad);
+      if (porUrgencia != 0) return porUrgencia;
+      return b.creadaEn.compareTo(a.creadaEn);
+    });
     return visibles;
   }
 

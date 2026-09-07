@@ -135,7 +135,7 @@ class _ScanProductoScreenState extends State<ScanProductoScreen> {
               height: 180,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.accent, width: 2),
+                border: Border.all(color: context.paleta.marca, width: 2),
               ),
             ),
           ),

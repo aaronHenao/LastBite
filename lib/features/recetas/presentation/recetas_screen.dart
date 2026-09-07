@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:lastbite/core/widgets/estado_vacio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
@@ -62,18 +64,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_cargaInicial) {
-      _cargaInicial = true;
-      ref.listenManual(despensaProvider, (_, next) {
-        if (next.value != null && !_cargaInicial) return;
-        if (next.value != null) _cargarRecetasDesdeApi();
-      }, fireImmediately: true);
-    }
-  }
-
-  @override
   void initState() {
     super.initState();
     _busquedaDataSource = RecetasBusquedaRemoteDataSource();
@@ -105,11 +95,14 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
               onTap: () => _abrirDetalle(receta),
             );
           }, childCount: _recetasFiltradas.length),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          // Alto fijo en vez de proporcion: la tarjeta mide lo mismo en
+          // cualquier ancho de celda, y un childAspectRatio calculado a ojo
+          // desbordaba en todo el rango de tablet.
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 420,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.8,
+            mainAxisExtent: 268,
           ),
         ),
       );
@@ -359,9 +352,20 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen<AsyncValue<List<Producto>>>(despensaProvider, (previous, next) {
-      final prevList = previous?.value;
       final nextList = next.value;
-      if (prevList != null && nextList != null && prevList != nextList) {
+      if (nextList == null) return;
+
+      // Primera carga: el stream de la despensa acaba de resolver.
+      if (!_cargaInicial) {
+        _cargaInicial = true;
+        _cargarRecetasDesdeApi();
+        return;
+      }
+
+      // Despues, solo un cambio real de contenido. Spoonacular se paga por
+      // llamada y el stream re-emite con cada snapshot de Firestore.
+      final prevList = previous?.value;
+      if (prevList != null && !listEquals(prevList, nextList)) {
         _cargarRecetasDesdeApi();
       }
     });
@@ -389,7 +393,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                       'MOTOR DE RECETAS',
                       style: textTheme.titleSmall?.copyWith(
                         letterSpacing: 2.4,
-                        color: AppColors.textMuted,
+                        color: context.paleta.apagado,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -398,7 +402,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                       style: textTheme.bodyLarge?.copyWith(
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.textMain,
+                        color: context.paleta.tinta,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -409,44 +413,49 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                       onChanged: _onQueryChanged,
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: AppColors.textMuted,
+                        color: context.paleta.apagado,
                       ),
                       decoration: InputDecoration(
                         hintText: 'Buscar por nombre...',
                         hintStyle: textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w500,
-                          color: AppColors.textMuted.withValues(alpha: 0.9),
+                          color: context.paleta.apagado.withValues(alpha: 0.9),
                         ),
-                        prefixIcon: const Icon(
+                        prefixIcon: Icon(
                           Icons.search_rounded,
-                          color: AppColors.textMuted,
+                          color: context.paleta.apagado,
                         ),
                         suffixIcon: _query.isNotEmpty
                             ? IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.close_rounded,
-                                  color: AppColors.textMuted,
+                                  color: context.paleta.apagado,
                                 ),
                                 onPressed: () {
+                                  _searchDebounce?.cancel();
                                   _searchCtrl.clear();
-                                  setState(() => _query = '');
+                                  setState(() {
+                                    _query = '';
+                                    _busquedaPorProducto = false;
+                                  });
+                                  _cargarRecetasDesdeApi();
                                 },
                               )
                             : null,
                         filled: true,
-                        fillColor: AppColors.surface,
+                        fillColor: context.paleta.marcaSuave,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(color: context.paleta.contorno),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(color: context.paleta.contorno),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: AppColors.accent,
+                          borderSide: BorderSide(
+                            color: context.paleta.marca,
                             width: 1.5,
                           ),
                         ),
@@ -462,7 +471,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.danger.withValues(alpha: 0.12),
+                        color: context.paleta.vencido.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(
@@ -470,7 +479,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                           Icon(
                             HugeIcons.strokeRoundedFire,
                             size: 24,
-                            color: AppColors.danger,
+                            color: context.paleta.vencido,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -483,7 +492,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 1,
-                                    color: AppColors.danger,
+                                    color: context.paleta.vencido,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -491,7 +500,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                                   _urgentesLabel(productosDespensa),
                                   style: textTheme.bodyMedium?.copyWith(
                                     fontSize: 12,
-                                    color: AppColors.textMuted,
+                                    color: context.paleta.apagado,
                                   ),
                                 ),
                               ],
@@ -511,7 +520,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1,
-                              color: AppColors.textMuted,
+                              color: context.paleta.apagado,
                             ),
                           ),
                         ),
@@ -532,7 +541,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                         Icon(
                           _iconoOrden,
                           size: 13,
-                          color: AppColors.textMuted,
+                          color: context.paleta.apagado,
                         ),
                         const SizedBox(width: 6),
                         Expanded(
@@ -540,7 +549,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                             _explicacionOrden(),
                             style: textTheme.bodyMedium?.copyWith(
                               fontSize: 12,
-                              color: AppColors.textMuted,
+                              color: context.paleta.apagado,
                             ),
                           ),
                         ),
@@ -555,19 +564,19 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.yellow.withValues(alpha: 0.16),
+                          color: context.paleta.urgente.withValues(alpha: 0.16),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: AppColors.yellow.withValues(alpha: 0.4),
+                            color: context.paleta.urgente.withValues(alpha: 0.4),
                           ),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.translate,
                               size: 14,
-                              color: AppColors.textMain,
+                              color: context.paleta.tinta,
                             ),
                             const SizedBox(width: 6),
                             Expanded(
@@ -575,7 +584,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                                 _avisoTraduccion!,
                                 style: textTheme.bodySmall?.copyWith(
                                   fontSize: 11,
-                                  color: AppColors.textMain,
+                                  color: context.paleta.tinta,
                                 ),
                               ),
                             ),
@@ -591,12 +600,12 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
 
             //Lista de recetas
             _cargandoRecetas
-                ? const SliverToBoxAdapter(
+                ? SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.only(top: 60),
                       child: Center(
                         child: CircularProgressIndicator(
-                          color: AppColors.accent,
+                          color: context.paleta.marca,
                         ),
                       ),
                     ),
@@ -608,27 +617,27 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
+                          color: context.paleta.marcaSuave,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.border),
+                          border: Border.all(color: context.paleta.contorno),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'No se pudieron cargar recetas',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.textMain,
+                                color: context.paleta.tinta,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               _errorCarga!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: AppColors.textMuted,
+                                color: context.paleta.apagado,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -645,23 +654,37 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                 : _recetasFiltradas.isEmpty
                 ? SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 60),
-                      child: Column(
-                        children: [
-                          const Text('🍽️', style: TextStyle(fontSize: 48)),
-                          const SizedBox(height: 12),
-                          Text(
-                            _query.isEmpty
-                                ? 'No hay recetas sugeridas\npara tu despensa actual'
-                                : 'No encontramos recetas\ncon "$_query"',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textMuted,
+                      padding: const EdgeInsets.only(top: 40),
+                      // El vacio dice que hacer, y la salida depende de por que
+                      // esta vacio: sin productos hay que agregar; con busqueda
+                      // sin resultados, hay que limpiarla.
+                      child: _query.isNotEmpty
+                          ? EstadoVacio(
+                              icono: Icons.search_off_rounded,
+                              titulo: 'Sin resultados',
+                              descripcion:
+                                  'Ninguna receta coincide con "$_query".',
+                              textoAccion: 'Limpiar búsqueda',
+                              onAccion: () {
+                                _searchDebounce?.cancel();
+                                _searchCtrl.clear();
+                                setState(() {
+                                  _query = '';
+                                  _busquedaPorProducto = false;
+                                });
+                                _cargarRecetasDesdeApi();
+                              },
+                            )
+                          : EstadoVacio(
+                              icono: Icons.restaurant_menu_rounded,
+                              titulo: 'Todavía no hay sugerencias',
+                              descripcion:
+                                  'Agregá productos a tu despensa y te '
+                                  'proponemos recetas que los aprovechen.',
+                              textoAccion: 'Buscar de nuevo',
+                              onAccion: () =>
+                                  _cargarRecetasDesdeApi(forzar: true),
                             ),
-                          ),
-                        ],
-                      ),
                     ),
                   )
                 : _buildRecetasSliver(context),
@@ -672,6 +695,64 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       ),
     );
   }
+
+  /// Marca la receta como cocinada. Consumir es lo que suma a "alimentos
+  /// salvados", asi que el usuario elige que productos se terminaron de verdad:
+  /// una receta usa parte de un producto, no siempre el producto entero.
+  Future<void> _cocinar(Receta receta) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final colorExito = context.paleta.marca;
+    final ingredientes = (receta.ingredientes ?? [])
+        .map((i) => i.toLowerCase())
+        .toList();
+
+    final usados =
+        (ref.read(despensaProvider).value ?? []).where((producto) {
+          final nombre = producto.nombre.toLowerCase().trim();
+          return nombre.isNotEmpty &&
+              ingredientes.any((ing) => ing.contains(nombre));
+        }).toList()
+          ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
+
+    if (usados.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Ninguno de tus productos coincide con esta receta.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    final elegidos = await showDialog<Set<String>>(
+      context: context,
+      builder: (_) => _DialogoCocinar(productos: usados),
+    );
+    if (elegidos == null || elegidos.isEmpty) return;
+
+    final notifier = ref.read(despensaProvider.notifier);
+    for (final id in elegidos) {
+      await notifier.consumir(id);
+    }
+
+    messenger.showSnackBar(
+      SnackBar(
+        backgroundColor: colorExito,
+        content: Text(
+          elegidos.length == 1
+              ? '1 producto salvado. ¡Buen provecho!'
+              : '${elegidos.length} productos salvados. ¡Buen provecho!',
+        ),
+      ),
+    );
+  }
+
+  Set<String> _nombresDespensa() => (ref.read(despensaProvider).value ?? [])
+      .map((p) => p.nombre.toLowerCase().trim())
+      .where((nombre) => nombre.isNotEmpty)
+      .toSet();
 
   void _abrirDetalle(Receta receta) {
     final isWeb = Responsive.isTabletOrWeb(context);
@@ -692,6 +773,8 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
               child: RecetaDetalleSheet(
                 receta: receta,
                 detalleFuture: _cargarDetalleReceta(receta),
+                productosEnDespensa: _nombresDespensa(),
+                onCocinar: _cocinar,
                 isDialog: true,
               ),
             ),
@@ -706,6 +789,8 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         builder: (_) => RecetaDetalleSheet(
           receta: receta,
           detalleFuture: _cargarDetalleReceta(receta),
+          productosEnDespensa: _nombresDespensa(),
+          onCocinar: _cocinar,
         ),
       );
     }
@@ -770,7 +855,7 @@ class _OrdenPorTiempoBoton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = activo ? AppColors.accent : AppColors.textMuted;
+    final color = activo ? context.paleta.marca : context.paleta.apagado;
 
     return InkWell(
       onTap: onTap,
@@ -780,8 +865,8 @@ class _OrdenPorTiempoBoton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: activo
-              ? AppColors.accent.withValues(alpha: 0.12)
-              : AppColors.surface,
+              ? context.paleta.marca.withValues(alpha: 0.12)
+              : context.paleta.marcaSuave,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: color.withValues(alpha: 0.4)),
         ),
@@ -801,6 +886,104 @@ class _OrdenPorTiempoBoton extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DialogoCocinar extends StatefulWidget {
+  const _DialogoCocinar({required this.productos});
+
+  final List<Producto> productos;
+
+  @override
+  State<_DialogoCocinar> createState() => _DialogoCocinarState();
+}
+
+class _DialogoCocinarState extends State<_DialogoCocinar> {
+  late final Set<String> _elegidos = widget.productos
+      .map((p) => p.id)
+      .toSet();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: context.paleta.marcaSuave,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(
+        '¿Qué usaste por completo?',
+        style: TextStyle(
+          color: context.paleta.tinta,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      content: SizedBox(
+        width: 380,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Lo que marques sale de tu despensa y suma a tus alimentos '
+              'salvados. Destildá lo que todavía te quede.',
+              style: TextStyle(color: context.paleta.apagado, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final producto in widget.productos)
+                      CheckboxListTile(
+                        value: _elegidos.contains(producto.id),
+                        onChanged: (marcado) => setState(() {
+                          if (marcado == true) {
+                            _elegidos.add(producto.id);
+                          } else {
+                            _elegidos.remove(producto.id);
+                          }
+                        }),
+                        activeColor: context.paleta.marca,
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: Text(
+                          '${producto.emoji}  ${producto.nombre}',
+                          style: TextStyle(
+                            color: context.paleta.tinta,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          AppTheme.diasLabel(producto.diasRestantes),
+                          style: TextStyle(
+                            color: context.paleta.apagado,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancelar',
+            style: TextStyle(color: context.paleta.apagado),
+          ),
+        ),
+        FilledButton(
+          onPressed: _elegidos.isEmpty
+              ? null
+              : () => Navigator.pop(context, _elegidos),
+          style: FilledButton.styleFrom(backgroundColor: context.paleta.marca),
+          child: const Text('Confirmar'),
+        ),
+      ],
     );
   }
 }

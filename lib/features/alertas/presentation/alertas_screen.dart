@@ -1,5 +1,10 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:lastbite/core/responsive/responsive.dart';
+import 'package:lastbite/features/alertas/domain/alerta.dart';
+import 'package:lastbite/core/widgets/estado_vacio.dart';
+import 'package:lastbite/core/widgets/estado_error.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
@@ -39,7 +44,10 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
     ref.listen<AsyncValue<List<Producto>>>(despensaProvider, (previous, next) {
       final prevList = previous?.value;
       final nextList = next.value;
-      if (prevList != null && nextList != null && prevList != nextList) {
+      if (prevList == null || nextList == null) return;
+      // listEquals compara elemento a elemento: el stream de la despensa
+      // re-emite con frecuencia y solo un cambio real debe regenerar alertas.
+      if (!listEquals(prevList, nextList)) {
         ref.read(alertasProvider.notifier).refrescar();
       }
     });
@@ -49,14 +57,13 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
 
     return asyncAlertas.when(
       loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        body: Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => Scaffold(
-        body: Center(
-          child: Text(
-            'Error cargando alertas: $e',
-            style: const TextStyle(color: AppColors.danger),
-          ),
+        body: EstadoError(
+          mensaje: 'No pudimos cargar tus alertas.',
+          detalle: e,
+          onReintentar: () => ref.read(alertasProvider.notifier).refrescar(),
         ),
       ),
       data: (alertas) {
@@ -86,7 +93,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                                       'ALERTAS',
                                       style: textTheme.titleSmall?.copyWith(
                                         letterSpacing: 2.4,
-                                        color: AppColors.textMuted,
+                                        color: context.paleta.apagado,
                                       ),
                                     ),
                                     const SizedBox(height: 2),
@@ -95,7 +102,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                                       style: textTheme.bodyLarge?.copyWith(
                                         fontSize: 24,
                                         fontWeight: FontWeight.w800,
-                                        color: AppColors.textMain,
+                                        color: context.paleta.tinta,
                                       ),
                                     ),
                                   ],
@@ -106,7 +113,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                                 TextButton(
                                   onPressed: () => _confirmarBorrado(context),
                                   style: TextButton.styleFrom(
-                                    foregroundColor: AppColors.danger,
+                                    foregroundColor: context.paleta.vencido,
                                   ),
                                   child: const Text(
                                     'Borrar todo',
@@ -121,7 +128,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                           Text(
                             'Las alertas se mantienen hasta que decidas borrarlas.',
                             style: textTheme.bodySmall?.copyWith(
-                              color: AppColors.textMuted,
+                              color: context.paleta.apagado,
                             ),
                           ),
                           if (avisoTraduccion != null) ...[
@@ -133,10 +140,10 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.yellow.withValues(alpha: 0.16),
+                                color: context.paleta.urgente.withValues(alpha: 0.16),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: AppColors.yellow.withValues(
+                                  color: context.paleta.urgente.withValues(
                                     alpha: 0.4,
                                   ),
                                 ),
@@ -144,10 +151,10 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.translate,
                                     size: 14,
-                                    color: AppColors.textMain,
+                                    color: context.paleta.tinta,
                                   ),
                                   const SizedBox(width: 6),
                                   Expanded(
@@ -155,7 +162,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                                       avisoTraduccion,
                                       style: textTheme.bodySmall?.copyWith(
                                         fontSize: 11,
-                                        color: AppColors.textMain,
+                                        color: context.paleta.tinta,
                                       ),
                                     ),
                                   ),
@@ -169,58 +176,54 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                     ),
                   ),
                   if (alertas.isEmpty) ...[
-                    SliverFillRemaining(
+                    const SliverFillRemaining(
                       hasScrollBody: false,
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 40),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                CupertinoIcons.bell_slash,
-                                size: 48,
-                                color: AppColors.textMuted,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'No tienes alertas activas',
-                                textAlign: TextAlign.center,
-                                style: textTheme.bodyMedium?.copyWith(
-                                  color: AppColors.textMuted,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      // El vacio aca es buena noticia y hay que decirlo: antes
+                      // solo informaba que no habia nada.
+                      child: EstadoVacio(
+                        icono: CupertinoIcons.checkmark_seal,
+                        titulo: 'Todo bajo control',
+                        descripcion:
+                            'Ningún producto de tu despensa está por vencerse. '
+                            'Te avisamos apenas alguno lo esté.',
                       ),
                     ),
                   ] else ...[
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        final alerta = alertas[index];
-                        return Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                          child: GestureDetector(
-                            onHorizontalDragEnd: (details) {
-                              final velocity = details.primaryVelocity ?? 0;
-                              if (velocity < -250) {
-                                ref
-                                    .read(alertasProvider.notifier)
-                                    .eliminar(alerta.id);
-                              }
-                            },
-                            child: AlertaCard(
-                              alerta: alerta,
-                              onVerReceta: alerta.recetaSugerida == null
-                                  ? null
-                                  : (receta) => _abrirDetalle(receta),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                      ),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final alerta = alertas[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.md,
                             ),
-                          ),
-                        );
-                      }, childCount: alertas.length),
+                            child: Dismissible(
+                              key: ValueKey(alerta.id),
+                              direction: DismissDirection.endToStart,
+                              background: _FondoDescartar(),
+                              onDismissed: (_) =>
+                                  _descartar(context, ref, alerta),
+                              child: AlertaCard(
+                                alerta: alerta,
+                                onVerReceta: alerta.recetaSugerida == null
+                                    ? null
+                                    : (receta) => _abrirDetalle(receta),
+                              ),
+                            ),
+                          );
+                        }, childCount: alertas.length),
+                      ),
                     ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 110)),
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: Responsive.isTabletOrWeb(context)
+                            ? AppSpacing.xl
+                            : 110,
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -231,6 +234,25 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
     );
   }
 
+  /// Descarta una alerta dejando siempre la puerta abierta: es una accion
+  /// destructiva y antes no habia forma de deshacerla.
+  void _descartar(BuildContext context, WidgetRef ref, Alerta alerta) {
+    final notifier = ref.read(alertasProvider.notifier);
+    notifier.eliminar(alerta.id);
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('Alerta de ${alerta.nombreProducto} descartada'),
+          action: SnackBarAction(
+            label: 'Deshacer',
+            onPressed: notifier.refrescar,
+          ),
+        ),
+      );
+  }
+
   void _confirmarBorrado(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -238,9 +260,9 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
       builder: (_) => Container(
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: context.paleta.marcaSuave,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.paleta.contorno),
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -254,24 +276,24 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: context.paleta.contorno,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Borrar todas las alertas',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textMain,
+                  color: context.paleta.tinta,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Esta accion eliminara las alertas actuales. Las nuevas se generaran cuando corresponda.',
-                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                style: TextStyle(fontSize: 12, color: context.paleta.apagado),
               ),
               const SizedBox(height: 16),
               Row(
@@ -290,13 +312,16 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                         await ref.read(alertasProvider.notifier).borrarTodas();
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text('Alertas eliminadas'),
-                              backgroundColor: AppColors.green,
+                              backgroundColor: context.paleta.marca,
                             ),
                           );
                         }
                       },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: context.paleta.vencido,
+                      ),
                       child: const Text('Borrar todo'),
                     ),
                   ),
@@ -369,5 +394,31 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
         .replaceAll('&nbsp;', ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
+  }
+}
+
+/// Fondo que aparece al arrastrar una alerta: sin esto el gesto era invisible
+/// y nadie lo descubria.
+class _FondoDescartar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final paleta = context.paleta;
+
+    return Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: paleta.vencido.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Descartar', style: AppTextStyles.rotulo(context)),
+          const SizedBox(width: AppSpacing.sm),
+          Icon(Icons.delete_outline_rounded, color: paleta.vencido),
+        ],
+      ),
+    );
   }
 }

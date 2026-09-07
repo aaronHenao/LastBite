@@ -28,7 +28,7 @@ class AuthField extends StatelessWidget {
       obscureText: obscureText,
       keyboardType: keyboardType,
       style: textTheme.titleMedium?.copyWith(
-        color: AppColors.green,
+        color: context.paleta.marca,
         fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
@@ -36,32 +36,32 @@ class AuthField extends StatelessWidget {
         hintText: hint,
         suffixIcon: suffixIcon != null 
             ? IconTheme(
-                data: const IconThemeData(color: AppColors.green),
+                data: IconThemeData(color: context.paleta.marca),
                 child: suffixIcon!,
               )
             : null,
         filled: true,
-        fillColor: AppColors.card, 
+        fillColor: context.paleta.superficie, 
         
         labelStyle: textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w500,
-          color: AppColors.green.withValues(alpha: 0.7), 
+          color: context.paleta.marca.withValues(alpha: 0.7), 
         ),
         hintStyle: textTheme.bodySmall?.copyWith(
-          color: AppColors.green.withValues(alpha: 0.5),
+          color: context.paleta.marca.withValues(alpha: 0.5),
         ),
         
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.green),
+          borderSide: BorderSide(color: context.paleta.marca),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.green),
+          borderSide: BorderSide(color: context.paleta.marca),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.green, width: 2.0),
+          borderSide: BorderSide(color: context.paleta.marca, width: 2.0),
         ),
       ),
     );

@@ -1,8 +1,15 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/pastilla_estado.dart';
 import '../../domain/producto.dart';
 
+/// Tarjeta de producto de la despensa.
+///
+/// El color se gana, no se reparte: un producto en buen estado no lleva
+/// insignia, ni barra, ni borde de color — solo su fecha en texto apagado. Asi
+/// lo urgente salta sin necesidad de gritar. Antes todas las tarjetas eran
+/// iguales y el unico refuerzo del urgente era una sombra verde, que
+/// contradecia su propio badge rojo.
 class ProductoCard extends StatelessWidget {
   final Producto producto;
   final VoidCallback? onTap;
@@ -12,103 +19,75 @@ class ProductoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final paleta = context.paleta;
 
-    final bool esUrgente = producto.urgente;
+    final dias = producto.diasRestantes;
+    final estado = paleta.urgenciaPorDias(dias);
 
-    final int diasRestantes = producto.diasRestantes;
-
-    final Color colorEstado = esUrgente ? AppColors.danger : AppColors.green;
+    // Solo lo que ya vencio o vence mañana levanta la tarjeta entera.
+    final reclamaAtencion = dias <= 1;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: AnimatedContainer(
+          duration: AppMotion.mueve,
+          curve: AppMotion.curvaMueve,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
           decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(20),
-            border: !esUrgente
-                ? Border.all(color: AppColors.border.withValues(alpha: 0.5))
-                : null,
-            boxShadow: [
-              if (esUrgente)
-                BoxShadow(
-                  color: AppColors.accent.withValues(alpha: 0.25),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                  spreadRadius: -4,
-                )
-              else
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-            ],
+            color: paleta.superficie,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: reclamaAtencion && estado != null
+                  ? estado
+                  : paleta.contorno,
+              width: reclamaAtencion ? 1.5 : 1,
+            ),
           ),
           child: Row(
             children: [
-              Text(producto.emoji, style: const TextStyle(fontSize: 30)),
-              const SizedBox(width: 14),
-
+              if (reclamaAtencion && estado != null) ...[
+                // Barra lateral: refuerza la urgencia con forma, no solo con
+                // color, para quien no distingue rojo de naranja.
+                Container(
+                  width: 3,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: estado,
+                    borderRadius: BorderRadius.circular(AppRadius.chip),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+              ],
+              Text(producto.emoji, style: const TextStyle(fontSize: 28)),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       producto.nombre,
-                      style: textTheme.bodyLarge?.copyWith(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textMain,
-                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.titleMedium,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '${producto.cantidad} · ${producto.categoria}',
-                      style: textTheme.bodySmall?.copyWith(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textMuted,
-                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.bodySmall,
                     ),
                   ],
                 ),
               ),
-
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: colorEstado.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${producto.diasRestantes}d',
-                      style: textTheme.bodySmall?.copyWith(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        color: colorEstado,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    if (diasRestantes <= 1)
-                      Icon(
-                        CupertinoIcons.exclamationmark_triangle_fill,
-                        size: 14,
-                        color: colorEstado,
-                      ),
-                  ],
-                ),
-              ),
+              const SizedBox(width: AppSpacing.sm),
+              PastillaEstado(dias: dias),
             ],
           ),
         ),
@@ -116,3 +95,4 @@ class ProductoCard extends StatelessWidget {
     );
   }
 }
+

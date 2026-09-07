@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lastbite/core/widgets/boton_volver.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
 import '../../../core/theme/app_theme.dart';
@@ -84,17 +85,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  //back
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Text(
-                      '← Volver',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ),
+                  const BotonVolver(),
                   const SizedBox(height: 24),
 
                   //header
@@ -103,7 +94,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     style: textTheme.bodyLarge?.copyWith(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textMain,
+                      color: context.paleta.tinta,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -111,7 +102,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     'Empieza a salvar tus alimentos',
                     style: textTheme.bodyMedium?.copyWith(
                       fontSize: 15,
-                      color: AppColors.textMuted,
+                      color: context.paleta.apagado,
                     ),
                   ),
                   const SizedBox(height: 36),
@@ -144,7 +135,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         _verPassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: AppColors.textMuted,
+                        color: context.paleta.apagado,
                         size: 20,
                       ),
                       onPressed: () =>
@@ -168,16 +159,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppColors.danger.withValues(alpha: 0.12),
+                        color: context.paleta.vencido.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: AppColors.danger.withValues(alpha: 0.4),
+                          color: context.paleta.vencido.withValues(alpha: 0.4),
                         ),
                       ),
                       child: Text(
                         _error!,
-                        style: const TextStyle(
-                          color: AppColors.danger,
+                        style: TextStyle(
+                          color: context.paleta.vencido,
                           fontSize: 13,
                         ),
                       ),
@@ -191,7 +182,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     child: FilledButton(
                       onPressed: _cargando ? null : _registrar,
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.accent,
+                        backgroundColor: context.paleta.marca,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(

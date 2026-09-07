@@ -27,6 +27,36 @@ class Producto {
   bool get critico => diasRestantes <= 1;
   bool get vencido => diasRestantes < 0;
 
+  /// Dos productos son el mismo si coinciden los campos que se guardan. Sin
+  /// esto, comparar dos listas de productos siempre daba distinto y cualquier
+  /// re-emision del stream de Firestore se tomaba como un cambio real.
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Producto &&
+          other.id == id &&
+          other.nombre == nombre &&
+          other.emoji == emoji &&
+          other.categoria == categoria &&
+          other.cantidad == cantidad &&
+          other.fechaCaducidad == fechaCaducidad &&
+          other.esFresco == esFresco &&
+          other.codigoBarras == codigoBarras &&
+          other.imagenUrl == imagenUrl;
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    nombre,
+    emoji,
+    categoria,
+    cantidad,
+    fechaCaducidad,
+    esFresco,
+    codigoBarras,
+    imagenUrl,
+  );
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,

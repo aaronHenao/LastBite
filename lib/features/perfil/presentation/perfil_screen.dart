@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:lastbite/core/widgets/boton_volver.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
@@ -39,28 +40,7 @@ class PerfilScreen extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                   child: Column(
                     children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: InkWell(
-                          onTap: () => Navigator.pop(context),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 6,
-                            ),
-                            child: Text(
-                              '← Volver',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: AppColors.textMuted.withValues(
-                                  alpha: 0.9,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                      const BotonVolver(),
                       const SizedBox(height: 16),
                       Builder(
                         builder: (context) {
@@ -70,19 +50,29 @@ class PerfilScreen extends ConsumerWidget {
                           if (!isWeb && fotoUrl != null) {
                             return CircleAvatar(
                               radius: 44,
-                              backgroundColor: AppColors.surface,
+                              backgroundColor: context.paleta.marcaSuave,
                               backgroundImage: CachedNetworkImageProvider(
                                 fotoUrl,
                               ),
                             );
                           }
+                          if (fotoUrl != null) {
+                            // En web CachedNetworkImage no se comporta bien,
+                            // pero NetworkImage si: no hay razon para perder
+                            // la foto del usuario en pantallas anchas.
+                            return CircleAvatar(
+                              radius: 44,
+                              backgroundColor: context.paleta.marcaSuave,
+                              backgroundImage: _buildImageProvider(fotoUrl),
+                            );
+                          }
                           return CircleAvatar(
                             radius: 44,
-                            backgroundColor: AppColors.surface,
-                            child: const Icon(
+                            backgroundColor: context.paleta.marcaSuave,
+                            child: Icon(
                               Icons.person,
                               size: 44,
-                              color: AppColors.textMuted,
+                              color: context.paleta.apagado,
                             ),
                           );
                         },
@@ -93,14 +83,14 @@ class PerfilScreen extends ConsumerWidget {
                         style: textTheme.bodyLarge?.copyWith(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.textMain,
+                          color: context.paleta.tinta,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         user?.email ?? '',
                         style: textTheme.bodySmall?.copyWith(
-                          color: AppColors.textMuted,
+                          color: context.paleta.apagado,
                           fontSize: 13,
                         ),
                       ),
@@ -112,25 +102,25 @@ class PerfilScreen extends ConsumerWidget {
                           vertical: 12,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.green.withValues(alpha: 0.12),
+                          color: context.paleta.marca.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: AppColors.green.withValues(alpha: 0.3),
+                            color: context.paleta.marca.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               CupertinoIcons.check_mark_circled,
-                              color: AppColors.green,
+                              color: context.paleta.marca,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               '$salvados alimentos salvados',
                               style: textTheme.bodyMedium?.copyWith(
-                                color: AppColors.green,
+                                color: context.paleta.marca,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -151,15 +141,15 @@ class PerfilScreen extends ConsumerWidget {
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.card,
+                            color: context.paleta.superficie,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(color: context.paleta.contorno),
                           ),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.restaurant_menu_outlined,
-                                color: AppColors.accent,
+                                color: context.paleta.marca,
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -180,9 +170,9 @@ class PerfilScreen extends ConsumerWidget {
                                   ],
                                 ),
                               ),
-                              const Icon(
+                              Icon(
                                 Icons.chevron_right_rounded,
-                                color: AppColors.textMuted,
+                                color: context.paleta.apagado,
                               ),
                             ],
                           ),
@@ -192,10 +182,10 @@ class PerfilScreen extends ConsumerWidget {
 
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             CupertinoIcons.cart,
                             size: 16,
-                            color: AppColors.accent,
+                            color: context.paleta.marca,
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -204,7 +194,7 @@ class PerfilScreen extends ConsumerWidget {
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1.5,
-                              color: AppColors.textMuted,
+                              color: context.paleta.apagado,
                             ),
                           ),
                           const Spacer(),
@@ -216,7 +206,7 @@ class PerfilScreen extends ConsumerWidget {
                                 onPressed: () =>
                                     _confirmarLimpiar(context, ref),
                                 style: TextButton.styleFrom(
-                                  foregroundColor: AppColors.accent,
+                                  foregroundColor: context.paleta.marca,
                                   padding: EdgeInsets.zero,
                                 ),
                                 child: const Text(
@@ -240,11 +230,11 @@ class PerfilScreen extends ConsumerWidget {
 
               //lista de compras
               asyncLista.when(
-                loading: () => const SliverToBoxAdapter(
+                loading: () => SliverToBoxAdapter(
                   child: Center(
                     child: Padding(
                       padding: EdgeInsets.only(top: 40),
-                      child: CircularProgressIndicator(color: AppColors.accent),
+                      child: CircularProgressIndicator(color: context.paleta.marca),
                     ),
                   ),
                 ),
@@ -252,7 +242,7 @@ class PerfilScreen extends ConsumerWidget {
                   child: Center(
                     child: Text(
                       'Error: $e',
-                      style: const TextStyle(color: AppColors.danger),
+                      style: TextStyle(color: context.paleta.vencido),
                     ),
                   ),
                 ),
@@ -264,16 +254,16 @@ class PerfilScreen extends ConsumerWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               CupertinoIcons.cart,
                               size: 48,
-                              color: AppColors.textMuted,
+                              color: context.paleta.apagado,
                             ),
                             const SizedBox(height: 12),
                             Text(
                               'Tu lista de compras está vacía',
                               style: textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textMuted,
+                                color: context.paleta.apagado,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -281,7 +271,7 @@ class PerfilScreen extends ConsumerWidget {
                               'Los productos que consumas o elimines\naparecerán aquí',
                               textAlign: TextAlign.center,
                               style: textTheme.bodySmall?.copyWith(
-                                color: AppColors.textMuted.withValues(
+                                color: context.paleta.apagado.withValues(
                                   alpha: 0.7,
                                 ),
                                 fontSize: 12,
@@ -320,7 +310,7 @@ class PerfilScreen extends ConsumerWidget {
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1.5,
-                              color: AppColors.textMuted,
+                              color: context.paleta.apagado,
                             ),
                           ),
                         ),
@@ -352,25 +342,25 @@ class PerfilScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.paleta.marcaSuave,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
+        title: Text(
           'Limpiar comprados',
           style: TextStyle(
-            color: AppColors.textMain,
+            color: context.paleta.tinta,
             fontWeight: FontWeight.w800,
           ),
         ),
-        content: const Text(
+        content: Text(
           '¿Eliminar todos los productos marcados como comprados?',
-          style: TextStyle(color: AppColors.textMuted),
+          style: TextStyle(color: context.paleta.apagado),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'Cancelar',
-              style: TextStyle(color: AppColors.textMuted),
+              style: TextStyle(color: context.paleta.apagado),
             ),
           ),
           FilledButton(
@@ -378,7 +368,7 @@ class PerfilScreen extends ConsumerWidget {
               Navigator.pop(context);
               await ref.read(listaComprasProvider.notifier).limpiarComprados();
             },
-            style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
+            style: FilledButton.styleFrom(backgroundColor: context.paleta.marca),
             child: const Text('Limpiar'),
           ),
         ],
@@ -407,12 +397,12 @@ class _ItemCompraCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: context.paleta.superficie,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: item.comprado
-                  ? AppColors.green.withValues(alpha: 0.3)
-                  : AppColors.border,
+                  ? context.paleta.marca.withValues(alpha: 0.3)
+                  : context.paleta.contorno,
             ),
           ),
           child: Row(
@@ -424,11 +414,11 @@ class _ItemCompraCard extends StatelessWidget {
                   height: 24,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: item.comprado ? AppColors.green : Colors.transparent,
+                    color: item.comprado ? context.paleta.marca : Colors.transparent,
                     border: Border.all(
                       color: item.comprado
-                          ? AppColors.green
-                          : AppColors.textMuted,
+                          ? context.paleta.marca
+                          : context.paleta.apagado,
                       width: 2,
                     ),
                   ),
@@ -450,12 +440,12 @@ class _ItemCompraCard extends StatelessWidget {
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: item.comprado
-                            ? AppColors.textMuted
-                            : AppColors.textMain,
+                            ? context.paleta.apagado
+                            : context.paleta.tinta,
                         decoration: item.comprado
                             ? TextDecoration.lineThrough
                             : null,
-                        decorationColor: AppColors.textMuted,
+                        decorationColor: context.paleta.apagado,
                       ),
                     ),
                     if (item.fechaConsumido != null ||
@@ -469,13 +459,13 @@ class _ItemCompraCard extends StatelessWidget {
                             _FechaPill(
                               text:
                                   'Consumido: ${_formatearFecha(item.fechaConsumido!)}',
-                              color: AppColors.green,
+                              color: context.paleta.marca,
                             ),
                           if (item.fechaVencido != null)
                             _FechaPill(
                               text:
                                   'Venció: ${_formatearFecha(item.fechaVencido!)}',
-                              color: AppColors.danger,
+                              color: context.paleta.vencido,
                             ),
                         ],
                       ),

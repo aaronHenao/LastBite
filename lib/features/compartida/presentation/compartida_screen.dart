@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/responsive/responsive.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
+import 'package:lastbite/core/widgets/boton_volver.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 
 import '../domain/despensa_compartida.dart';
@@ -30,13 +31,13 @@ class DespensaCompartidaScreen extends ConsumerWidget {
             // ancho en tablet y web.
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
             children: [
-              _BotonVolver(),
+              const BotonVolver(),
               const SizedBox(height: 12),
               asyncDespensa.when(
-                loading: () => const Padding(
+                loading: () => Padding(
                   padding: EdgeInsets.only(top: 60),
                   child: Center(
-                    child: CircularProgressIndicator(color: AppColors.accent),
+                    child: CircularProgressIndicator(color: context.paleta.marca),
                   ),
                 ),
                 error: (e, _) => _MensajeError(mensaje: '$e'),
@@ -55,28 +56,6 @@ class DespensaCompartidaScreen extends ConsumerWidget {
   }
 }
 
-class _BotonVolver extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: InkWell(
-        onTap: () => Navigator.pop(context),
-        borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-          child: Text(
-            '← Volver',
-            style: TextStyle(
-              fontSize: 15,
-              color: AppColors.textMuted.withValues(alpha: 0.9),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _MensajeError extends StatelessWidget {
   const _MensajeError({required this.mensaje});
@@ -90,7 +69,7 @@ class _MensajeError extends StatelessWidget {
         child: Text(
           mensaje,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: AppColors.danger),
+          style: TextStyle(color: context.paleta.vencido),
         ),
       ),
     );
@@ -133,7 +112,7 @@ class _SinDespensa extends ConsumerWidget {
         Text(
           'Comparte una sola despensa con tu familia: los productos, las '
           'alertas y las recetas son los mismos para todos.',
-          style: textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
+          style: textTheme.bodyMedium?.copyWith(color: context.paleta.apagado),
         ),
         const SizedBox(height: 24),
         if (anchoAmplio)
@@ -169,17 +148,17 @@ class _NotaUnaDespensa extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.6),
+        color: context.paleta.marcaSuave.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.paleta.contorno),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             CupertinoIcons.info_circle,
             size: 18,
-            color: AppColors.textMuted,
+            color: context.paleta.apagado,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -188,7 +167,7 @@ class _NotaUnaDespensa extends StatelessWidget {
               'una compartida.',
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+              ).textTheme.bodySmall?.copyWith(color: context.paleta.apagado),
             ),
           ),
         ],
@@ -223,13 +202,13 @@ class _AccionCard extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: principal
-              ? AppColors.green.withValues(alpha: 0.12)
-              : AppColors.card,
+              ? context.paleta.marca.withValues(alpha: 0.12)
+              : context.paleta.superficie,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: principal
-                ? AppColors.green.withValues(alpha: 0.35)
-                : AppColors.border,
+                ? context.paleta.marca.withValues(alpha: 0.35)
+                : context.paleta.contorno,
           ),
         ),
         child: Column(
@@ -238,14 +217,14 @@ class _AccionCard extends StatelessWidget {
             Icon(
               icono,
               size: 26,
-              color: principal ? AppColors.green : AppColors.accent,
+              color: principal ? context.paleta.marca : context.paleta.marca,
             ),
             const SizedBox(height: 12),
             Text(titulo, style: textTheme.titleLarge),
             const SizedBox(height: 6),
             Text(
               descripcion,
-              style: textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+              style: textTheme.bodySmall?.copyWith(color: context.paleta.apagado),
             ),
           ],
         ),
@@ -276,17 +255,17 @@ class _ConDespensa extends ConsumerWidget {
           esAdmin
               ? 'Eres el administrador de esta despensa.'
               : 'Administrada por ${despensa.miembro(despensa.adminUid)?.nombre ?? 'otro miembro'}.',
-          style: textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+          style: textTheme.bodySmall?.copyWith(color: context.paleta.apagado),
         ),
         const SizedBox(height: 20),
         _CodigoCard(codigo: despensa.codigo),
         const SizedBox(height: 24),
         Row(
           children: [
-            const Icon(
+            Icon(
               CupertinoIcons.person_2,
               size: 16,
-              color: AppColors.accent,
+              color: context.paleta.marca,
             ),
             const SizedBox(width: 8),
             Text(
@@ -295,7 +274,7 @@ class _ConDespensa extends ConsumerWidget {
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.5,
-                color: AppColors.textMuted,
+                color: context.paleta.apagado,
               ),
             ),
           ],
@@ -303,13 +282,23 @@ class _ConDespensa extends ConsumerWidget {
         const SizedBox(height: 12),
         _MiembrosGrid(despensa: despensa, uid: uid, esAdmin: esAdmin),
         const SizedBox(height: 28),
-        if (esAdmin)
+        if (esAdmin) ...[
+          // El admin tambien puede irse: le deja la administracion a otro
+          // miembro en vez de destruir la despensa de todos.
+          if (despensa.miembros.length > 1) ...[
+            _BotonPeligro(
+              icono: CupertinoIcons.square_arrow_left,
+              texto: 'Salir y ceder la administración',
+              onTap: () => _confirmarSalirComoAdmin(context, ref, despensa, uid),
+            ),
+            const SizedBox(height: 10),
+          ],
           _BotonPeligro(
             icono: CupertinoIcons.delete,
             texto: 'Eliminar despensa',
             onTap: () => _confirmarEliminar(context, ref, despensa),
-          )
-        else
+          ),
+        ] else
           _BotonPeligro(
             icono: CupertinoIcons.square_arrow_left,
             texto: 'Salir de la despensa',
@@ -334,14 +323,14 @@ class _CodigoCard extends StatelessWidget {
       children: [
         Text(
           'CÓDIGO DE INVITACIÓN',
-          style: textTheme.labelSmall?.copyWith(color: AppColors.textMuted),
+          style: textTheme.labelSmall?.copyWith(color: context.paleta.apagado),
         ),
         const SizedBox(height: 6),
         Text(
           codigo,
           style: textTheme.displayMedium?.copyWith(
             letterSpacing: 6,
-            color: AppColors.green,
+            color: context.paleta.marca,
           ),
         ),
       ],
@@ -355,7 +344,7 @@ class _CodigoCard extends StatelessWidget {
           const SnackBar(content: Text('Código copiado')),
         );
       },
-      style: FilledButton.styleFrom(backgroundColor: AppColors.green),
+      style: FilledButton.styleFrom(backgroundColor: context.paleta.marca),
       icon: const Icon(CupertinoIcons.doc_on_doc, size: 16),
       label: const Text('Copiar'),
     );
@@ -364,9 +353,9 @@ class _CodigoCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.paleta.marcaSuave,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.paleta.contorno),
       ),
       child: apretado
           ? Column(
@@ -450,8 +439,8 @@ class _BotonPeligro extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.danger,
-          side: BorderSide(color: AppColors.danger.withValues(alpha: 0.5)),
+          foregroundColor: context.paleta.vencido,
+          side: BorderSide(color: context.paleta.vencido.withValues(alpha: 0.5)),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -507,6 +496,20 @@ Future<void> _dialogoUnirse(BuildContext context, WidgetRef ref) async {
   );
   if (codigo == null || !context.mounted) return;
 
+  // Se valida el codigo antes de preguntar por la migracion: si no existe la
+  // despensa, no tiene sentido que el usuario decida sobre sus productos.
+  final despensaId = await ref.read(buscarPorCodigoProvider(codigo).future);
+  if (!context.mounted) return;
+  if (despensaId == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: context.paleta.vencido,
+        content: Text('No existe una despensa con ese código.'),
+      ),
+    );
+    return;
+  }
+
   final migrar = await _preguntarMigracion(context, ref);
   if (migrar == null || !context.mounted) return;
 
@@ -532,36 +535,36 @@ Future<bool?> _preguntarMigracion(BuildContext context, WidgetRef ref) async {
   return showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.paleta.marcaSuave,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text(
+      title: Text(
         'Migrar tus productos',
-        style: TextStyle(color: AppColors.textMain, fontWeight: FontWeight.w800),
+        style: TextStyle(color: context.paleta.tinta, fontWeight: FontWeight.w800),
       ),
       content: Text(
         'Tienes $cantidad producto${cantidad == 1 ? '' : 's'} en tu despensa '
         'personal. ¿Quieres moverlos a la despensa compartida? Si no, se '
         'quedan en tu despensa personal y volverás a verlos cuando salgas.',
-        style: const TextStyle(color: AppColors.textMuted),
+        style: TextStyle(color: context.paleta.apagado),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext),
-          child: const Text(
+          child: Text(
             'Cancelar',
-            style: TextStyle(color: AppColors.textMuted),
+            style: TextStyle(color: context.paleta.apagado),
           ),
         ),
         TextButton(
           onPressed: () => Navigator.pop(dialogContext, false),
-          child: const Text(
+          child: Text(
             'No migrar',
-            style: TextStyle(color: AppColors.textMuted),
+            style: TextStyle(color: context.paleta.apagado),
           ),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(dialogContext, true),
-          style: FilledButton.styleFrom(backgroundColor: AppColors.green),
+          style: FilledButton.styleFrom(backgroundColor: context.paleta.marca),
           child: const Text('Migrar'),
         ),
       ],
@@ -589,6 +592,126 @@ Future<void> _confirmarSalir(
     () => ref.read(compartidaProvider.notifier).salir(despensa.id),
     exito: 'Saliste de la despensa',
   );
+}
+
+Future<void> _confirmarSalirComoAdmin(
+  BuildContext context,
+  WidgetRef ref,
+  DespensaCompartida despensa,
+  String uid,
+) async {
+  final candidatos = despensa.miembros.where((m) => m.uid != uid).toList();
+  if (candidatos.isEmpty) return;
+
+  final nuevoAdmin = await showDialog<String>(
+    context: context,
+    builder: (dialogContext) => _DialogoNuevoAdmin(candidatos: candidatos),
+  );
+  if (nuevoAdmin == null || !context.mounted) return;
+
+  final nombre = despensa.miembro(nuevoAdmin)?.nombre ?? 'ese miembro';
+  final ok = await _confirmar(
+    context,
+    titulo: 'Salir de la despensa',
+    mensaje:
+        '$nombre pasa a ser el administrador y vos volvés a tu despensa '
+        'personal. Los productos que agregaste se quedan en la compartida.',
+    textoBoton: 'Salir',
+  );
+  if (ok != true || !context.mounted) return;
+
+  await _ejecutar(
+    context,
+    () => ref
+        .read(compartidaProvider.notifier)
+        .salir(despensa.id, nuevoAdminUid: nuevoAdmin),
+    exito: 'Saliste de la despensa. Ahora administra $nombre.',
+  );
+}
+
+class _DialogoNuevoAdmin extends StatefulWidget {
+  const _DialogoNuevoAdmin({required this.candidatos});
+
+  final List<MiembroDespensa> candidatos;
+
+  @override
+  State<_DialogoNuevoAdmin> createState() => _DialogoNuevoAdminState();
+}
+
+class _DialogoNuevoAdminState extends State<_DialogoNuevoAdmin> {
+  late String _elegido = widget.candidatos.first.uid;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: context.paleta.marcaSuave,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(
+        '¿Quién administra la despensa?',
+        style: TextStyle(
+          color: context.paleta.tinta,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quien elijas va a poder agregar y sacar miembros, y eliminar la '
+            'despensa.',
+            style: TextStyle(color: context.paleta.apagado, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          RadioGroup<String>(
+            groupValue: _elegido,
+            onChanged: (valor) => setState(() => _elegido = valor!),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final miembro in widget.candidatos)
+                  RadioListTile<String>(
+                    value: miembro.uid,
+                    activeColor: context.paleta.marca,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      miembro.nombre,
+                      style: TextStyle(
+                        color: context.paleta.tinta,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: miembro.email == null
+                        ? null
+                        : Text(
+                            miembro.email!,
+                            style: TextStyle(
+                              color: context.paleta.apagado,
+                              fontSize: 12,
+                            ),
+                          ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancelar',
+            style: TextStyle(color: context.paleta.apagado),
+          ),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _elegido),
+          style: FilledButton.styleFrom(backgroundColor: context.paleta.marca),
+          child: const Text('Continuar'),
+        ),
+      ],
+    );
+  }
 }
 
 Future<void> _confirmarEliminar(
@@ -648,30 +771,30 @@ Future<bool?> _confirmar(
   return showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.paleta.marcaSuave,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(
         titulo,
-        style: const TextStyle(
-          color: AppColors.textMain,
+        style: TextStyle(
+          color: context.paleta.tinta,
           fontWeight: FontWeight.w800,
         ),
       ),
       content: Text(
         mensaje,
-        style: const TextStyle(color: AppColors.textMuted),
+        style: TextStyle(color: context.paleta.apagado),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext, false),
-          child: const Text(
+          child: Text(
             'Cancelar',
-            style: TextStyle(color: AppColors.textMuted),
+            style: TextStyle(color: context.paleta.apagado),
           ),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(dialogContext, true),
-          style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+          style: FilledButton.styleFrom(backgroundColor: context.paleta.vencido),
           child: Text(textoBoton),
         ),
       ],
@@ -686,6 +809,7 @@ Future<void> _ejecutar(
 }) async {
   final messenger = ScaffoldMessenger.of(context);
   final navigator = Navigator.of(context, rootNavigator: true);
+  final colorError = context.paleta.vencido;
 
   // Bloquea la pantalla mientras dura la escritura en Firestore: sin esto no
   // hay senal de progreso y se puede tocar el boton dos veces.
@@ -693,8 +817,8 @@ Future<void> _ejecutar(
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: AppColors.accent),
+      builder: (_) => Center(
+        child: CircularProgressIndicator(color: context.paleta.marca),
       ),
     ),
   );
@@ -706,7 +830,7 @@ Future<void> _ejecutar(
   } catch (e) {
     navigator.pop();
     messenger.showSnackBar(
-      SnackBar(backgroundColor: AppColors.danger, content: Text('$e')),
+      SnackBar(backgroundColor: colorError, content: Text('\$e')),
     );
   }
 }
@@ -755,12 +879,12 @@ class _DialogoTextoState extends State<_DialogoTexto> {
     final maxLength = widget.maxLength;
 
     return AlertDialog(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.paleta.marcaSuave,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(
         titulo,
-        style: const TextStyle(
-          color: AppColors.textMain,
+        style: TextStyle(
+          color: context.paleta.tinta,
           fontWeight: FontWeight.w800,
         ),
       ),
@@ -770,7 +894,7 @@ class _DialogoTextoState extends State<_DialogoTexto> {
         children: [
           Text(
             descripcion,
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+            style: TextStyle(color: context.paleta.apagado, fontSize: 13),
           ),
           const SizedBox(height: 14),
           TextField(
@@ -784,7 +908,7 @@ class _DialogoTextoState extends State<_DialogoTexto> {
                 ? [UpperCaseTextFormatter()]
                 : const [],
             style: TextStyle(
-              color: AppColors.textMain,
+              color: context.paleta.tinta,
               fontWeight: FontWeight.w600,
               letterSpacing: mayusculas ? 4 : 0,
             ),
@@ -792,18 +916,18 @@ class _DialogoTextoState extends State<_DialogoTexto> {
               hintText: hint,
               counterText: '',
               filled: true,
-              fillColor: AppColors.card,
+              fillColor: context.paleta.superficie,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(color: context.paleta.contorno),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(color: context.paleta.contorno),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.green),
+                borderSide: BorderSide(color: context.paleta.marca),
               ),
             ),
             onSubmitted: (valor) => _enviar(context, valor),
@@ -813,14 +937,14 @@ class _DialogoTextoState extends State<_DialogoTexto> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text(
+          child: Text(
             'Cancelar',
-            style: TextStyle(color: AppColors.textMuted),
+            style: TextStyle(color: context.paleta.apagado),
           ),
         ),
         FilledButton(
           onPressed: () => _enviar(context, controller.text),
-          style: FilledButton.styleFrom(backgroundColor: AppColors.green),
+          style: FilledButton.styleFrom(backgroundColor: context.paleta.marca),
           child: Text(textoBoton),
         ),
       ],

@@ -8,6 +8,22 @@ import 'package:lastbite/features/alertas/presentation/alertas_screen.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_screen.dart';
 import 'package:lastbite/features/recetas/presentation/recetas_screen.dart';
 import 'package:lastbite/core/notifications/notification_service.dart';
+import 'package:lastbite/core/theme/interruptor_tema.dart';
+import 'package:lastbite/core/widgets/marca_lastbite.dart';
+import 'package:lastbite/core/widgets/menu_cuenta.dart';
+
+/// Destinos de la navegacion principal. Antes los iconos viajaban sueltos y
+/// sin etiqueta: la barra movil no anunciaba nada a un lector de pantalla, y
+/// una camara para "Agregar" o un gorro de chef para "Recetas" no son iconos
+/// que se entiendan solos.
+typedef _Destino = ({IconData icono, String etiqueta});
+
+const List<_Destino> _destinos = [
+  (icono: HugeIcons.strokeRoundedHome04, etiqueta: 'Despensa'),
+  (icono: CupertinoIcons.camera, etiqueta: 'Agregar'),
+  (icono: HugeIcons.strokeRoundedChefHat, etiqueta: 'Recetas'),
+  (icono: CupertinoIcons.bell, etiqueta: 'Alertas'),
+];
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -51,25 +67,30 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final isWide = Responsive.isTabletOrWeb(context);
 
+    // En ancho la navegacion va arriba y en horizontal: el menu lateral se
+    // llevaba 220px permanentes para mostrar cuatro iconos.
     if (isWide) {
       return Scaffold(
-        backgroundColor: AppColors.bg,
-        body: Row(
-          children: [
-            //sidebaar izq
-            _Sidebar(selectedIndex: _selectedIndex, onTap: _onItemTapped),
-            //contenido principal
-            Expanded(
-              child: IndexedStack(index: _selectedIndex, children: _pages),
-            ),
-          ],
+        backgroundColor: context.paleta.papel,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _BarraNavegacion(
+                selectedIndex: _selectedIndex,
+                onTap: _onItemTapped,
+              ),
+              Expanded(
+                child: IndexedStack(index: _selectedIndex, children: _pages),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     //navbar flotante (mobile)
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: context.paleta.papel,
       body: Stack(
         children: [
           IndexedStack(index: _selectedIndex, children: _pages),
@@ -88,139 +109,6 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
-//sidebar tablet/web
-class _Sidebar extends StatelessWidget {
-  final int selectedIndex;
-  final ValueChanged<int> onTap;
-
-  const _Sidebar({required this.selectedIndex, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final isWeb = Responsive.isWeb(context);
-
-    return Container(
-      width: isWeb ? 220 : 72,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border(right: BorderSide(color: AppColors.border)),
-      ),
-      child: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            //logo letra
-            if (isWeb) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    Image.asset(
-                      'lib/assets/images/letra.png',
-                      height: 95,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(width: 5),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
-            ] else ...[
-              Text('🌿', style: const TextStyle(fontSize: 24)),
-              const SizedBox(height: 32),
-            ],
-
-            //items de navegación
-            _SidebarItem(
-              icon: HugeIcons.strokeRoundedHome04,
-              label: 'Despensa',
-              selected: selectedIndex == 0,
-              showLabel: isWeb,
-              onTap: () => onTap(0),
-            ),
-            _SidebarItem(
-              icon: CupertinoIcons.camera,
-              label: 'Agregar',
-              selected: selectedIndex == 1,
-              showLabel: isWeb,
-              onTap: () => onTap(1),
-            ),
-            _SidebarItem(
-              icon: HugeIcons.strokeRoundedChefHat,
-              label: 'Recetas',
-              selected: selectedIndex == 2,
-              showLabel: isWeb,
-              onTap: () => onTap(2),
-            ),
-            _SidebarItem(
-              icon: CupertinoIcons.bell,
-              label: 'Alertas',
-              selected: selectedIndex == 3,
-              showLabel: isWeb,
-              onTap: () => onTap(3),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SidebarItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final bool showLabel;
-  final VoidCallback onTap;
-
-  const _SidebarItem({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.showLabel,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? AppColors.accent : AppColors.textMuted;
-    final bg = selected
-        ? AppColors.accent.withValues(alpha: 0.12)
-        : Colors.transparent;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: showLabel
-              ? Row(
-                  children: [
-                    Icon(icon, size: 22, color: color),
-                    const SizedBox(width: 12),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: color,
-                      ),
-                    ),
-                  ],
-                )
-              : Center(child: Icon(icon, size: 24, color: color)),
-        ),
-      ),
-    );
-  }
-}
 
 //navbar mobile
 class _FloatingMenuBar extends StatelessWidget {
@@ -236,9 +124,9 @@ class _FloatingMenuBar extends StatelessWidget {
       child: Container(
         height: 70,
         decoration: BoxDecoration(
-          color: AppColors.surface.withValues(alpha: 0.8),
+          color: context.paleta.marcaSuave.withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.paleta.contorno),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
@@ -249,26 +137,13 @@ class _FloatingMenuBar extends StatelessWidget {
         ),
         child: Row(
           children: [
-            _MenuItem(
-              icon: HugeIcons.strokeRoundedHome04,
-              selected: selectedIndex == 0,
-              onTap: () => onTap(0),
-            ),
-            _MenuItem(
-              icon: CupertinoIcons.camera,
-              selected: selectedIndex == 1,
-              onTap: () => onTap(1),
-            ),
-            _MenuItem(
-              icon: HugeIcons.strokeRoundedChefHat,
-              selected: selectedIndex == 2,
-              onTap: () => onTap(2),
-            ),
-            _MenuItem(
-              icon: CupertinoIcons.bell,
-              selected: selectedIndex == 3,
-              onTap: () => onTap(3),
-            ),
+            for (final (indice, destino) in _destinos.indexed)
+              _MenuItem(
+                icon: destino.icono,
+                label: destino.etiqueta,
+                selected: selectedIndex == indice,
+                onTap: () => onTap(indice),
+              ),
           ],
         ),
       ),
@@ -278,40 +153,162 @@ class _FloatingMenuBar extends StatelessWidget {
 
 class _MenuItem extends StatelessWidget {
   final IconData icon;
+  final String label;
   final bool selected;
   final VoidCallback onTap;
 
   const _MenuItem({
     required this.icon,
+    required this.label,
     required this.selected,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final Color activeColor = AppColors.accent;
-    final Color inactiveColor = AppColors.textMuted;
+    final paleta = context.paleta;
+    final color = selected ? paleta.marca : paleta.apagado;
 
     return Expanded(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: Tooltip(
+          message: label,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 24, color: color),
+                const SizedBox(height: AppSpacing.xs),
+                AnimatedContainer(
+                  duration: AppMotion.pulsa,
+                  curve: AppMotion.curvaPulsa,
+                  width: selected ? 22 : 0,
+                  height: 2,
+                  decoration: BoxDecoration(
+                    color: paleta.marca,
+                    borderRadius: BorderRadius.circular(AppRadius.chip),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Navegacion horizontal para tablet y web.
+class _BarraNavegacion extends StatelessWidget {
+  const _BarraNavegacion({required this.selectedIndex, required this.onTap});
+
+  final int selectedIndex;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final paleta = context.paleta;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: paleta.contorno)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: const MarcaLastBite(tamano: 24),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final (indice, destino) in _destinos.indexed) ...[
+                _ItemBarra(
+                  icono: destino.icono,
+                  etiqueta: destino.etiqueta,
+                  seleccionado: selectedIndex == indice,
+                  onTap: () => onTap(indice),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+            ],
+          ),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: const [
+                InterruptorTema(),
+                SizedBox(width: AppSpacing.xs),
+                MenuCuenta(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ItemBarra extends StatelessWidget {
+  const _ItemBarra({
+    required this.icono,
+    required this.etiqueta,
+    required this.seleccionado,
+    required this.onTap,
+  });
+
+  final IconData icono;
+  final String etiqueta;
+  final bool seleccionado;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final paleta = context.paleta;
+    final textTheme = Theme.of(context).textTheme;
+    final color = seleccionado ? paleta.marca : paleta.apagado;
+
+    return Semantics(
+      button: true,
+      selected: seleccionado,
+      label: etiqueta,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 24, color: selected ? activeColor : inactiveColor),
-            const SizedBox(height: 4),
-            const SizedBox(height: 2),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: selected ? 26 : 0,
-              height: 2,
-              decoration: BoxDecoration(
-                color: activeColor,
-                borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: AnimatedContainer(
+          duration: AppMotion.pulsa,
+          curve: AppMotion.curvaPulsa,
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: seleccionado ? paleta.marcaSuave : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icono, size: 20, color: color),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                etiqueta,
+                style: textTheme.labelLarge?.copyWith(color: color),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
