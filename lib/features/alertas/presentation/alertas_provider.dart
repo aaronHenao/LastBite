@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
-//import 'package:lastbite/features/recetas/data/datasources/ai_translation_data_source.dart';
+import 'package:lastbite/features/perfil/domain/perfil_nutricional.dart';
+import 'package:lastbite/features/perfil/presentation/perfil_nutricional_provider.dart';
 import 'package:lastbite/features/recetas/data/datasources/recetas_busqueda_remote_data_source.dart';
 import 'package:lastbite/features/recetas/data/models/receta_busqueda_remote_model.dart';
+import 'package:lastbite/features/recetas/data/receta_cache_repository.dart';
 import 'package:lastbite/features/recetas/domain/receta.dart';
 import 'package:lastbite/features/compartida/presentation/compartida_provider.dart';
 import '../data/alertas_repository.dart';
@@ -11,11 +15,14 @@ import '../domain/alerta.dart';
 
 class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
   late AlertasRepository _repo;
-  //late AiTranslationDataSource _translator;
   late RecetasBusquedaRemoteDataSource _busquedaDataSource;
 
-  String? _avisoTraduccion;
-  String? get avisoTraduccion => _avisoTraduccion;
+  /// Sube con cada carga. Las recetas se completan en segundo plano, y si
+  /// mientras tanto hubo otra carga, ese resultado ya no aplica al state.
+  int _generacion = 0;
+
+  // Ya no hay traduccion; se mantiene porque AlertasScreen lo lee.
+  String? get avisoTraduccion => null;
 
   @override
   Future<List<Alerta>> build() async {
@@ -60,42 +67,36 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     final user = await ref.read(firebaseUserProvider.future);
     if (user == null) return [];
 
-    _repo = AlertasRepository(
+    final compartidaId = await ref.read(despensaCompartidaIdProvider.future);
+    final repo = AlertasRepository(
       userId: user.uid,
-      despensaCompartidaId: await ref.read(despensaCompartidaIdProvider.future),
+      despensaCompartidaId: compartidaId,
     );
+    _repo = repo;
     _busquedaDataSource = RecetasBusquedaRemoteDataSource();
-    _avisoTraduccion = null;
 
     final resultados = await Future.wait([
-      _repo.cargarProductos(),
-      _repo.cargarAlertas(),
-      _repo.cargarUltimoBorrado(),
+      repo.cargarProductos(),
+      repo.cargarAlertas(),
+      repo.cargarUltimoBorrado(),
     ]);
 
     final productos = resultados[0] as List<Producto>;
-    final alertasExistentes = resultados[1] as List<Alerta>;
+    final alertasExistentes = List<Alerta>.from(resultados[1] as List<Alerta>);
     final lastClearAt = resultados[2] as DateTime?;
 
-    final nuevas = await _generarAlertas(
+    final nuevas = _generarAlertas(
       productos: productos,
       alertasExistentes: alertasExistentes,
       lastClearAt: lastClearAt,
     );
 
     if (nuevas.isNotEmpty) {
-      await _repo.guardarAlertas(nuevas);
+      await repo.guardarAlertas(nuevas);
       alertasExistentes.addAll(nuevas);
     }
 
-    final completadas = await _completarAlertasSinReceta(
-      alertas: alertasExistentes,
-      productos: productos,
-    );
-
-    final todasLasAlertas = List<Alerta>.from(completadas);
-
-    final visibles = todasLasAlertas
+    final visibles = alertasExistentes
         .where((alerta) => !alerta.estaOculta)
         .toList();
     // Primero lo mas urgente; a igual urgencia, lo mas reciente. Antes se
@@ -106,151 +107,68 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
       if (porUrgencia != 0) return porUrgencia;
       return b.creadaEn.compareTo(a.creadaEn);
     });
+
+    // Generar una receta con IA tarda segundos: las alertas se muestran ya y
+    // la receta aparece en su tarjeta cuando llega.
+    final generacion = ++_generacion;
+    final pendientes = visibles.where(_necesitaReceta).toList();
+    if (pendientes.isNotEmpty) {
+      unawaited(
+        _completarRecetas(
+          pendientes: pendientes,
+          productos: productos,
+          repo: repo,
+          cache: RecetaCacheRepository(
+            userId: user.uid,
+            despensaCompartidaId: compartidaId,
+          ),
+          generacion: generacion,
+        ),
+      );
+    }
+
     return visibles;
   }
 
-  Future<List<Alerta>> _generarAlertas({
+  List<Alerta> _generarAlertas({
     required List<Producto> productos,
     required List<Alerta> alertasExistentes,
     required DateTime? lastClearAt,
-  }) async {
-    print('🔄 Generando alertas para ${productos.length} productos');
-    print('📋 Alertas existentes: ${alertasExistentes.length}');
-
-    for (final p in productos) {
-      print('  → ${p.nombre}: ${p.diasRestantes}d urgente:${p.urgente}');
-    }
+  }) {
     final existentesIds = alertasExistentes.map((a) => a.id).toSet();
-    final productosNoVencidos = productos.where((p) => !p.vencido).toList()
-      ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
-    final ingredientesDespensa = productosNoVencidos
-        .map((p) => p.nombre)
-        .where((name) => name.trim().isNotEmpty)
-        .toList();
-
     final nuevas = <Alerta>[];
+
+    void agregar(Producto producto, AlertaTipo tipo, int umbralDias) {
+      final alerta = _crearAlerta(
+        producto: producto,
+        tipo: tipo,
+        existentesIds: existentesIds,
+        lastClearAt: lastClearAt,
+        umbralDias: umbralDias,
+      );
+      if (alerta != null) nuevas.add(alerta);
+    }
 
     for (final producto in productos) {
       if (producto.diasRestantes < 0) {
-        final alerta = await _crearAlerta(
-          producto: producto,
-          tipo: AlertaTipo.vencido,
-          existentesIds: existentesIds,
-          lastClearAt: lastClearAt,
-          umbralDias: 0,
-          ingredientesDespensa: ingredientesDespensa,
-        );
-        if (alerta != null) nuevas.add(alerta);
+        agregar(producto, AlertaTipo.vencido, 0);
         continue;
       }
-
-      if (producto.diasRestantes <= 5) {
-        final alerta = await _crearAlerta(
-          producto: producto,
-          tipo: AlertaTipo.aviso5,
-          existentesIds: existentesIds,
-          lastClearAt: lastClearAt,
-          umbralDias: 5,
-          ingredientesDespensa: ingredientesDespensa,
-        );
-        if (alerta != null) nuevas.add(alerta);
-      }
-
-      if (producto.diasRestantes <= 3) {
-        final alerta = await _crearAlerta(
-          producto: producto,
-          tipo: AlertaTipo.aviso3,
-          existentesIds: existentesIds,
-          lastClearAt: lastClearAt,
-          umbralDias: 3,
-          ingredientesDespensa: ingredientesDespensa,
-        );
-        if (alerta != null) nuevas.add(alerta);
-      }
-
-      if (producto.diasRestantes <= 1) {
-        final alerta = await _crearAlerta(
-          producto: producto,
-          tipo: AlertaTipo.aviso1,
-          existentesIds: existentesIds,
-          lastClearAt: lastClearAt,
-          umbralDias: 1,
-          ingredientesDespensa: ingredientesDespensa,
-        );
-        if (alerta != null) nuevas.add(alerta);
-      }
+      if (producto.diasRestantes <= 5) agregar(producto, AlertaTipo.aviso5, 5);
+      if (producto.diasRestantes <= 3) agregar(producto, AlertaTipo.aviso3, 3);
+      if (producto.diasRestantes <= 1) agregar(producto, AlertaTipo.aviso1, 1);
     }
 
     return nuevas;
   }
 
-  Future<List<Alerta>> _completarAlertasSinReceta({
-    required List<Alerta> alertas,
-    required List<Producto> productos,
-  }) async {
-    final productosMap = {for (final p in productos) p.id: p};
-    final productosNoVencidos = productos.where((p) => !p.vencido).toList()
-      ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
-    final ingredientesDespensa = productosNoVencidos
-        .map((p) => p.nombre)
-        .where((name) => name.trim().isNotEmpty)
-        .toList();
-
-    final actualizaciones = <Alerta>[];
-
-    for (final alerta in alertas) {
-      if (alerta.estaOculta) continue;
-      if (alerta.recetaSugerida != null) continue;
-      if (alerta.tipo != AlertaTipo.aviso3 &&
-          alerta.tipo != AlertaTipo.aviso1) {
-        continue;
-      }
-
-      final producto = productosMap[alerta.productoId];
-      if (producto == null) continue;
-
-      final receta = await _buscarRecetaSugerida(
-        producto: producto,
-        ingredientesDespensa: ingredientesDespensa,
-        maximizarMatch: alerta.tipo == AlertaTipo.aviso1,
-      );
-
-      if (receta == null) continue;
-
-      actualizaciones.add(
-        Alerta(
-          id: alerta.id,
-          productoId: alerta.productoId,
-          nombreProducto: alerta.nombreProducto,
-          emoji: alerta.emoji,
-          fechaCaducidad: alerta.fechaCaducidad,
-          tipo: alerta.tipo,
-          creadaEn: alerta.creadaEn,
-          dismissedAt: alerta.dismissedAt,
-          recetaSugerida: receta,
-        ),
-      );
-    }
-
-    if (actualizaciones.isNotEmpty) {
-      await _repo.guardarAlertas(actualizaciones);
-      final actualizadasMap = {for (final a in actualizaciones) a.id: a};
-      return alertas
-          .map((alerta) => actualizadasMap[alerta.id] ?? alerta)
-          .toList();
-    }
-
-    return alertas;
-  }
-
-  Future<Alerta?> _crearAlerta({
+  Alerta? _crearAlerta({
     required Producto producto,
     required AlertaTipo tipo,
     required Set<String> existentesIds,
     required DateTime? lastClearAt,
     required int umbralDias,
-    required List<String> ingredientesDespensa,
-  }) async {
+  }) {
     final alertaId = Alerta.buildId(productoId: producto.id, tipo: tipo);
     if (existentesIds.contains(alertaId)) return null;
 
@@ -262,15 +180,6 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
       return null;
     }
 
-    Receta? receta;
-    if (tipo == AlertaTipo.aviso3 || tipo == AlertaTipo.aviso1) {
-      receta = await _buscarRecetaSugerida(
-        producto: producto,
-        ingredientesDespensa: ingredientesDespensa,
-        maximizarMatch: tipo == AlertaTipo.aviso1,
-      );
-    }
-
     return Alerta(
       id: alertaId,
       productoId: producto.id,
@@ -279,112 +188,146 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
       fechaCaducidad: producto.fechaCaducidad,
       tipo: tipo,
       creadaEn: DateTime.now(),
-      recetaSugerida: receta,
     );
   }
 
-  Future<Receta?> _buscarRecetaSugerida({
-    required Producto producto,
-    required List<String> ingredientesDespensa,
-    required bool maximizarMatch,
-  }) async {
-    try {
-      final recetasSoloProducto = await _buscarRecetas([producto.nombre]);
-      final seleccionSolo = _seleccionarReceta(
-        recetasSoloProducto,
-        producto.nombre,
-        maximizarMatch: maximizarMatch,
-      );
-      if (seleccionSolo != null) return seleccionSolo;
+  /// Solo los avisos de 3 y 1 dia llevan receta. Una receta sin instrucciones
+  /// viene de Spoonacular: su detalle ya no se puede pedir, asi que se
+  /// reemplaza por una generada.
+  bool _necesitaReceta(Alerta alerta) {
+    if (alerta.estaOculta) return false;
+    if (alerta.tipo != AlertaTipo.aviso3 && alerta.tipo != AlertaTipo.aviso1) {
+      return false;
+    }
+    final instrucciones = alerta.recetaSugerida?.instrucciones ?? '';
+    return instrucciones.trim().isEmpty;
+  }
 
-      final ingredientes = _combinarIngredientes(
-        producto.nombre,
-        ingredientesDespensa,
-      );
-      final recetas = await _buscarRecetas(ingredientes);
-      return _seleccionarReceta(
-        recetas,
-        producto.nombre,
-        maximizarMatch: maximizarMatch,
-      );
+  Future<void> _completarRecetas({
+    required List<Alerta> pendientes,
+    required List<Producto> productos,
+    required AlertasRepository repo,
+    required RecetaCacheRepository cache,
+    required int generacion,
+  }) async {
+    final productosMap = {for (final p in productos) p.id: p};
+    final despensa =
+        (productos.where((p) => !p.vencido).toList()
+              ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes)))
+            .map((p) => p.nombre)
+            .where((nombre) => nombre.trim().isNotEmpty)
+            .toList();
+
+    PerfilNutricional? perfil;
+    try {
+      perfil = await ref.read(perfilNutricionalProvider.future);
     } catch (_) {
+      // Sin perfil se generan recetas sin filtros.
+    }
+
+    // Las recetas que ya genero la pestaña Recetas son gratis: se prueban
+    // antes de gastar un credito de IA.
+    var enCache = const <Receta>[];
+    try {
+      enCache = (await cache.cargarRecetas())
+          .where((r) => (r.instrucciones ?? '').trim().isNotEmpty)
+          .toList();
+    } catch (_) {}
+
+    // aviso3 y aviso1 del mismo producto comparten receta: una sola llamada.
+    final porProducto = <String, Future<Receta?>>{};
+    for (final alerta in pendientes) {
+      final producto = productosMap[alerta.productoId];
+      if (producto == null) continue;
+      porProducto.putIfAbsent(
+        producto.id,
+        () => _recetaPara(
+          producto: producto,
+          despensa: despensa,
+          enCache: enCache,
+          perfil: perfil,
+        ),
+      );
+    }
+    if (porProducto.isEmpty) return;
+
+    final ids = porProducto.keys.toList();
+    final recetas = await Future.wait(porProducto.values);
+    final recetaDe = {
+      for (var i = 0; i < ids.length; i++)
+        if (recetas[i] != null) ids[i]: recetas[i]!,
+    };
+
+    final actualizaciones = [
+      for (final alerta in pendientes)
+        if (recetaDe[alerta.productoId] case final receta?)
+          _conReceta(alerta, receta),
+    ];
+    if (actualizaciones.isEmpty) return;
+
+    try {
+      await repo.guardarAlertas(actualizaciones);
+    } catch (_) {
+      // Se muestra igual; la proxima carga lo intenta de nuevo.
+    }
+
+    if (generacion != _generacion) return;
+    final actuales = state.valueOrNull;
+    if (actuales == null) return;
+
+    final porId = {for (final a in actualizaciones) a.id: a};
+    state = AsyncData([for (final a in actuales) porId[a.id] ?? a]);
+  }
+
+  Future<Receta?> _recetaPara({
+    required Producto producto,
+    required List<String> despensa,
+    required List<Receta> enCache,
+    required PerfilNutricional? perfil,
+  }) async {
+    final productoKey = _normalizar(producto.nombre);
+
+    final candidatas =
+        enCache.where((r) => _recetaIncluyeProducto(r, productoKey)).toList()
+          ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
+    if (candidatas.isNotEmpty) return candidatas.first;
+
+    try {
+      final raw = await _busquedaDataSource.buscarRecetasPorDespensaRaw(
+        productosDespensa: despensa,
+        number: 1,
+        perfil: perfil,
+        ingredientePrincipal: producto.nombre,
+      );
+      final recetas = RecetaBusquedaRemoteModel.fromApiRawList(
+        raw,
+      ).map((model) => model.toDomain()).toList();
+      return recetas.isEmpty ? null : recetas.first;
+    } catch (_) {
+      // Sin receta la alerta sigue siendo util.
       return null;
     }
   }
 
-  Future<List<Receta>> _buscarRecetas(List<String> ingredientes) async {
-    final raw = await _busquedaDataSource.buscarRecetasPorDespensaRaw(
-      productosDespensa: ingredientes,
-      number: 3,
-      ignorePantry: false,
-    );
-
-    final recetas = RecetaBusquedaRemoteModel.fromApiRawList(
-      raw,
-    ).map((model) => model.toDomain()).toList();
-
-    _capturarAvisoTraduccion();
-    return recetas;
-  }
-
-  Receta? _seleccionarReceta(
-    List<Receta> recetas,
-    String productoNombre, {
-    required bool maximizarMatch,
-  }) {
-    if (recetas.isEmpty) return null;
-
-    final productoKey = _normalizar(productoNombre);
-    final recetasConProducto = recetas
-        .where((receta) => _recetaIncluyeProducto(receta, productoKey))
-        .toList();
-
-    final candidatas = recetasConProducto.isNotEmpty
-        ? recetasConProducto
-        : recetas;
-
-    if (maximizarMatch) {
-      candidatas.sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
-    }
-
-    return candidatas.first;
-  }
+  Alerta _conReceta(Alerta alerta, Receta receta) => Alerta(
+    id: alerta.id,
+    productoId: alerta.productoId,
+    nombreProducto: alerta.nombreProducto,
+    emoji: alerta.emoji,
+    fechaCaducidad: alerta.fechaCaducidad,
+    tipo: alerta.tipo,
+    creadaEn: alerta.creadaEn,
+    dismissedAt: alerta.dismissedAt,
+    recetaSugerida: receta,
+  );
 
   bool _recetaIncluyeProducto(Receta receta, String productoKey) {
     if (productoKey.isEmpty) return false;
     final ingredientes = receta.ingredientes ?? const <String>[];
-
-    return ingredientes.any((ing) {
-      final normalizado = _normalizar(ing);
-      return normalizado.contains(productoKey);
-    });
-  }
-
-  List<String> _combinarIngredientes(
-    String productoNombre,
-    List<String> ingredientesDespensa,
-  ) {
-    final ingredientes = <String>{};
-
-    final principal = productoNombre.trim();
-    if (principal.isNotEmpty) ingredientes.add(principal);
-
-    for (final ingrediente in ingredientesDespensa) {
-      final limpio = ingrediente.trim();
-      if (limpio.isNotEmpty) ingredientes.add(limpio);
-    }
-
-    return ingredientes.toList();
+    return ingredientes.any((ing) => _normalizar(ing).contains(productoKey));
   }
 
   String _normalizar(String texto) => texto.toLowerCase().trim();
-
-  void _capturarAvisoTraduccion() {
-    final aviso = _busquedaDataSource.lastTranslationWarning;
-    if (aviso != null && _avisoTraduccion == null) {
-      _avisoTraduccion = aviso;
-    }
-  }
 }
 
 final alertasProvider = AsyncNotifierProvider<AlertasNotifier, List<Alerta>>(

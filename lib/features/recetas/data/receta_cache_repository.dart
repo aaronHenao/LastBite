@@ -8,12 +8,15 @@ class RecetaCacheRepository {
   /// Version del formato guardado en Firestore.
   ///
   /// Subirla invalida el cache de todos los usuarios la proxima vez que
-  /// entren. Hay que subirla cada vez que se agrega un campo que viene de
-  /// Spoonacular: los documentos viejos no lo tienen y, como el cache no
-  /// expira por tiempo, se quedarian sin ese dato para siempre.
+  /// entren. Hay que subirla cada vez que cambia el formato de la receta
+  /// guardada: los documentos viejos no tienen el dato nuevo y, como el
+  /// cache no expira por tiempo, se quedarian sin el para siempre.
   ///
   /// v2: agrega `dishTypes`.
-  static const int versionCache = 2;
+  /// v3: recetas generadas por IA, completas (ingredientes con cantidad e
+  /// instrucciones). Las de Spoonacular no tienen detalle recuperable.
+  /// v4: ilustracion generada por IA en `imagenUrl` (data URI).
+  static const int versionCache = 4;
 
   final String userId;
 
@@ -23,10 +26,8 @@ class RecetaCacheRepository {
 
   final _db = FirebaseFirestore.instance;
 
-  DocumentReference<Map<String, dynamic>> get _raiz => raizDespensa(
-    userId: userId,
-    despensaCompartidaId: despensaCompartidaId,
-  );
+  DocumentReference<Map<String, dynamic>> get _raiz =>
+      raizDespensa(userId: userId, despensaCompartidaId: despensaCompartidaId);
 
   CollectionReference<Map<String, dynamic>> get _col =>
       _raiz.collection('recetas_sugeridas');
@@ -63,8 +64,8 @@ class RecetaCacheRepository {
       }
 
       await batch.commit();
-    } catch (e) {
-      print('❌ Error guardando en Firestore: $e');
+    } catch (_) {
+      // Sin cache la pantalla sigue funcionando; solo se pierde el ahorro.
     }
   }
 

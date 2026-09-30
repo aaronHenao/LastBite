@@ -141,12 +141,18 @@ class Alerta {
       'ingredientesFaltantes': receta.ingredientesFaltantes,
       'likes': receta.likes,
       'ingredientes': receta.ingredientes ?? const <String>[],
+      // Una receta de IA no se puede volver a pedir por id: la alerta guarda
+      // la receta completa para poder mostrar el detalle despues.
+      'minutosPreparacion': receta.minutosPreparacion,
+      'porciones': receta.porciones,
+      'dishTypes': receta.dishTypes,
+      'instrucciones': receta.instrucciones,
     };
   }
 
   static Receta? _recetaFromMap(dynamic raw) {
     if (raw is! Map) return null;
-    final map = Map<String, dynamic>.from(raw as Map);
+    final map = Map<String, dynamic>.from(raw);
     final ingredientes = (map['ingredientes'] as List?)
         ?.whereType<String>()
         .toList();
@@ -159,6 +165,12 @@ class Alerta {
       ingredientesFaltantes: (map['ingredientesFaltantes'] as num?)?.toInt() ?? 0,
       likes: (map['likes'] as num?)?.toInt() ?? 0,
       ingredientes: ingredientes,
+      minutosPreparacion: (map['minutosPreparacion'] as num?)?.toInt(),
+      porciones: (map['porciones'] as num?)?.toInt(),
+      dishTypes: (map['dishTypes'] as List?)?.map((e) => e.toString()).toList(),
+      // Las alertas viejas (Spoonacular) no lo tienen: el notifier las
+      // detecta por eso y les genera una receta nueva.
+      instrucciones: map['instrucciones']?.toString(),
     );
   }
 }

@@ -469,7 +469,11 @@ class L10nPt extends L10n {
   String get recetasTitulo => 'Resíduo Zero';
 
   @override
-  String get recetasBuscar => 'Buscar por nome...';
+  String get recetasBuscar =>
+      'Digite um ingrediente ou prato e toque em buscar';
+
+  @override
+  String get recetasGenerando => 'A IA está preparando mais receitas…';
 
   @override
   String get recetasSugeridas => 'RECEITAS SUGERIDAS';

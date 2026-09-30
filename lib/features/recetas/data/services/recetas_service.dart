@@ -1,291 +1,414 @@
-import '../datasources/my_memory_translate_service.dart';
+import 'dart:async';
+
 import '../datasources/recetas_remote_exception.dart';
-import 'spoon_service.dart';
+import '../models/receta_ia_model.dart';
+import 'imagenes_recetas_service.dart';
+import 'nvidia_nim_service.dart';
 import 'package:lastbite/features/perfil/domain/perfil_nutricional.dart';
 
+/// Genera recetas con un LLM (NVIDIA NIM) directamente en español, cada una
+/// con una ilustracion generada por IA.
+///
+/// Devuelve mapas con forma Spoonacular para que los modelos y pantallas
+/// existentes no cambien. Un LLM no puede "volver a pedir" una receta por id,
+/// asi que cada receta se genera completa en la busqueda y queda guardada en
+/// memoria: [obtenerDetalleRecetaRaw] la resuelve sin otra llamada.
 class RecetasService {
-  RecetasService({SpoonService? spoon, MyMemoryTranslateService? translator})
-    : _spoon = spoon ?? SpoonService(),
-      _translator = translator ?? MyMemoryTranslateService();
+  RecetasService({NvidiaNimService? ia, ImagenesRecetasService? imagenes})
+    : _ia = ia ?? NvidiaNimService(),
+      _imagenes = imagenes ?? ImagenesRecetasService();
 
   static const int maxRecetasPorBusqueda = 3;
 
-  final SpoonService _spoon;
-  final MyMemoryTranslateService _translator;
+  /// Tope de ingredientes que se mandan al prompt: con mas, el modelo se
+  /// dispersa y el prompt gasta tokens sin mejorar las recetas.
+  static const int _maxIngredientesPrompt = 25;
 
-  // Ya no hay warnings de traducción pero mantenemos el getter
-  // para no romper código que lo use
+  /// Cuantas busquedas recuerda la sesion. Repetir una busqueda (volver a
+  /// escribir "pollo") no debe gastar otro credito.
+  static const int _maxBusquedasEnMemoria = 30;
+
+  final NvidiaNimService _ia;
+  final ImagenesRecetasService _imagenes;
+
+  // Estaticos: cada pantalla crea sus propios datasources, y el detalle de una
+  // receta generada desde Recetas tiene que poder leerse desde Alertas.
+  static final Map<int, Map<String, dynamic>> _detalles = {};
+  static final Map<String, List<Map<String, dynamic>>> _busquedas = {};
+
+  /// Busquedas que todavia esperan a la IA. Si Recetas y Alertas piden lo
+  /// mismo a la vez, la segunda espera a la primera en vez de pagar otra.
+  static final Map<String, Future<List<Map<String, dynamic>>>> _enCurso = {};
+
+  // Ya no hay traduccion; se mantiene por compatibilidad con los llamadores.
   String? get lastTranslationWarning => null;
 
+  /// Resultado final de la busqueda (recetas con su imagen). Lo usan quienes
+  /// no necesitan ver las recetas a medida que llegan, como las alertas.
   Future<List<Map<String, dynamic>>> buscarRecetasPorDespensaRaw({
     required List<String> productosDespensa,
     int number = 3,
     bool ignorePantry = false,
     PerfilNutricional? perfil,
+    String? ingredientePrincipal,
   }) async {
-    final numberLimitado = number.clamp(1, maxRecetasPorBusqueda).toInt();
-    final normalizados = _normalizarIngredientes(productosDespensa);
+    final pedido = _Pedido.de(
+      productosDespensa: productosDespensa,
+      number: number,
+      perfil: perfil,
+      ingredientePrincipal: ingredientePrincipal,
+    );
 
-    // ES → EN para Spoonacular
-    final ingredientesEn = await _translator.ingredientesEsAEn(normalizados);
+    final enMemoria = _busquedas[pedido.clave];
+    if (enMemoria != null) return enMemoria;
 
-    if (ingredientesEn.isEmpty) {
-      throw const RecetasRemoteException(
-        message: 'No hay ingredientes válidos para buscar recetas',
-      );
+    final pendiente = _enCurso[pedido.clave];
+    if (pendiente != null) return pendiente;
+
+    final futuro = _generar(pedido).last;
+    _enCurso[pedido.clave] = futuro;
+    try {
+      return await futuro;
+    } finally {
+      _enCurso.remove(pedido.clave);
+    }
+  }
+
+  /// Igual que [buscarRecetasPorDespensaRaw], pero emite la lista cada vez
+  /// que cambia: cuando termina de llegar una receta y cuando llega su
+  /// imagen. El ultimo evento es el resultado completo.
+  ///
+  /// [ingredientePrincipal]: lo que el usuario busco o el producto de una
+  /// alerta. Todas las recetas lo usan; [productosDespensa] es contexto para
+  /// aprovechar lo que ya hay. [ignorePantry] no aplica a la IA.
+  Stream<List<Map<String, dynamic>>> buscarRecetasPorDespensaStream({
+    required List<String> productosDespensa,
+    int number = 3,
+    bool ignorePantry = false,
+    PerfilNutricional? perfil,
+    String? ingredientePrincipal,
+  }) async* {
+    final pedido = _Pedido.de(
+      productosDespensa: productosDespensa,
+      number: number,
+      perfil: perfil,
+      ingredientePrincipal: ingredientePrincipal,
+    );
+
+    final enMemoria = _busquedas[pedido.clave];
+    if (enMemoria != null) {
+      yield enMemoria;
+      return;
     }
 
-    final raw = perfil?.hasRecipePreferences == true
-        ? await _spoon.searchComplex(
-            ingredients: ingredientesEn,
-            number: numberLimitado,
-            diet: _dietFilter(perfil!),
-            intolerances: perfil.allergies,
-            excludedIngredients: perfil.restrictions,
-            sort: _sortFilter(perfil),
-            sortDirection: _sortDirection(perfil),
-          )
-        : await _spoon.findByIngredients(
-            ingredients: ingredientesEn,
-            number: numberLimitado,
-            ignorePantry: ignorePantry,
-            ranking: 1,
-          );
+    final pendiente = _enCurso[pedido.clave];
+    if (pendiente != null) {
+      yield await pendiente;
+      return;
+    }
 
-    final capped = raw.take(maxRecetasPorBusqueda).toList();
-    final conTiempos = await _agregarTiemposPreparacion(capped);
-    return _traducirResultados(conTiempos);
+    yield* _generar(pedido);
+  }
+
+  Stream<List<Map<String, dynamic>>> _generar(_Pedido pedido) {
+    final controller = StreamController<List<Map<String, dynamic>>>();
+
+    Future<void> ejecutar() async {
+      final recetas = <RecetaIaModel>[];
+      final imagenes = <int, String>{};
+      final pendientes = <Future<void>>[];
+      var textoFinal = '';
+
+      List<Map<String, dynamic>> lista() => [
+        for (final r in recetas)
+          r.toBusquedaRaw(pedido.contexto, imagen: imagenes[r.id] ?? ''),
+      ];
+
+      void agregar(RecetaIaModel receta) {
+        if (recetas.length >= pedido.cantidad) return;
+        // Dos recetas con el mismo titulo tendrian el mismo id.
+        if (recetas.any((r) => r.id == receta.id)) return;
+        recetas.add(receta);
+        controller.add(lista());
+
+        pendientes.add(
+          _imagenes
+              .generar(
+                receta.descripcionImagen.isNotEmpty
+                    ? receta.descripcionImagen
+                    : receta.titulo,
+                semilla: receta.id,
+              )
+              .then((imagen) {
+                if (imagen == null) return;
+                imagenes[receta.id] = imagen;
+                controller.add(lista());
+              }),
+        );
+      }
+
+      try {
+        var procesados = 0;
+        await for (final parcial in _ia.completarStream(
+          sistema: _promptSistema,
+          usuario: _promptUsuario(pedido),
+          // Una receta completa en JSON ronda los 250-350 tokens.
+          maxTokens: 400 + pedido.cantidad * 800,
+          esquemaJson: _esquemaRespuesta,
+        )) {
+          textoFinal = parcial;
+          final objetos = RecetaIaModel.objetosCompletos(parcial);
+          for (; procesados < objetos.length; procesados++) {
+            final receta = RecetaIaModel.fromJson(objetos[procesados]);
+            if (receta != null) agregar(receta);
+          }
+        }
+
+        // Respuesta con otra forma (sin esquema, markdown...): el parseo
+        // completo es mas tolerante que el incremental.
+        if (recetas.isEmpty) {
+          RecetaIaModel.parsearRespuesta(textoFinal).forEach(agregar);
+        }
+
+        await Future.wait(pendientes);
+
+        final resultado = lista();
+        for (final receta in recetas) {
+          _detalles[receta.id] = receta.toDetalleRaw(
+            pedido.contexto,
+            imagen: imagenes[receta.id] ?? '',
+          );
+        }
+        if (_busquedas.length >= _maxBusquedasEnMemoria) {
+          _busquedas.remove(_busquedas.keys.first);
+        }
+        _busquedas[pedido.clave] = resultado;
+        controller.add(resultado);
+      } catch (e, st) {
+        controller.addError(e, st);
+      } finally {
+        await controller.close();
+      }
+    }
+
+    controller.onListen = ejecutar;
+    return controller.stream;
   }
 
   Future<Map<String, dynamic>> obtenerDetalleRecetaRaw({
     required int recetaId,
   }) async {
-    final info = await _spoon.getRecipeInformation(recipeId: recetaId);
-    final traducido = await _traducirDetalle(info);
-    return {
-      'information': traducido,
-      'equipment': {'equipment': <Map<String, dynamic>>[]},
-    };
-  }
+    final detalle = _detalles[recetaId];
+    if (detalle != null) return detalle;
 
-  Future<List<Map<String, dynamic>>> _agregarTiemposPreparacion(
-    List<Map<String, dynamic>> raw,
-  ) async {
-    if (raw.isEmpty) return raw;
-
-    final ids = raw
-        .map((r) => (r['id'] as num?)?.toInt())
-        .whereType<int>()
-        .toList();
-
-    if (ids.isEmpty) return raw;
-
-    try {
-      final info = await _spoon.getRecipeInformationBulk(recipeIds: ids);
-
-      final minutosPorId = <int, int>{};
-      final tiposPorId = <int, List<String>>{};
-      for (final item in info) {
-        final id = (item['id'] as num?)?.toInt();
-        if (id == null) continue;
-
-        final minutos = (item['readyInMinutes'] as num?)?.toInt();
-        if (minutos != null) minutosPorId[id] = minutos;
-
-        final tipos = (item['dishTypes'] as List?)
-            ?.map((e) => e.toString())
-            .where((e) => e.isNotEmpty)
-            .toList();
-        if (tipos != null && tipos.isNotEmpty) tiposPorId[id] = tipos;
-      }
-
-      return raw.map((recipe) {
-        final id = (recipe['id'] as num?)?.toInt();
-        if (id == null) return recipe;
-
-        final minutos = minutosPorId[id];
-        final tipos = tiposPorId[id];
-        if (minutos == null && tipos == null) return recipe;
-
-        return {
-          ...recipe,
-          'readyInMinutes': ?minutos,
-          'dishTypes': ?tipos,
-        };
-      }).toList();
-    } on RecetasRemoteException {
-      return raw;
-    }
-  }
-
-  // ── Traducción de resultados de búsqueda ──────────────
-
-  Future<List<Map<String, dynamic>>> _traducirResultados(
-    List<Map<String, dynamic>> raw,
-  ) async {
-    if (raw.isEmpty) return raw;
-
-    // Recolecta títulos e ingredientes únicos
-    final titulos = raw
-        .map((r) => r['title']?.toString() ?? '')
-        .where((t) => t.isNotEmpty)
-        .toList();
-
-    final todosIngredientes = <String>{};
-    for (final recipe in raw) {
-      for (final key in ['usedIngredients', 'missedIngredients']) {
-        final list = recipe[key];
-        if (list is! List) continue;
-        for (final item in list) {
-          if (item is Map<String, dynamic>) {
-            final name = item['name']?.toString() ?? '';
-            if (name.isNotEmpty) todosIngredientes.add(name);
-          }
-        }
-      }
-    }
-
-    // Dos llamadas en paralelo — títulos e ingredientes al mismo tiempo
-    final resultados = await Future.wait([
-      _translator.traducirLista(
-        textos: titulos,
-        de: 'en',
-        a: 'es',
-        contexto: 'recipe title latin american cooking',
-      ),
-      _translator.ingredientesEnAEs(todosIngredientes.toList()),
-    ]);
-
-    final titulosEs = resultados[0];
-    final ingredientesEs = resultados[1];
-
-    final tituloMap = Map.fromIterables(titulos, titulosEs);
-    final ingredienteMap = Map.fromIterables(
-      todosIngredientes.toList(),
-      ingredientesEs,
+    // Recetas de sesiones anteriores o de Spoonacular (alertas viejas): su
+    // detalle no esta en memoria y no se puede volver a pedir por id.
+    throw const RecetasRemoteException(
+      message:
+          'El detalle de esta receta ya no está disponible. '
+          'Actualiza las sugerencias para generar una nueva.',
     );
-
-    return raw.map((recipe) {
-      final copy = Map<String, dynamic>.from(recipe);
-
-      final titulo = copy['title']?.toString() ?? '';
-      if (titulo.isNotEmpty) copy['title'] = tituloMap[titulo] ?? titulo;
-
-      for (final key in ['usedIngredients', 'missedIngredients']) {
-        final list = copy[key];
-        if (list is! List) continue;
-        copy[key] = list.map((item) {
-          if (item is! Map<String, dynamic>) return item;
-          final itemCopy = Map<String, dynamic>.from(item);
-          final name = itemCopy['name']?.toString() ?? '';
-          if (name.isNotEmpty) {
-            itemCopy['name'] = ingredienteMap[name] ?? name;
-          }
-          return itemCopy;
-        }).toList();
-      }
-
-      return copy;
-    }).toList();
   }
 
-  // ── Traducción del detalle ────────────────────────────
+  // ---------------------------------------------------------------- prompt
 
-  Future<Map<String, dynamic>> _traducirDetalle(
-    Map<String, dynamic> info,
-  ) async {
-    final copy = Map<String, dynamic>.from(info);
+  /// Forma exacta que debe devolver el modelo (misma que describe el prompt).
+  static const Map<String, dynamic> _esquemaRespuesta = {
+    'type': 'object',
+    'properties': {
+      'recetas': {
+        'type': 'array',
+        'items': {
+          'type': 'object',
+          'properties': {
+            'titulo': {'type': 'string'},
+            'imagen': {'type': 'string'},
+            'tipos': {
+              'type': 'array',
+              'items': {'type': 'string'},
+            },
+            'minutos': {'type': 'integer'},
+            'porciones': {'type': 'integer'},
+            'ingredientes': {
+              'type': 'array',
+              'items': {
+                'type': 'object',
+                'properties': {
+                  'nombre': {'type': 'string'},
+                  'cantidad': {'type': 'string'},
+                },
+                'required': ['nombre', 'cantidad'],
+              },
+            },
+            'pasos': {
+              'type': 'array',
+              'items': {'type': 'string'},
+            },
+          },
+          'required': [
+            'titulo',
+            'imagen',
+            'tipos',
+            'minutos',
+            'porciones',
+            'ingredientes',
+            'pasos',
+          ],
+        },
+      },
+    },
+    'required': ['recetas'],
+  };
 
-    // Recolecta nombres de ingredientes
-    final extendedIngredients = copy['extendedIngredients'];
-    final nombres = extendedIngredients is List
-        ? extendedIngredients
-              .whereType<Map<String, dynamic>>()
-              .map((item) => item['name']?.toString() ?? '')
-              .where((n) => n.isNotEmpty)
-              .toList()
-        : <String>[];
+  static const _promptSistema = '''
+Eres el chef de LastBite, una app colombiana que ayuda a no desperdiciar comida.
+Propones recetas caseras, realistas y fáciles, en español de Colombia.
 
-    // Título e ingredientes en paralelo, instrucciones aparte
-    // (instrucciones puede ser texto largo, mejor separado)
-    final titulo = copy['title']?.toString() ?? '';
-    final instrucciones = copy['instructions']?.toString() ?? '';
+Responde SOLO con JSON válido, sin texto antes ni después y sin markdown, con esta forma exacta:
+{"recetas":[{"titulo":"Arroz con pollo","imagen":"A plate of yellow rice mixed with shredded chicken, peas and carrots","tipos":["main course"],"minutos":40,"porciones":4,"ingredientes":[{"nombre":"pechuga de pollo","cantidad":"500 g"}],"pasos":["Corta el pollo en cubos...","..."]}]}
 
-    final resultadosParalelos = await Future.wait([
-      titulo.isNotEmpty
-          ? _translator.tituloEnAEs(titulo)
-          : Future.value(titulo),
-      nombres.isNotEmpty
-          ? _translator.ingredientesEnAEs(nombres)
-          : Future.value(<String>[]),
-    ]);
+Reglas:
+- "imagen": UNA frase EN INGLÉS que describa cómo se ve el plato servido para dibujarlo: el recipiente (plate, bowl, pan) y los ingredientes visibles con su forma y color. Sin nombres propios de platos.
+- "tipos": uno o más de: breakfast, brunch, main course, lunch, dinner, side dish, salad, soup, snack, dessert.
+- "minutos": tiempo total en minutos (entero). "porciones": entero.
+- "ingredientes": todos los que lleva la receta, con el nombre corto del alimento en minúscula (ej. "tomate", "leche") y la cantidad aparte. Usa los mismos nombres de la despensa cuando sea el mismo alimento.
+- "pasos": entre 3 y 8 pasos concretos, sin numerarlos.
+- Prioriza los ingredientes que vencen primero. Evita pedir muchos ingredientes que no están en la despensa.
+- Puedes asumir que hay sal, pimienta, aceite y agua.
+- Cada receta debe ser distinta de las demás.''';
 
-    if (titulo.isNotEmpty) copy['title'] = resultadosParalelos[0];
+  String _promptUsuario(_Pedido pedido) {
+    final buffer = StringBuffer();
 
-    // Traduce instrucciones separado porque es texto largo
-    if (instrucciones.isNotEmpty) {
-      copy['instructions'] = await _translator.instruccionesEnAEs(
-        instrucciones,
+    if (pedido.despensa.isNotEmpty) {
+      buffer.writeln(
+        'Ingredientes en mi despensa (del que vence primero al último): '
+        '${pedido.despensa.join(', ')}.',
       );
     }
 
-    // Actualiza ingredientes traducidos
-    final nombresEs = resultadosParalelos[1] as List<String>;
-    if (extendedIngredients is List && nombresEs.isNotEmpty) {
-      final nombreMap = Map.fromIterables(nombres, nombresEs);
-      copy['extendedIngredients'] = extendedIngredients.map((item) {
-        if (item is! Map<String, dynamic>) return item;
-        final itemCopy = Map<String, dynamic>.from(item);
-        final name = itemCopy['name']?.toString() ?? '';
-        if (name.isNotEmpty) {
-          itemCopy['name'] = nombreMap[name] ?? name;
-        }
-        return itemCopy;
-      }).toList();
+    if (pedido.principal.isNotEmpty) {
+      // Con "deben usar o estar relacionadas" el modelo a veces devolvia una
+      // receta sin lo buscado (arepas con carne al buscar "pollo").
+      buffer.writeln(
+        'OBLIGATORIO: las ${pedido.cantidad} recetas deben ser de '
+        '"${pedido.principal}": tiene que ser el protagonista y aparecer en '
+        '"ingredientes" (o, si es un plato, ser ese plato). Usa la despensa '
+        'solo para acompañarlo.',
+      );
     }
 
-    return copy;
-  }
-
-  List<String> _normalizarIngredientes(List<String> productos) {
-    return productos
-        .map((p) => p.trim().toLowerCase())
-        .where((p) => p.isNotEmpty)
-        .toSet()
-        .toList();
-  }
-
-  String? _dietFilter(PerfilNutricional perfil) {
-    switch (perfil.dietaryType) {
-      case 'vegetarian':
-        return 'vegetarian';
-      case 'vegan':
-        return 'vegan';
-      default:
-        return null;
-    }
-  }
-
-  String? _sortFilter(PerfilNutricional perfil) {
-    if (perfil.userType == 'athlete') return 'protein';
-    if (perfil.userType == 'nutritional_plan') {
-      switch (perfil.goal) {
-        case 'lose_weight':
-          return 'calories';
-        case 'maintain_weight':
-          return 'max-used-ingredients';
-        case 'gain_weight':
-          return 'calories';
+    final restricciones = _restriccionesPerfil(pedido.perfil);
+    if (restricciones.isNotEmpty) {
+      buffer.writeln('Mi perfil alimentario (obligatorio respetarlo):');
+      for (final r in restricciones) {
+        buffer.writeln('- $r');
       }
     }
-    return 'max-used-ingredients';
+
+    buffer.write(
+      pedido.cantidad == 1
+          ? 'Dame 1 receta.'
+          : 'Dame ${pedido.cantidad} recetas diferentes.',
+    );
+    return buffer.toString();
   }
 
-  String _sortDirection(PerfilNutricional perfil) {
-    if (perfil.userType == 'athlete') return 'desc';
-    if (perfil.userType == 'nutritional_plan' && perfil.goal == 'gain_weight') {
-      return 'desc';
+  List<String> _restriccionesPerfil(PerfilNutricional? perfil) {
+    if (perfil == null) return const [];
+
+    final lineas = <String>[];
+
+    switch (perfil.dietaryType) {
+      case 'vegetarian':
+        lineas.add('Dieta vegetariana: sin carne, pollo ni pescado.');
+      case 'vegan':
+        lineas.add(
+          'Dieta vegana: ningún producto de origen animal '
+          '(ni huevo, lácteos ni miel).',
+        );
     }
-    return 'asc';
+
+    if (perfil.allergies.isNotEmpty) {
+      lineas.add(
+        'Alergias o intolerancias, NUNCA incluir: '
+        '${perfil.allergies.join(', ')}.',
+      );
+    }
+
+    if (perfil.restrictions.isNotEmpty) {
+      lineas.add('No como: ${perfil.restrictions.join(', ')}.');
+    }
+
+    if (perfil.userType == 'athlete') {
+      lineas.add('Soy deportista: recetas altas en proteína.');
+    } else if (perfil.userType == 'nutritional_plan') {
+      switch (perfil.goal) {
+        case 'lose_weight':
+          lineas.add('Quiero perder peso: recetas bajas en calorías.');
+        case 'gain_weight':
+          lineas.add('Quiero ganar peso: recetas con más calorías y proteína.');
+        case 'maintain_weight':
+          lineas.add('Quiero mantener mi peso: recetas balanceadas.');
+      }
+    }
+
+    return lineas;
   }
+}
+
+/// Parametros normalizados de una busqueda y su clave de memoria.
+class _Pedido {
+  _Pedido._({
+    required this.despensa,
+    required this.principal,
+    required this.cantidad,
+    required this.perfil,
+  });
+
+  factory _Pedido.de({
+    required List<String> productosDespensa,
+    required int number,
+    required PerfilNutricional? perfil,
+    required String? ingredientePrincipal,
+  }) {
+    final vistos = <String>{};
+    final despensa = <String>[];
+    for (final producto in productosDespensa) {
+      final limpio = producto.trim();
+      if (limpio.isEmpty) continue;
+      if (vistos.add(limpio.toLowerCase())) despensa.add(limpio);
+      if (despensa.length == RecetasService._maxIngredientesPrompt) break;
+    }
+
+    final principal = ingredientePrincipal?.trim() ?? '';
+    if (despensa.isEmpty && principal.isEmpty) {
+      throw const RecetasRemoteException(
+        message: 'No hay ingredientes válidos para buscar recetas',
+      );
+    }
+
+    return _Pedido._(
+      despensa: despensa,
+      principal: principal,
+      cantidad: number.clamp(1, RecetasService.maxRecetasPorBusqueda).toInt(),
+      perfil: perfil,
+    );
+  }
+
+  final List<String> despensa;
+  final String principal;
+  final int cantidad;
+  final PerfilNutricional? perfil;
+
+  String get clave => [
+    principal.toLowerCase(),
+    cantidad,
+    despensa.join(','),
+    perfil?.cacheKey ?? '',
+  ].join('|');
+
+  /// Lo buscado cuenta como disponible solo para calcular el match cuando no
+  /// hay despensa: si no, toda receta saldria con 0 %.
+  List<String> get contexto => despensa.isEmpty ? [principal] : despensa;
 }

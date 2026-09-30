@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lastbite/core/widgets/estado_vacio.dart';
@@ -37,7 +35,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   late final RecetasDetalleRemoteDataSource _detalleDataSource;
   final _searchCtrl = TextEditingController();
   final Map<int, Receta> _detallesCache = {};
-  Timer? _searchDebounce;
 
   List<Receta> _recetas = const [];
   bool _cargandoRecetas = true;
@@ -48,6 +45,13 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   bool _busquedaPorProducto = false;
   bool _ordenarPorTiempo = false;
   bool _ritmoAutomatico = false;
+
+  /// Sube con cada carga o busqueda. La IA tarda segundos y las respuestas
+  /// pueden llegar en otro orden: solo se pinta la de la ultima solicitud.
+  int _solicitud = 0;
+
+  /// Ya se ve al menos una receta pero la IA sigue enviando las demas.
+  bool _generandoMas = false;
 
   /// Se resuelve en cada carga porque la raiz cambia al entrar o salir de una
   /// despensa compartida. Espera el id en vez de leerlo del estado actual:
@@ -79,7 +83,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   @override
   void dispose() {
     _searchCtrl.dispose();
-    _searchDebounce?.cancel();
     super.dispose();
   }
 
@@ -185,10 +188,51 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         .join(' · ');
   }
 
+  /// Pide recetas a la IA y las va mostrando a medida que llegan (streaming):
+  /// la primera aparece en 3-9 s en vez de esperar las tres. Devuelve la
+  /// lista final. Si la IA falla despues de mandar alguna receta, se quedan
+  /// las que llegaron.
+  Future<List<Receta>> _recetasConIa({
+    required int solicitud,
+    required List<String> despensa,
+    required PerfilNutricional? perfil,
+    String? principal,
+  }) async {
+    var recetas = const <Receta>[];
+    try {
+      await for (final raw in _busquedaDataSource
+          .buscarRecetasPorDespensaStream(
+            productosDespensa: despensa,
+            number: 3,
+            perfil: perfil,
+            ingredientePrincipal: principal,
+          )) {
+        recetas = RecetaBusquedaRemoteModel.fromApiRawList(
+          raw,
+        ).map((m) => m.toDomain()).toList();
+        // Otra carga o busqueda la reemplazo: el servicio igual la guarda.
+        if (!mounted || solicitud != _solicitud) break;
+        setState(() {
+          _recetas = recetas;
+          _cargandoRecetas = false;
+          _generandoMas = true;
+        });
+      }
+    } catch (_) {
+      if (recetas.isEmpty) rethrow;
+    } finally {
+      if (mounted && solicitud == _solicitud) {
+        setState(() => _generandoMas = false);
+      }
+    }
+    return recetas;
+  }
+
   Future<void> _cargarRecetasDesdeApi({bool forzar = false}) async {
-    _searchDebounce?.cancel();
+    final solicitud = ++_solicitud;
     setState(() {
       _cargandoRecetas = true;
+      _generandoMas = false;
       _errorCarga = null;
       _busquedaPorProducto = false;
     });
@@ -197,7 +241,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       final perfil = ref.read(perfilNutricionalProvider).valueOrNull;
       final productosDespensa = ref.read(despensaProvider).value ?? [];
       if (productosDespensa.isEmpty) {
-        if (!mounted) return;
+        if (!mounted || solicitud != _solicitud) return;
         setState(() {
           _recetas = const [];
           _cargandoRecetas = false;
@@ -222,7 +266,8 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         );
         if (valido) {
           final recetasCache = await cacheRepo.cargarRecetas();
-          if (recetasCache.isNotEmpty && mounted) {
+          if (!mounted || solicitud != _solicitud) return;
+          if (recetasCache.isNotEmpty) {
             setState(() {
               _recetas = recetasCache
                 ..sort(
@@ -236,23 +281,16 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         }
       }
 
-      //caché inválido o vacío - Llama a spoonacular
+      //caché inválido o vacío: la IA genera recetas nuevas
       final productosOrdenados = [...productosDespensa]
         ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
       final nombres = productosOrdenados.map((p) => p.nombre).toList();
 
-      final raw = await _busquedaDataSource.buscarRecetasPorDespensaRaw(
-        productosDespensa: nombres,
-        number: 3,
-        ignorePantry: false,
+      final recetas = await _recetasConIa(
+        solicitud: solicitud,
+        despensa: nombres,
         perfil: perfil,
       );
-
-      final recetas =
-          RecetaBusquedaRemoteModel.fromApiRawList(
-              raw,
-            ).map((m) => m.toDomain()).toList()
-            ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
 
       // guarda en caché
       if (cacheRepo != null && recetas.isNotEmpty) {
@@ -263,29 +301,32 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         );
       }
 
-      if (!mounted) return;
+      if (!mounted || solicitud != _solicitud) return;
       setState(() {
         _recetas = recetas;
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
     } catch (e) {
-      // Si Spoonacular falla (sin cuota, sin red) mostramos lo ultimo que
-      // haya quedado guardado, aunque sea de una version anterior del cache.
-      // Puede venir sin dishTypes o sin tiempo: esos criterios simplemente
-      // no opinan sobre esas recetas. Es mejor que dejar la pantalla vacia.
+      // Si la IA falla (sin creditos, sin red) mostramos lo ultimo que haya
+      // quedado guardado, aunque sea de una version anterior del cache. Solo
+      // sirven las recetas completas: las de Spoonacular no tienen detalle.
       var respaldo = const <Receta>[];
       try {
         final cacheRepo = await _resolverCache();
-        if (cacheRepo != null) respaldo = await cacheRepo.cargarRecetas();
+        if (cacheRepo != null) {
+          respaldo = (await cacheRepo.cargarRecetas())
+              .where((r) => (r.instrucciones ?? '').trim().isNotEmpty)
+              .toList();
+        }
       } catch (_) {
         // Sin respaldo utilizable: se muestra el error original.
       }
 
-      if (!mounted) return;
+      if (!mounted || solicitud != _solicitud) return;
       setState(() {
         _recetas = respaldo;
-        _errorCarga = respaldo.isEmpty ? e.toString() : null;
+        _errorCarga = respaldo.isEmpty ? _mensajeError(e) : null;
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
@@ -293,61 +334,59 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   }
 
   Future<void> _buscarRecetasPorProducto(String query) async {
+    final solicitud = ++_solicitud;
     setState(() {
       _cargandoRecetas = true;
+      _generandoMas = false;
       _errorCarga = null;
       _busquedaPorProducto = true;
     });
 
     try {
       final perfil = ref.read(perfilNutricionalProvider).valueOrNull;
-      final raw = await _busquedaDataSource.buscarRecetasPorDespensaRaw(
-        productosDespensa: [query],
-        number: 3,
-        ignorePantry: false,
+      // La despensa va como contexto: asi las recetas de lo buscado
+      // aprovechan lo que ya hay y el match se calcula de verdad.
+      final despensa = [...ref.read(despensaProvider).value ?? <Producto>[]]
+        ..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
+      final recetas = await _recetasConIa(
+        solicitud: solicitud,
+        despensa: despensa.map((p) => p.nombre).toList(),
         perfil: perfil,
+        principal: query,
       );
 
-      final recetas =
-          RecetaBusquedaRemoteModel.fromApiRawList(
-              raw,
-            ).map((m) => m.toDomain()).toList()
-            ..sort((a, b) => b.porcentajeMatch.compareTo(a.porcentajeMatch));
-
-      if (!mounted) return;
+      if (!mounted || solicitud != _solicitud) return;
       setState(() {
         _recetas = recetas;
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || solicitud != _solicitud) return;
       setState(() {
-        _errorCarga = e.toString();
+        _errorCarga = _mensajeError(e);
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
     }
   }
 
+  /// Mientras se escribe solo se filtran por titulo las recetas que ya hay.
+  /// Antes cada pausa al escribir lanzaba una consulta a la IA: escribir
+  /// "pollo" disparaba dos o tres de ~10 s que competian entre si (~30 s).
   void _onQueryChanged(String value) {
-    final trimmed = value.trim();
-    setState(() {
-      _query = value;
-      _busquedaPorProducto = trimmed.isNotEmpty;
-    });
+    setState(() => _query = value);
 
-    _searchDebounce?.cancel();
-
-    if (trimmed.isEmpty) {
+    if (value.trim().isEmpty && _busquedaPorProducto) {
       _cargarRecetasDesdeApi();
-      return;
     }
+  }
 
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 350),
-      () => _buscarRecetasPorProducto(trimmed),
-    );
+  /// La IA se consulta al confirmar la busqueda (boton del teclado o Enter).
+  void _onBuscar(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return;
+    _buscarRecetasPorProducto(trimmed);
   }
 
   @override
@@ -363,8 +402,8 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         return;
       }
 
-      // Despues, solo un cambio real de contenido. Spoonacular se paga por
-      // llamada y el stream re-emite con cada snapshot de Firestore.
+      // Despues, solo un cambio real de contenido. La IA se paga por llamada
+      // y el stream re-emite con cada snapshot de Firestore.
       final prevList = previous?.value;
       if (prevList != null && !listEquals(prevList, nextList)) {
         _cargarRecetasDesdeApi();
@@ -412,6 +451,8 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                     TextField(
                       controller: _searchCtrl,
                       onChanged: _onQueryChanged,
+                      onSubmitted: _onBuscar,
+                      textInputAction: TextInputAction.search,
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w500,
                         color: context.paleta.apagado,
@@ -433,7 +474,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                                   color: context.paleta.apagado,
                                 ),
                                 onPressed: () {
-                                  _searchDebounce?.cancel();
                                   _searchCtrl.clear();
                                   setState(() {
                                     _query = '';
@@ -667,7 +707,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                                   .recetasSinResultadosDescripcion(_query),
                               textoAccion: context.t.accionLimpiarBusqueda,
                               onAccion: () {
-                                _searchDebounce?.cancel();
                                 _searchCtrl.clear();
                                 setState(() {
                                   _query = '';
@@ -688,6 +727,36 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                     ),
                   )
                 : _buildRecetasSliver(context),
+
+            if (_generandoMas && !_cargandoRecetas && _errorCarga == null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Row(
+                      children: [
+                        SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: context.paleta.marca,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            context.t.recetasGenerando,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: context.paleta.apagado,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
@@ -792,6 +861,9 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   }
 
   Future<Receta> _cargarDetalleReceta(Receta receta) async {
+    // Las recetas de IA llegan completas desde la busqueda o la cache.
+    if ((receta.instrucciones ?? '').trim().isNotEmpty) return receta;
+
     final cached = _detallesCache[receta.id];
     if (cached != null) return cached;
 
@@ -834,12 +906,18 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   String? _limpiarHtml(String? texto) {
     if (texto == null || texto.trim().isEmpty) return null;
 
+    // Conserva los saltos de linea: las instrucciones de IA van un paso por
+    // linea.
     final sinTags = texto.replaceAll(RegExp(r'<[^>]*>'), ' ');
     return sinTags
         .replaceAll('&nbsp;', ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'[ \t]+'), ' ')
+        .replaceAll(RegExp(r'\s*\n\s*'), '\n')
         .trim();
   }
+
+  String _mensajeError(Object error) =>
+      error is RecetasRemoteException ? error.message : error.toString();
 }
 
 class _OrdenPorTiempoBoton extends StatelessWidget {

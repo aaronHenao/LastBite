@@ -1,14 +1,12 @@
 import 'package:dio/dio.dart';
+import '../services/nvidia_nim_service.dart';
 import '../services/recetas_service.dart';
-import '../services/spoon_service.dart';
-import '../datasources/my_memory_translate_service.dart';
 
 class RecetasDetalleRemoteDataSource {
   RecetasDetalleRemoteDataSource({Dio? dio, String? apiKey})
-      : _service = RecetasService(
-          spoon: SpoonService(dio: dio, apiKey: apiKey),
-          translator: MyMemoryTranslateService(dio: dio),
-        );
+    : _service = RecetasService(
+        ia: NvidiaNimService(dio: dio, apiKey: apiKey),
+      );
 
   final RecetasService _service;
 

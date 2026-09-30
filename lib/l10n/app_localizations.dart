@@ -869,8 +869,14 @@ abstract class L10n {
   /// No description provided for @recetasBuscar.
   ///
   /// In es, this message translates to:
-  /// **'Buscar por nombre...'**
+  /// **'Escribe un ingrediente o plato y pulsa buscar'**
   String get recetasBuscar;
+
+  /// No description provided for @recetasGenerando.
+  ///
+  /// In es, this message translates to:
+  /// **'La IA está preparando más recetas…'**
+  String get recetasGenerando;
 
   /// No description provided for @recetasSugeridas.
   ///

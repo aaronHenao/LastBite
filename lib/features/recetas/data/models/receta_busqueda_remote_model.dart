@@ -12,6 +12,8 @@ class RecetaBusquedaRemoteModel {
     required this.dishTypes,
     required this.nombresIngredientesUsados,
     required this.nombresIngredientesFaltantes,
+    this.porciones,
+    this.instrucciones,
   });
 
   final int id;
@@ -24,6 +26,10 @@ class RecetaBusquedaRemoteModel {
   final List<String>? dishTypes;
   final List<String> nombresIngredientesUsados;
   final List<String> nombresIngredientesFaltantes;
+
+  /// Las recetas generadas por IA llegan completas desde la busqueda.
+  final int? porciones;
+  final String? instrucciones;
 
   factory RecetaBusquedaRemoteModel.fromJson(Map<String, dynamic> json) {
     final used = (json['usedIngredients'] as List<dynamic>? ?? const [])
@@ -61,6 +67,8 @@ class RecetaBusquedaRemoteModel {
           .toList(),
       nombresIngredientesUsados: usadosNombres,
       nombresIngredientesFaltantes: faltantesNombres,
+      porciones: (json['servings'] as num?)?.toInt(),
+      instrucciones: json['instructions']?.toString(),
     );
   }
 
@@ -80,6 +88,8 @@ class RecetaBusquedaRemoteModel {
       likes: likes,
       minutosPreparacion: minutosPreparacion,
       dishTypes: dishTypes,
+      porciones: porciones,
+      instrucciones: instrucciones,
       ingredientes: [
         ...nombresIngredientesUsados,
         ...nombresIngredientesFaltantes,

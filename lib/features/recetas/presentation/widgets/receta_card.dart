@@ -4,6 +4,45 @@ import 'package:lastbite/core/theme/app_theme.dart';
 //import 'package:lastbite/features/recetas/data/services/translation_service.dart';
 import 'package:lastbite/features/recetas/domain/receta.dart';
 
+/// Bytes de las ilustraciones en data URI, decodificados una sola vez: sin
+/// esto cada redibujo decodificaria ~60 KB y la imagen parpadearia.
+final Map<String, Uint8List> _bytesPorImagen = {};
+
+/// Imagen de una receta: ilustracion generada por IA (data URI) o URL
+/// remota (recetas viejas de Spoonacular). Si falla, [alternativa].
+Widget _imagenReceta(String url, {required Widget alternativa}) {
+  if (url.startsWith('data:')) {
+    var bytes = _bytesPorImagen[url];
+    if (bytes == null) {
+      try {
+        bytes = UriData.parse(url).contentAsBytes();
+      } catch (_) {
+        return alternativa;
+      }
+      if (_bytesPorImagen.length >= 40) {
+        _bytesPorImagen.remove(_bytesPorImagen.keys.first);
+      }
+      _bytesPorImagen[url] = bytes;
+    }
+    return Image.memory(
+      bytes,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      gaplessPlayback: true,
+      errorBuilder: (_, error, stackTrace) => alternativa,
+    );
+  }
+
+  return Image.network(
+    _urlImagenOptimizada(url),
+    width: double.infinity,
+    fit: BoxFit.cover,
+    filterQuality: FilterQuality.high,
+    webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+    errorBuilder: (_, error, stackTrace) => alternativa,
+  );
+}
+
 String _urlImagenOptimizada(String originalUrl) {
   if (originalUrl.isEmpty) return originalUrl;
 
@@ -137,13 +176,9 @@ class _RecetaCardState extends State<RecetaCard> {
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(18),
                       ),
-                      child: Image.network(
-                        _urlImagenOptimizada(receta.imagenUrl),
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        filterQuality: FilterQuality.high,
-                        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-                        errorBuilder: (_, error, stackTrace) => Center(
+                      child: _imagenReceta(
+                        receta.imagenUrl,
+                        alternativa: Center(
                           child: Text(
                             _emojiParaReceta(receta.titulo),
                             style: const TextStyle(fontSize: 52),
@@ -477,13 +512,9 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
               )
             : ClipRRect(
                 borderRadius: BorderRadius.circular(18),
-                child: Image.network(
-                  _urlImagenOptimizada(receta.imagenUrl),
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  filterQuality: FilterQuality.high,
-                  webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-                  errorBuilder: (_, error, stackTrace) => Center(
+                child: _imagenReceta(
+                  receta.imagenUrl,
+                  alternativa: Center(
                     child: Text(
                       _emojiParaReceta(receta.titulo),
                       style: const TextStyle(fontSize: 60),

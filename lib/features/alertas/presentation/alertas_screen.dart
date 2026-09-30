@@ -349,6 +349,9 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
   }
 
   Future<Receta> _cargarDetalleReceta(Receta receta) async {
+    // La alerta guarda la receta de IA completa: no hace falta pedir nada.
+    if ((receta.instrucciones ?? '').trim().isNotEmpty) return receta;
+
     final cached = _detallesCache[receta.id];
     if (cached != null) return cached;
 
@@ -391,10 +394,13 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
   String? _limpiarHtml(String? texto) {
     if (texto == null || texto.trim().isEmpty) return null;
 
+    // Conserva los saltos de linea: las instrucciones de IA van un paso por
+    // linea.
     final sinTags = texto.replaceAll(RegExp(r'<[^>]*>'), ' ');
     return sinTags
         .replaceAll('&nbsp;', ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'[ \t]+'), ' ')
+        .replaceAll(RegExp(r'\s*\n\s*'), '\n')
         .trim();
   }
 }

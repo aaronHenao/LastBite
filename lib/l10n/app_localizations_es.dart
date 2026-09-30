@@ -467,7 +467,10 @@ class L10nEs extends L10n {
   String get recetasTitulo => 'Residuo Cero';
 
   @override
-  String get recetasBuscar => 'Buscar por nombre...';
+  String get recetasBuscar => 'Escribe un ingrediente o plato y pulsa buscar';
+
+  @override
+  String get recetasGenerando => 'La IA está preparando más recetas…';
 
   @override
   String get recetasSugeridas => 'RECETAS SUGERIDAS';

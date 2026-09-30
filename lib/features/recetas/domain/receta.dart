@@ -1,12 +1,14 @@
 class Receta {
   final int id;
   final String titulo;
+  /// URL http(s) o data URI (`data:image/jpeg;base64,...`) de la ilustracion
+  /// generada por IA. Ver `ImagenesRecetasService`.
   final String imagenUrl;
   final int ingredientesUsados; // cuántos hay en la despensa
   final int ingredientesFaltantes; // cuántos faltan para prepararla
   final int likes;
 
-  // segundo endpoint (detalle)
+  // detalle (las recetas de IA los traen desde la busqueda)
   final int? minutosPreparacion;
   final List<String>? dishTypes;
   final int? porciones;
@@ -53,22 +55,26 @@ class Receta {
 }
 
 factory Receta.fromMap(Map<String, dynamic> map) {
+  // Tolerante: la cache guarda recetas de versiones anteriores y un campo
+  // null no debe tumbar toda la lista.
+  int? entero(Object? v) => v is num ? v.toInt() : int.tryParse('${v ?? ''}');
+
   return Receta(
-    id: map['id'] as int,
-    titulo: map['titulo'] as String,
-    imagenUrl: map['imagenUrl'] as String,
-    ingredientesUsados: map['ingredientesUsados'] as int,
-    ingredientesFaltantes: map['ingredientesFaltantes'] as int,
-    likes: map['likes'] as int,
-    minutosPreparacion: map['minutosPreparacion'] as int?,
+    id: entero(map['id']) ?? 0,
+    titulo: map['titulo']?.toString() ?? '',
+    imagenUrl: map['imagenUrl']?.toString() ?? '',
+    ingredientesUsados: entero(map['ingredientesUsados']) ?? 0,
+    ingredientesFaltantes: entero(map['ingredientesFaltantes']) ?? 0,
+    likes: entero(map['likes']) ?? 0,
+    minutosPreparacion: entero(map['minutosPreparacion']),
     dishTypes: (map['dishTypes'] as List?)
         ?.map((e) => e.toString())
         .toList(),
-    porciones: map['porciones'] as int?,
+    porciones: entero(map['porciones']),
     ingredientes: (map['ingredientes'] as List?)
         ?.map((e) => e.toString())
         .toList(),
-    instrucciones: map['instrucciones'] as String?,
+    instrucciones: map['instrucciones']?.toString(),
   );
 }
 
