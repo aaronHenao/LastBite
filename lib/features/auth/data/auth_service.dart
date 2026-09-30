@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 import '../domain/auth_user.dart';
 
@@ -55,6 +56,13 @@ class AuthService {
 
   Future<AuthUser> loginConGoogle() async {
     try {
+      // En web, google_sign_in.signIn() esta obsoleto: no devuelve idToken y
+      // depende de People API. Firebase abre su propio popup de Google.
+      if (kIsWeb) {
+        final cred = await _auth.signInWithPopup(GoogleAuthProvider());
+        return _mapUser(cred.user!);
+      }
+
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) throw Exception('Login cancelado');
 
@@ -67,6 +75,10 @@ class AuthService {
       final cred = await _auth.signInWithCredential(credential);
       return _mapUser(cred.user!);
     } on FirebaseAuthException catch (e) {
+      if (e.code == 'popup-closed-by-user' ||
+          e.code == 'cancelled-popup-request') {
+        throw Exception('Login cancelado');
+      }
       throw _mapError(e);
     }
   }
@@ -74,7 +86,7 @@ class AuthService {
   //logout
 
   Future<void> cerrarSesion() async {
-    await _googleSignIn.signOut();
+    if (!kIsWeb) await _googleSignIn.signOut();
     await _auth.signOut();
   }
 
@@ -107,6 +119,8 @@ class AuthService {
         return 'Demasiados intentos. Espera un momento.';
       case 'network-request-failed':
         return 'Sin conexión a internet.';
+      case 'popup-blocked':
+        return 'El navegador bloqueó la ventana de Google. Permite ventanas emergentes.';
       default:
         return 'Error de autenticación: ${e.message}';
     }
