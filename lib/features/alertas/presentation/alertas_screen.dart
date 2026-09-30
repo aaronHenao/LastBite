@@ -249,7 +249,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
           content: Text('Alerta de ${alerta.nombreProducto} descartada'),
           action: SnackBarAction(
             label: 'Deshacer',
-            onPressed: notifier.refrescar,
+            onPressed: () => notifier.restaurar(alerta),
           ),
         ),
       );

@@ -25,6 +25,8 @@ class AlertasRepository {
   CollectionReference<Map<String, dynamic>> get _alertasCol =>
       _raiz.collection('alertas');
 
+  /// Documento de versiones anteriores (guardaba `lastClearAt`). Ya no se
+  /// usa, pero puede existir en Firestore y no es una alerta.
   DocumentReference<Map<String, dynamic>> get _metaDoc => _alertasCol.doc('_meta');
 
   Future<List<Producto>> cargarProductos() async {
@@ -38,16 +40,6 @@ class AlertasRepository {
         .where((doc) => doc.id != _metaDoc.id)
         .map((doc) => Alerta.fromMap({...doc.data(), 'id': doc.id}))
         .toList();
-  }
-
-  Future<DateTime?> cargarUltimoBorrado() async {
-    final doc = await _metaDoc.get();
-    if (!doc.exists) return null;
-
-    final data = doc.data();
-    final raw = data?['lastClearAt']?.toString();
-    if (raw == null || raw.trim().isEmpty) return null;
-    return DateTime.tryParse(raw);
   }
 
   Future<void> guardarAlertas(List<Alerta> alertas) async {
@@ -66,18 +58,34 @@ class AlertasRepository {
     }, SetOptions(merge: true));
   }
 
+  /// Deshace un descarte: la alerta vuelve a mostrarse.
+  Future<void> restaurarAlerta(String id) async {
+    await _alertasCol.doc(id).set({
+      'dismissedAt': null,
+    }, SetOptions(merge: true));
+  }
+
+  /// "Borrar todo": descarta las alertas visibles en vez de borrar los
+  /// documentos. Asi esas mismas no vuelven a crearse, pero las de productos
+  /// nuevos o de un umbral nuevo si aparecen.
   Future<void> borrarTodasAlertas(DateTime momento) async {
     final snapshot = await _alertasCol.get();
-    final batch = _db.batch();
+    final visibles = snapshot.docs
+        .where((doc) => doc.id != _metaDoc.id)
+        .where((doc) => doc.data()['dismissedAt'] == null)
+        .toList();
 
-    for (final doc in snapshot.docs) {
-      if (doc.id == _metaDoc.id) continue;
-      batch.delete(doc.reference);
+    // En la despensa compartida cada escritura evalua una regla que lee otro
+    // documento y Firestore corta en 20 lecturas por request.
+    final porLote = despensaCompartidaId == null ? 400 : 10;
+    for (var i = 0; i < visibles.length; i += porLote) {
+      final batch = _db.batch();
+      for (final doc in visibles.skip(i).take(porLote)) {
+        batch.set(doc.reference, {
+          'dismissedAt': momento.toIso8601String(),
+        }, SetOptions(merge: true));
+      }
+      await batch.commit();
     }
-
-    await batch.commit();
-    await _metaDoc.set({
-      'lastClearAt': momento.toIso8601String(),
-    }, SetOptions(merge: true));
   }
 }

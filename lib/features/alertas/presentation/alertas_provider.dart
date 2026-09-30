@@ -12,6 +12,7 @@ import 'package:lastbite/features/recetas/domain/receta.dart';
 import 'package:lastbite/features/compartida/presentation/compartida_provider.dart';
 import '../data/alertas_repository.dart';
 import '../domain/alerta.dart';
+import '../domain/generar_alertas.dart';
 
 class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
   late AlertasRepository _repo;
@@ -63,6 +64,22 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     state = AsyncData((state.value ?? []).where((a) => a.id != id).toList());
   }
 
+  /// "Deshacer" despues de descartar. Antes solo recargaba la lista y la
+  /// alerta seguia descartada, asi que no volvia nunca.
+  Future<void> restaurar(Alerta alerta) async {
+    final user = await ref.read(firebaseUserProvider.future);
+    if (user == null) return;
+
+    _repo = AlertasRepository(
+      userId: user.uid,
+      despensaCompartidaId: await ref.read(despensaCompartidaIdProvider.future),
+    );
+    await _repo.restaurarAlerta(alerta.id);
+
+    final actuales = (state.value ?? []).where((a) => a.id != alerta.id);
+    state = AsyncData(ordenarAlertas([...actuales, _conReceta(alerta, null)]));
+  }
+
   Future<List<Alerta>> _cargarAlertas() async {
     final user = await ref.read(firebaseUserProvider.future);
     if (user == null) return [];
@@ -78,17 +95,14 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     final resultados = await Future.wait([
       repo.cargarProductos(),
       repo.cargarAlertas(),
-      repo.cargarUltimoBorrado(),
     ]);
 
     final productos = resultados[0] as List<Producto>;
     final alertasExistentes = List<Alerta>.from(resultados[1] as List<Alerta>);
-    final lastClearAt = resultados[2] as DateTime?;
 
-    final nuevas = _generarAlertas(
+    final nuevas = alertasPendientes(
       productos: productos,
-      alertasExistentes: alertasExistentes,
-      lastClearAt: lastClearAt,
+      existentesIds: alertasExistentes.map((a) => a.id).toSet(),
     );
 
     if (nuevas.isNotEmpty) {
@@ -96,17 +110,9 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
       alertasExistentes.addAll(nuevas);
     }
 
-    final visibles = alertasExistentes
-        .where((alerta) => !alerta.estaOculta)
-        .toList();
-    // Primero lo mas urgente; a igual urgencia, lo mas reciente. Antes se
-    // ordenaba solo por creadaEn, asi que un producto ya vencido quedaba
-    // debajo de un primer aviso de hoy.
-    visibles.sort((a, b) {
-      final porUrgencia = b.prioridad.compareTo(a.prioridad);
-      if (porUrgencia != 0) return porUrgencia;
-      return b.creadaEn.compareTo(a.creadaEn);
-    });
+    final visibles = ordenarAlertas(
+      alertasExistentes.where((alerta) => !alerta.estaOculta),
+    );
 
     // Generar una receta con IA tarda segundos: las alertas se muestran ya y
     // la receta aparece en su tarjeta cuando llega.
@@ -128,67 +134,6 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     }
 
     return visibles;
-  }
-
-  List<Alerta> _generarAlertas({
-    required List<Producto> productos,
-    required List<Alerta> alertasExistentes,
-    required DateTime? lastClearAt,
-  }) {
-    final existentesIds = alertasExistentes.map((a) => a.id).toSet();
-    final nuevas = <Alerta>[];
-
-    void agregar(Producto producto, AlertaTipo tipo, int umbralDias) {
-      final alerta = _crearAlerta(
-        producto: producto,
-        tipo: tipo,
-        existentesIds: existentesIds,
-        lastClearAt: lastClearAt,
-        umbralDias: umbralDias,
-      );
-      if (alerta != null) nuevas.add(alerta);
-    }
-
-    for (final producto in productos) {
-      if (producto.diasRestantes < 0) {
-        agregar(producto, AlertaTipo.vencido, 0);
-        continue;
-      }
-      if (producto.diasRestantes <= 5) agregar(producto, AlertaTipo.aviso5, 5);
-      if (producto.diasRestantes <= 3) agregar(producto, AlertaTipo.aviso3, 3);
-      if (producto.diasRestantes <= 1) agregar(producto, AlertaTipo.aviso1, 1);
-    }
-
-    return nuevas;
-  }
-
-  Alerta? _crearAlerta({
-    required Producto producto,
-    required AlertaTipo tipo,
-    required Set<String> existentesIds,
-    required DateTime? lastClearAt,
-    required int umbralDias,
-  }) {
-    final alertaId = Alerta.buildId(productoId: producto.id, tipo: tipo);
-    if (existentesIds.contains(alertaId)) return null;
-
-    final fechaDisparo = producto.fechaCaducidad.subtract(
-      Duration(days: umbralDias),
-    );
-
-    if (lastClearAt != null && !fechaDisparo.isAfter(lastClearAt)) {
-      return null;
-    }
-
-    return Alerta(
-      id: alertaId,
-      productoId: producto.id,
-      nombreProducto: producto.nombre,
-      emoji: producto.emoji,
-      fechaCaducidad: producto.fechaCaducidad,
-      tipo: tipo,
-      creadaEn: DateTime.now(),
-    );
   }
 
   /// Solo los avisos de 3 y 1 dia llevan receta. Una receta sin instrucciones
@@ -309,7 +254,9 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     }
   }
 
-  Alerta _conReceta(Alerta alerta, Receta receta) => Alerta(
+  /// Copia de [alerta] visible (sin dismissedAt) y con [receta]; null deja
+  /// la receta que ya tenia.
+  Alerta _conReceta(Alerta alerta, Receta? receta) => Alerta(
     id: alerta.id,
     productoId: alerta.productoId,
     nombreProducto: alerta.nombreProducto,
@@ -317,8 +264,7 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
     fechaCaducidad: alerta.fechaCaducidad,
     tipo: alerta.tipo,
     creadaEn: alerta.creadaEn,
-    dismissedAt: alerta.dismissedAt,
-    recetaSugerida: receta,
+    recetaSugerida: receta ?? alerta.recetaSugerida,
   );
 
   bool _recetaIncluyeProducto(Receta receta, String productoKey) {
