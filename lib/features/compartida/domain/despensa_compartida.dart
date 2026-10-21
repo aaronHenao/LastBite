@@ -25,7 +25,7 @@ class MiembroDespensa {
     uid: map['uid'] as String,
     nombre: (map['nombre'] as String?)?.trim().isNotEmpty == true
         ? map['nombre'] as String
-        : 'Miembro',
+        : '',
     email: map['email'] as String?,
     fotoUrl: map['fotoUrl'] as String?,
     unidoEn:
@@ -79,7 +79,7 @@ class DespensaCompartida {
 
     return DespensaCompartida(
       id: map['id'] as String,
-      nombre: map['nombre'] as String? ?? 'Despensa familiar',
+      nombre: map['nombre'] as String? ?? '',
       codigo: map['codigo'] as String? ?? '',
       adminUid: map['adminUid'] as String? ?? '',
       creadaEn:

@@ -13,6 +13,7 @@ import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 
 import '../domain/despensa_compartida.dart';
 import 'compartida_provider.dart';
+import 'textos_compartida.dart';
 import 'widgets/miembro_tile.dart';
 
 class DespensaCompartidaScreen extends ConsumerWidget {
@@ -41,7 +42,8 @@ class DespensaCompartidaScreen extends ConsumerWidget {
                     child: CircularProgressIndicator(color: context.paleta.marca),
                   ),
                 ),
-                error: (e, _) => _MensajeError(mensaje: '$e'),
+                error: (e, _) =>
+                    _MensajeError(mensaje: mensajeErrorCompartida(context.t, e)),
                 data: (despensa) {
                   if (despensa == null || uid == null) {
                     return const _SinDespensa();
@@ -249,13 +251,13 @@ class _ConDespensa extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(despensa.nombre, style: textTheme.displaySmall),
+        Text(despensa.nombreVisible(t), style: textTheme.displaySmall),
         const SizedBox(height: 6),
         Text(
           esAdmin
               ? t.compartidaEresAdmin
               : t.compartidaAdministradaPor(
-                  despensa.miembro(despensa.adminUid)?.nombre ??
+                  despensa.miembro(despensa.adminUid)?.nombreVisible(t) ??
                       t.compartidaOtroMiembro,
                 ),
           style: textTheme.bodySmall?.copyWith(color: context.paleta.apagado),
@@ -470,6 +472,10 @@ Future<void> _dialogoCrear(BuildContext context, WidgetRef ref) async {
     ),
   );
   if (nombre == null || !context.mounted) return;
+  // Sin nombre, el de siempre en el idioma activo: el dato no guarda uno fijo.
+  final nombreFinal = nombre.trim().isEmpty
+      ? context.t.compartidaNombreDefecto
+      : nombre;
 
   final migrar = await _preguntarMigracion(context, ref);
   if (migrar == null || !context.mounted) return;
@@ -477,7 +483,7 @@ Future<void> _dialogoCrear(BuildContext context, WidgetRef ref) async {
   await _ejecutar(
     context,
     () => ref.read(compartidaProvider.notifier).crear(
-      nombre: nombre,
+      nombre: nombreFinal,
       migrar: migrar,
     ),
     exito: context.t.compartidaCreada,
@@ -608,7 +614,8 @@ Future<void> _confirmarSalirComoAdmin(
   if (nuevoAdmin == null || !context.mounted) return;
 
   final nombre =
-      despensa.miembro(nuevoAdmin)?.nombre ?? context.t.compartidaOtroMiembro;
+      despensa.miembro(nuevoAdmin)?.nombreVisible(context.t) ??
+      context.t.compartidaOtroMiembro;
   final ok = await _confirmar(
     context,
     titulo: context.t.compartidaSalir,
@@ -671,7 +678,7 @@ class _DialogoNuevoAdminState extends State<_DialogoNuevoAdmin> {
                     activeColor: context.paleta.marca,
                     contentPadding: EdgeInsets.zero,
                     title: Text(
-                      miembro.nombre,
+                      miembro.nombreVisible(context.t),
                       style: TextStyle(
                         color: context.paleta.tinta,
                         fontWeight: FontWeight.w600,
@@ -739,7 +746,9 @@ Future<void> _confirmarExpulsar(
   final ok = await _confirmar(
     context,
     titulo: context.t.compartidaExpulsarTitulo,
-    mensaje: context.t.compartidaExpulsarDescripcion(miembro.nombre),
+    mensaje: context.t.compartidaExpulsarDescripcion(
+      miembro.nombreVisible(context.t),
+    ),
     textoBoton: context.t.compartidaEliminarAccion,
   );
   if (ok != true || !context.mounted) return;
@@ -750,7 +759,7 @@ Future<void> _confirmarExpulsar(
       despensaId: despensa.id,
       userId: miembro.uid,
     ),
-    exito: context.t.compartidaMiembroSalio(miembro.nombre),
+    exito: context.t.compartidaMiembroSalio(miembro.nombreVisible(context.t)),
   );
 }
 
@@ -802,6 +811,7 @@ Future<void> _ejecutar(
   final messenger = ScaffoldMessenger.of(context);
   final navigator = Navigator.of(context, rootNavigator: true);
   final colorError = context.paleta.vencido;
+  final t = context.t;
 
   // Bloquea la pantalla mientras dura la escritura en Firestore: sin esto no
   // hay senal de progreso y se puede tocar el boton dos veces.
@@ -822,7 +832,10 @@ Future<void> _ejecutar(
   } catch (e) {
     navigator.pop();
     messenger.showSnackBar(
-      SnackBar(backgroundColor: colorError, content: Text('\$e')),
+      SnackBar(
+        backgroundColor: colorError,
+        content: Text(mensajeErrorCompartida(t, e)),
+      ),
     );
   }
 }

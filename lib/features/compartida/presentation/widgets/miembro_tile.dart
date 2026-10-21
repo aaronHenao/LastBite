@@ -1,10 +1,12 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:lastbite/core/responsive/responsive.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
+import 'package:lastbite/core/widgets/avatar_usuario.dart';
+
+import 'package:lastbite/l10n/traducciones.dart';
 
 import '../../domain/despensa_compartida.dart';
+import '../textos_compartida.dart';
 
 class MiembroTile extends StatelessWidget {
   const MiembroTile({
@@ -39,7 +41,7 @@ class MiembroTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _Avatar(fotoUrl: miembro.fotoUrl),
+          AvatarUsuario(fotoUrl: miembro.fotoUrl, radio: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -49,7 +51,11 @@ class MiembroTile extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        esYo ? '${miembro.nombre} (tú)' : miembro.nombre,
+                        esYo
+                            ? context.t.compartidaTu(
+                                miembro.nombreVisible(context.t),
+                              )
+                            : miembro.nombreVisible(context.t),
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.titleMedium,
                       ),
@@ -74,7 +80,7 @@ class MiembroTile extends StatelessWidget {
           if (onExpulsar != null)
             IconButton(
               onPressed: onExpulsar,
-              tooltip: 'Eliminar miembro',
+              tooltip: context.t.compartidaEliminarMiembro,
               icon: Icon(
                 CupertinoIcons.person_badge_minus,
                 size: 20,
@@ -83,28 +89,6 @@ class MiembroTile extends StatelessWidget {
             ),
         ],
       ),
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({this.fotoUrl});
-  final String? fotoUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    // CachedNetworkImage no se comporta bien en web, igual que en el perfil.
-    if (fotoUrl != null && !Responsive.isTabletOrWeb(context)) {
-      return CircleAvatar(
-        radius: 20,
-        backgroundColor: context.paleta.marcaSuave,
-        backgroundImage: CachedNetworkImageProvider(fotoUrl!),
-      );
-    }
-    return CircleAvatar(
-      radius: 20,
-      backgroundColor: context.paleta.marcaSuave,
-      child: Icon(Icons.person, size: 20, color: context.paleta.apagado),
     );
   }
 }
@@ -121,7 +105,7 @@ class _BadgeAdmin extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        'ADMIN',
+        context.t.compartidaAdmin,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
           color: context.paleta.marca,
           fontSize: 9,

@@ -5,13 +5,30 @@ import 'package:lastbite/core/data/despensa_ref.dart';
 
 import '../domain/despensa_compartida.dart';
 
-/// Error de dominio de la despensa compartida, con mensaje listo para mostrar.
+/// Por que no se pudo hacer algo con la despensa compartida.
+enum ErrorCompartida {
+  largoCodigo,
+  codigoInexistente,
+  noExiste,
+  unicoMiembro,
+  elegirAdmin,
+  adminInvalido,
+  soloAdminMiembros,
+  adminNoSeElimina,
+  soloAdminEliminar,
+  yaPerteneces,
+  sinCodigo,
+  sinSesion,
+}
+
+/// Error de dominio de la despensa compartida. Lleva el motivo, no la frase:
+/// la pantalla la pone en el idioma activo.
 class DespensaCompartidaException implements Exception {
-  DespensaCompartidaException(this.mensaje);
-  final String mensaje;
+  DespensaCompartidaException(this.motivo);
+  final ErrorCompartida motivo;
 
   @override
-  String toString() => mensaje;
+  String toString() => 'DespensaCompartidaException(${motivo.name})';
 }
 
 class DespensaCompartidaRepository {
@@ -21,7 +38,7 @@ class DespensaCompartidaRepository {
 
   // Sin 0/O/1/I para que el codigo se dicte sin confusiones.
   static const _alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  static const _largoCodigo = 6;
+  static const largoCodigo = 6;
   static const _subcolecciones = [
     'productos',
     'alertas',
@@ -82,7 +99,7 @@ class DespensaCompartidaRepository {
   /// usuario decidiera sobre sus productos para una despensa inexistente.
   Future<String?> buscarPorCodigo(String codigo) async {
     final normalizado = _normalizarCodigo(codigo);
-    if (normalizado.length != _largoCodigo) return null;
+    if (normalizado.length != largoCodigo) return null;
     final indice = await _codigos.doc(normalizado).get();
     return indice.data()?['despensaId'] as String?;
   }
@@ -107,7 +124,7 @@ class DespensaCompartidaRepository {
     final ref = _col.doc();
     final despensa = DespensaCompartida(
       id: ref.id,
-      nombre: nombre.trim().isEmpty ? 'Despensa familiar' : nombre.trim(),
+      nombre: nombre.trim(),
       codigo: codigo,
       adminUid: admin.uid,
       creadaEn: DateTime.now(),
@@ -133,18 +150,14 @@ class DespensaCompartidaRepository {
     await _verificarSinDespensa(usuario.uid);
 
     final normalizado = _normalizarCodigo(codigo);
-    if (normalizado.length != _largoCodigo) {
-      throw DespensaCompartidaException(
-        'El código debe tener $_largoCodigo caracteres.',
-      );
+    if (normalizado.length != largoCodigo) {
+      throw DespensaCompartidaException(ErrorCompartida.largoCodigo);
     }
 
     final indice = await _codigos.doc(normalizado).get();
     final despensaId = indice.data()?['despensaId'] as String?;
     if (!indice.exists || despensaId == null) {
-      throw DespensaCompartidaException(
-        'No existe una despensa con ese código.',
-      );
+      throw DespensaCompartidaException(ErrorCompartida.codigoInexistente);
     }
 
     await _col.doc(despensaId).update({
@@ -155,7 +168,7 @@ class DespensaCompartidaRepository {
 
     final actualizada = await cargar(despensaId);
     if (actualizada == null) {
-      throw DespensaCompartidaException('La despensa ya no está disponible.');
+      throw DespensaCompartidaException(ErrorCompartida.noExiste);
     }
     return actualizada;
   }
@@ -190,24 +203,18 @@ class DespensaCompartidaRepository {
   }) async {
     final despensa = await cargar(despensaId);
     if (despensa == null) {
-      throw DespensaCompartidaException('La despensa ya no existe.');
+      throw DespensaCompartidaException(ErrorCompartida.noExiste);
     }
 
     if (despensa.esAdmin(userId)) {
       if (despensa.miembros.length == 1) {
-        throw DespensaCompartidaException(
-          'Eres el único miembro. Elimina la despensa en vez de salir.',
-        );
+        throw DespensaCompartidaException(ErrorCompartida.unicoMiembro);
       }
       if (nuevoAdminUid == null) {
-        throw DespensaCompartidaException(
-          'Elige a quién le dejas la administración antes de salir.',
-        );
+        throw DespensaCompartidaException(ErrorCompartida.elegirAdmin);
       }
       if (nuevoAdminUid == userId || despensa.miembro(nuevoAdminUid) == null) {
-        throw DespensaCompartidaException(
-          'El nuevo administrador debe ser otro miembro de la despensa.',
-        );
+        throw DespensaCompartidaException(ErrorCompartida.adminInvalido);
       }
       // Primero la transferencia, todavia como admin; despues la salida, que
       // las reglas permiten porque cada quien puede quitarse a si mismo.
@@ -225,17 +232,13 @@ class DespensaCompartidaRepository {
   }) async {
     final despensa = await cargar(despensaId);
     if (despensa == null) {
-      throw DespensaCompartidaException('La despensa ya no existe.');
+      throw DespensaCompartidaException(ErrorCompartida.noExiste);
     }
     if (!despensa.esAdmin(adminUid)) {
-      throw DespensaCompartidaException(
-        'Solo el administrador puede eliminar miembros.',
-      );
+      throw DespensaCompartidaException(ErrorCompartida.soloAdminMiembros);
     }
     if (userId == adminUid) {
-      throw DespensaCompartidaException(
-        'El administrador no puede eliminarse a sí mismo.',
-      );
+      throw DespensaCompartidaException(ErrorCompartida.adminNoSeElimina);
     }
     await _quitarMiembro(despensaId: despensaId, userId: userId);
   }
@@ -248,12 +251,10 @@ class DespensaCompartidaRepository {
   }) async {
     final despensa = await cargar(despensaId);
     if (despensa == null) {
-      throw DespensaCompartidaException('La despensa ya no existe.');
+      throw DespensaCompartidaException(ErrorCompartida.noExiste);
     }
     if (!despensa.esAdmin(adminUid)) {
-      throw DespensaCompartidaException(
-        'Solo el administrador puede eliminar la despensa.',
-      );
+      throw DespensaCompartidaException(ErrorCompartida.soloAdminEliminar);
     }
 
     final ref = _col.doc(despensaId);
@@ -332,9 +333,7 @@ class DespensaCompartidaRepository {
   Future<void> _verificarSinDespensa(String userId) async {
     final actual = await idCompartidaDe(userId);
     if (actual != null) {
-      throw DespensaCompartidaException(
-        'Ya perteneces a una despensa compartida. Sal de ella primero.',
-      );
+      throw DespensaCompartidaException(ErrorCompartida.yaPerteneces);
     }
   }
 
@@ -348,15 +347,13 @@ class DespensaCompartidaRepository {
     final random = Random.secure();
     for (var intento = 0; intento < 8; intento++) {
       final codigo = List.generate(
-        _largoCodigo,
+        largoCodigo,
         (_) => _alfabeto[random.nextInt(_alfabeto.length)],
       ).join();
 
       final existe = await _codigos.doc(codigo).get();
       if (!existe.exists) return codigo;
     }
-    throw DespensaCompartidaException(
-      'No se pudo generar un código. Intenta de nuevo.',
-    );
+    throw DespensaCompartidaException(ErrorCompartida.sinCodigo);
   }
 }

@@ -59,7 +59,7 @@ class CompartidaNotifier extends AsyncNotifier<void> {
   Future<User> _usuario() async {
     final user = await ref.read(firebaseUserProvider.future);
     if (user == null) {
-      throw DespensaCompartidaException('Debes iniciar sesión.');
+      throw DespensaCompartidaException(ErrorCompartida.sinSesion);
     }
     return user;
   }
@@ -68,7 +68,7 @@ class CompartidaNotifier extends AsyncNotifier<void> {
     uid: user.uid,
     nombre: user.displayName?.trim().isNotEmpty == true
         ? user.displayName!.trim()
-        : (user.email ?? 'Miembro'),
+        : (user.email ?? ''),
     email: user.email,
     fotoUrl: user.photoURL,
     unidoEn: DateTime.now(),
