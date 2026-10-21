@@ -1,6 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:lastbite/core/utils/texto.dart';
+import 'package:lastbite/core/widgets/aviso_deshacer.dart';
+import 'package:lastbite/core/widgets/boton_ayuda.dart';
 import 'package:lastbite/core/widgets/estado_vacio.dart';
+import 'package:lastbite/core/widgets/pastilla_estado.dart';
+import 'package:lastbite/features/ayuda/presentation/ayuda_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
@@ -38,7 +43,11 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
 
   List<Receta> _recetas = const [];
   bool _cargandoRecetas = true;
-  String? _errorCarga;
+  /// Lo que fallo. El mensaje se arma al dibujar, en el idioma activo.
+  Object? _errorCarga;
+
+  /// Idioma en el que se pidieron las recetas que se ven.
+  String? _idioma;
   String? _avisoTraduccion;
   String _query = '';
   bool _cargaInicial = false;
@@ -52,6 +61,9 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
 
   /// Ya se ve al menos una receta pero la IA sigue enviando las demas.
   bool _generandoMas = false;
+
+  /// La despensa cambio desde que se generaron las recetas que se ven.
+  bool _despensaCambio = false;
 
   /// Se resuelve en cada carga porque la raiz cambia al entrar o salir de una
   /// despensa compartida. Espera el id en vez de leerlo del estado actual:
@@ -78,6 +90,20 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     // cambiarlo con el boton "Menor tiempo" y ahi deja de ser automatico.
     _ordenarPorTiempo = priorizarRecetasRapidas(DateTime.now());
     _ritmoAutomatico = true;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Recetas en el idioma elegido: al cambiarlo, la IA genera otras. La
+    // cache se separa por idioma, asi que volver a uno anterior no paga de
+    // nuevo.
+    final idioma = context.t.localeName;
+    final anterior = _idioma;
+    _idioma = idioma;
+    if (anterior != null && anterior != idioma && _cargaInicial) {
+      _cargarRecetasDesdeApi();
+    }
   }
 
   @override
@@ -131,9 +157,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     final lista = [..._recetas]..sort(_compararRecetas);
 
     if (_query.isEmpty || _busquedaPorProducto) return lista;
-    return lista
-        .where((r) => r.titulo.toLowerCase().contains(_query.toLowerCase()))
-        .toList();
+    return lista.where((r) => coincideBusqueda(r.titulo, _query)).toList();
   }
 
   int _compararRecetas(Receta a, Receta b) {
@@ -156,10 +180,11 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   /// mismo instante.
   String _explicacionOrden() {
     final ahora = DateTime.now();
-    final momento = explicacionMomento(momentoComidaDe(ahora));
+    final t = context.t;
+    final momento = explicacionMomento(t, momentoComidaDe(ahora));
 
     if (!_ritmoAutomatico) return momento;
-    return '$momento. ${explicacionRitmo(ahora)}';
+    return '$momento. ${explicacionRitmo(t, ahora)}';
   }
 
   /// Icono que acompana a [_explicacionOrden].
@@ -184,7 +209,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     }
 
     return topUrgentes
-        .map((p) => '${p.nombre} (${p.diasRestantes}d)')
+        .map((p) => '${p.nombre} (${etiquetaDias(context, p.diasRestantes)})')
         .join(' · ');
   }
 
@@ -206,6 +231,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
             number: 3,
             perfil: perfil,
             ingredientePrincipal: principal,
+            idioma: context.t.localeName,
           )) {
         recetas = RecetaBusquedaRemoteModel.fromApiRawList(
           raw,
@@ -235,6 +261,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       _generandoMas = false;
       _errorCarga = null;
       _busquedaPorProducto = false;
+      _despensaCambio = false;
     });
 
     try {
@@ -262,7 +289,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       if (!forzar && cacheRepo != null) {
         final valido = await cacheRepo.cacheEsValido(
           ingredientesUrgentesActuales: urgentes,
-          perfilKey: perfil?.cacheKey ?? '',
+          perfilKey: _claveCache(perfil),
         );
         if (valido) {
           final recetasCache = await cacheRepo.cargarRecetas();
@@ -297,7 +324,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         await cacheRepo.guardarRecetas(
           recetas: recetas,
           ingredientesUrgentes: urgentes,
-          perfilKey: perfil?.cacheKey ?? '',
+          perfilKey: _claveCache(perfil),
         );
       }
 
@@ -326,7 +353,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       if (!mounted || solicitud != _solicitud) return;
       setState(() {
         _recetas = respaldo;
-        _errorCarga = respaldo.isEmpty ? _mensajeError(e) : null;
+        _errorCarga = respaldo.isEmpty ? e : null;
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
@@ -340,6 +367,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       _generandoMas = false;
       _errorCarga = null;
       _busquedaPorProducto = true;
+      _despensaCambio = false;
     });
 
     try {
@@ -364,7 +392,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     } catch (e) {
       if (!mounted || solicitud != _solicitud) return;
       setState(() {
-        _errorCarga = _mensajeError(e);
+        _errorCarga = e;
         _cargandoRecetas = false;
         _avisoTraduccion = _busquedaDataSource.lastTranslationWarning;
       });
@@ -405,8 +433,16 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
       // Despues, solo un cambio real de contenido. La IA se paga por llamada
       // y el stream re-emite con cada snapshot de Firestore.
       final prevList = previous?.value;
-      if (prevList != null && !listEquals(prevList, nextList)) {
+      if (prevList == null || listEquals(prevList, nextList)) return;
+
+      // Lo que se esta mirando no cambia solo: la evaluacion encontro que la
+      // receta que alguien queria conservar desaparecia al tocar la
+      // despensa. Se avisa y la persona decide; solo se recarga sola si no
+      // habia nada que perder.
+      if (_recetas.isEmpty) {
         _cargarRecetasDesdeApi();
+      } else {
+        setState(() => _despensaCambio = true);
       }
     });
     ref.listen<AsyncValue<PerfilNutricional?>>(perfilNutricionalProvider, (
@@ -429,21 +465,33 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      context.t.recetasRotulo,
-                      style: textTheme.titleSmall?.copyWith(
-                        letterSpacing: 2.4,
-                        color: context.paleta.apagado,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      context.t.recetasTitulo,
-                      style: textTheme.bodyLarge?.copyWith(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        color: context.paleta.tinta,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                context.t.recetasRotulo,
+                                style: textTheme.titleSmall?.copyWith(
+                                  letterSpacing: 2.4,
+                                  color: context.paleta.apagado,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                context.t.recetasTitulo,
+                                style: textTheme.bodyLarge?.copyWith(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: context.paleta.tinta,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const BotonAyuda(seccion: SeccionAyuda.recetas),
+                      ],
                     ),
                     const SizedBox(height: 16),
 
@@ -633,6 +681,12 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                         ),
                       ),
                     ],
+                    if (_despensaCambio && !_cargandoRecetas) ...[
+                      const SizedBox(height: 8),
+                      _AvisoDespensaCambio(
+                        onActualizar: () => _cargarRecetasDesdeApi(forzar: true),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                   ],
                 ),
@@ -641,12 +695,27 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
 
             //Lista de recetas
             _cargandoRecetas
+                // La IA tarda varios segundos: un spinner solo no dice si la
+                // app sigue trabajando ni cuanto falta.
                 ? SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.only(top: 60),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: context.paleta.marca,
+                      padding: const EdgeInsets.fromLTRB(20, 60, 20, 0),
+                      child: Semantics(
+                        liveRegion: true,
+                        child: Column(
+                          children: [
+                            CircularProgressIndicator(
+                              color: context.paleta.marca,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              context.t.recetasBuscando,
+                              textAlign: TextAlign.center,
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: context.paleta.apagado,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -675,7 +744,7 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              _errorCarga!,
+                              _mensajeError(_errorCarga!),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: context.paleta.apagado,
@@ -770,7 +839,6 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
   /// una receta usa parte de un producto, no siempre el producto entero.
   Future<void> _cocinar(Receta receta) async {
     final messenger = ScaffoldMessenger.of(context);
-    final colorExito = context.paleta.marca;
     final t = context.t;
     final ingredientes = (receta.ingredientes ?? [])
         .map((i) => i.toLowerCase())
@@ -801,15 +869,20 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
     if (elegidos == null || elegidos.isEmpty) return;
 
     final notifier = ref.read(despensaProvider.notifier);
-    for (final id in elegidos) {
-      await notifier.consumir(id);
+    final consumidos = usados.where((p) => elegidos.contains(p.id)).toList();
+    for (final producto in consumidos) {
+      await notifier.consumir(producto.id);
     }
 
-    messenger.showSnackBar(
-      SnackBar(
-        backgroundColor: colorExito,
-        content: Text(t.recetasSalvados(elegidos.length)),
-      ),
+    if (!mounted) return;
+    mostrarAvisoDeshacer(
+      context,
+      mensaje: t.recetasSalvados(consumidos.length),
+      onDeshacer: () async {
+        for (final producto in consumidos) {
+          await notifier.deshacerConsumo(producto);
+        }
+      },
     );
   }
 
@@ -916,8 +989,87 @@ class _RecetasScreenState extends ConsumerState<RecetasScreen> {
         .trim();
   }
 
-  String _mensajeError(Object error) =>
-      error is RecetasRemoteException ? error.message : error.toString();
+  /// La cache se separa por idioma: cambiarlo trae recetas nuevas en ese
+  /// idioma en vez de las guardadas en otro.
+  String _claveCache(PerfilNutricional? perfil) =>
+      '${perfil?.cacheKey ?? ''}|${context.t.localeName}';
+
+  String _mensajeError(Object error) {
+    final t = context.t;
+    if (error is! RecetasRemoteException) return t.recetasErrorDesconocido;
+    return switch (error.motivo) {
+      ErrorRecetas.faltaClave => t.recetasErrorFaltaClave,
+      ErrorRecetas.respuestaVacia => t.recetasErrorRespuestaVacia,
+      ErrorRecetas.tiempoAgotado => t.recetasErrorTiempo,
+      ErrorRecetas.sinConexion => t.recetasErrorSinConexion,
+      ErrorRecetas.claveInvalida => t.recetasErrorClave,
+      ErrorRecetas.sinCreditos => t.recetasErrorCreditos,
+      ErrorRecetas.modeloInexistente => t.recetasErrorModeloInexistente,
+      ErrorRecetas.modeloRetirado => t.recetasErrorModeloRetirado,
+      ErrorRecetas.demasiadasConsultas => t.recetasErrorDemasiadas,
+      ErrorRecetas.servicioCaido => t.recetasErrorServicio,
+      ErrorRecetas.sinRecetasValidas => t.recetasErrorSinRecetas,
+      ErrorRecetas.formatoInesperado => t.recetasErrorFormato,
+      ErrorRecetas.respuestaIncompleta => t.recetasErrorIncompleta,
+      ErrorRecetas.detalleNoDisponible => t.recetasErrorDetalle,
+      ErrorRecetas.sinIngredientes => t.recetasErrorSinIngredientes,
+      ErrorRecetas.desconocido => t.recetasErrorDesconocido,
+    };
+  }
+}
+
+/// Las recetas que se ven son de una despensa que ya cambio. No se cambian
+/// solas: la persona decide cuando actualizarlas.
+class _AvisoDespensaCambio extends StatelessWidget {
+  const _AvisoDespensaCambio({required this.onActualizar});
+
+  final VoidCallback onActualizar;
+
+  @override
+  Widget build(BuildContext context) {
+    final paleta = context.paleta;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+      decoration: BoxDecoration(
+        color: paleta.marcaSuave,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: paleta.marca.withValues(alpha: 0.4)),
+      ),
+      child: Semantics(
+        liveRegion: true,
+        child: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: WrapAlignment.spaceBetween,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 16, color: paleta.marca),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      context.t.recetasDespensaCambio,
+                      style: textTheme.bodySmall?.copyWith(color: paleta.tinta),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            TextButton.icon(
+              onPressed: onActualizar,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: Text(context.t.recetasActualizar),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _OrdenPorTiempoBoton extends StatelessWidget {
@@ -1036,7 +1188,7 @@ class _DialogoCocinarState extends State<_DialogoCocinar> {
                           ),
                         ),
                         subtitle: Text(
-                          AppTheme.diasLabel(producto.diasRestantes),
+                          etiquetaDias(context, producto.diasRestantes),
                           style: TextStyle(
                             color: context.paleta.apagado,
                             fontSize: 12,

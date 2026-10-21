@@ -68,9 +68,78 @@ void main() {
   testWidgets('resume los ingredientes que no entran', (tester) async {
     await _montarEnCelda(tester, 1100);
 
-    // Dos etiquetas visibles; lo que no entra se resume en un contador.
+    // Dos etiquetas visibles; lo que se tiene y no entra se resume en un
+    // contador, y lo que falta va aparte: no se mezclan.
     expect(find.text('arroz'), findsOneWidget);
-    expect(find.textContaining('más'), findsOneWidget);
+    expect(find.text('+1'), findsOneWidget);
+    expect(find.text('Faltan 4'), findsOneWidget);
     expect(find.text('tripas de salchichas'), findsNothing);
+  });
+
+  group('detalle', () {
+    Future<void> montarDetalle(WidgetTester tester, Receta receta) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('es'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          theme: AppTheme.light,
+          home: Scaffold(
+            body: RecetaDetalleSheet(
+              receta: receta,
+              productosEnDespensa: const {'pechuga de pollo', 'limón'},
+              isDialog: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    final receta = Receta(
+      id: 2,
+      titulo: 'Pollo al limón',
+      imagenUrl: '',
+      ingredientesUsados: 3,
+      ingredientesFaltantes: 1,
+      likes: 0,
+      ingredientes: const [
+        'Pollo (300 g)',
+        'Jugo de limon (2 cucharadas)',
+        'Sal',
+        'Crema de leche con un nombre larguísimo que no entra en una sola '
+            'línea de la pantalla (100 ml)',
+      ],
+      instrucciones: 'Corta el pollo.\nSofríe con limón.\nAgrega la crema.',
+    );
+
+    testWidgets('marca cada ingrediente con la misma regla que el match', (
+      tester,
+    ) async {
+      // Una receta "75 %" mostraba la sal como "Falta" y no reconocia el
+      // limon sin tilde: el porcentaje y las marcas no cuadraban.
+      await montarDetalle(tester, receta);
+
+      expect(find.text('✓ Tienes'), findsNWidgets(2));
+      expect(find.text('Básico'), findsOneWidget);
+      expect(find.text('Falta'), findsOneWidget);
+      expect(find.text('Tienes 3 de 4 ingredientes'), findsOneWidget);
+      expect(find.text('75% match'), findsOneWidget);
+      expect(find.textContaining('se asume que los tienes'), findsOneWidget);
+    });
+
+    testWidgets('la preparacion va en pasos numerados y nada desborda', (
+      tester,
+    ) async {
+      await montarDetalle(tester, receta);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('Agrega la crema.'), findsOneWidget);
+    });
   });
 }

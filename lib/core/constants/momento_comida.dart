@@ -7,6 +7,8 @@
 /// principal).
 library;
 
+import 'package:lastbite/l10n/app_localizations.dart';
+
 enum MomentoComida {
   /// Antes del mediodia: desayunos y brunch.
   desayuno,
@@ -42,8 +44,8 @@ bool encajaConMomento(List<String>? dishTypes, MomentoComida momento) {
 }
 
 /// Texto que explica al usuario por que la lista quedo ordenada asi.
-String explicacionMomento(MomentoComida momento) {
+String explicacionMomento(L10n t, MomentoComida momento) {
   return momento == MomentoComida.desayuno
-      ? 'Es temprano: primero las de desayuno'
-      : 'Primero los platos fuertes';
+      ? t.recetasOrdenDesayuno
+      : t.recetasOrdenPrincipal;
 }

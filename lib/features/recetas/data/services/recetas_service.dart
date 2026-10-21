@@ -51,12 +51,14 @@ class RecetasService {
     bool ignorePantry = false,
     PerfilNutricional? perfil,
     String? ingredientePrincipal,
+    String idioma = 'es',
   }) async {
     final pedido = _Pedido.de(
       productosDespensa: productosDespensa,
       number: number,
       perfil: perfil,
       ingredientePrincipal: ingredientePrincipal,
+      idioma: idioma,
     );
 
     final enMemoria = _busquedas[pedido.clave];
@@ -87,12 +89,14 @@ class RecetasService {
     bool ignorePantry = false,
     PerfilNutricional? perfil,
     String? ingredientePrincipal,
+    String idioma = 'es',
   }) async* {
     final pedido = _Pedido.de(
       productosDespensa: productosDespensa,
       number: number,
       perfil: perfil,
       ingredientePrincipal: ingredientePrincipal,
+      idioma: idioma,
     );
 
     final enMemoria = _busquedas[pedido.clave];
@@ -204,9 +208,7 @@ class RecetasService {
     // Recetas de sesiones anteriores o de Spoonacular (alertas viejas): su
     // detalle no esta en memoria y no se puede volver a pedir por id.
     throw const RecetasRemoteException(
-      message:
-          'El detalle de esta receta ya no está disponible. '
-          'Actualiza las sugerencias para generar una nueva.',
+      motivo: ErrorRecetas.detalleNoDisponible,
     );
   }
 
@@ -262,7 +264,7 @@ class RecetasService {
 
   static const _promptSistema = '''
 Eres el chef de LastBite, una app colombiana que ayuda a no desperdiciar comida.
-Propones recetas caseras, realistas y fáciles, en español de Colombia.
+Propones recetas caseras, realistas y fáciles, en el idioma que te pida el usuario.
 
 Responde SOLO con JSON válido, sin texto antes ni después y sin markdown, con esta forma exacta:
 {"recetas":[{"titulo":"Arroz con pollo","imagen":"A plate of yellow rice mixed with shredded chicken, peas and carrots","tipos":["main course"],"minutos":40,"porciones":4,"ingredientes":[{"nombre":"pechuga de pollo","cantidad":"500 g"}],"pasos":["Corta el pollo en cubos...","..."]}]}
@@ -306,6 +308,12 @@ Reglas:
       }
     }
 
+    // Lo que lee la persona sale en el idioma de la app; "imagen" sigue en
+    // ingles porque es para el generador de ilustraciones.
+    buffer.writeln(
+      'Escribe "titulo", los nombres de "ingredientes", sus cantidades y '
+      'los "pasos" en ${_nombreIdioma(pedido.idioma)}.',
+    );
     buffer.write(
       pedido.cantidad == 1
           ? 'Dame 1 receta.'
@@ -313,6 +321,12 @@ Reglas:
     );
     return buffer.toString();
   }
+
+  static String _nombreIdioma(String codigo) => switch (codigo) {
+    'en' => 'inglés (English)',
+    'pt' => 'portugués de Brasil (português)',
+    _ => 'español de Colombia',
+  };
 
   List<String> _restriccionesPerfil(PerfilNutricional? perfil) {
     if (perfil == null) return const [];
@@ -364,6 +378,7 @@ class _Pedido {
     required this.principal,
     required this.cantidad,
     required this.perfil,
+    required this.idioma,
   });
 
   factory _Pedido.de({
@@ -371,6 +386,7 @@ class _Pedido {
     required int number,
     required PerfilNutricional? perfil,
     required String? ingredientePrincipal,
+    required String idioma,
   }) {
     final vistos = <String>{};
     final despensa = <String>[];
@@ -384,7 +400,7 @@ class _Pedido {
     final principal = ingredientePrincipal?.trim() ?? '';
     if (despensa.isEmpty && principal.isEmpty) {
       throw const RecetasRemoteException(
-        message: 'No hay ingredientes válidos para buscar recetas',
+        motivo: ErrorRecetas.sinIngredientes,
       );
     }
 
@@ -393,6 +409,7 @@ class _Pedido {
       principal: principal,
       cantidad: number.clamp(1, RecetasService.maxRecetasPorBusqueda).toInt(),
       perfil: perfil,
+      idioma: idioma,
     );
   }
 
@@ -401,11 +418,16 @@ class _Pedido {
   final int cantidad;
   final PerfilNutricional? perfil;
 
+  /// Codigo del idioma de la app ('es', 'en', 'pt'): en el se escriben las
+  /// recetas.
+  final String idioma;
+
   String get clave => [
     principal.toLowerCase(),
     cantidad,
     despensa.join(','),
     perfil?.cacheKey ?? '',
+    idioma,
   ].join('|');
 
   /// Lo buscado cuenta como disponible solo para calcular el match cuando no

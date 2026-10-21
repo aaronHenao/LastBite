@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+import 'package:lastbite/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lastbite/core/constants/ritmo_cocina.dart';
 
@@ -55,9 +57,12 @@ void main() {
       final lunes = DateTime(2026, 8, 24);
       final sabado = DateTime(2026, 8, 29);
 
-      expect(explicacionRitmo(lunes), isNot(explicacionRitmo(sabado)));
-      expect(explicacionRitmo(lunes), isNotEmpty);
-      expect(explicacionRitmo(sabado), isNotEmpty);
+      for (final idioma in ['es', 'en', 'pt']) {
+        final t = lookupL10n(Locale(idioma));
+        expect(explicacionRitmo(t, lunes), isNot(explicacionRitmo(t, sabado)));
+        expect(explicacionRitmo(t, lunes), isNotEmpty);
+        expect(explicacionRitmo(t, sabado), isNotEmpty);
+      }
     });
   });
 }

@@ -21,6 +21,7 @@ class RecetasBusquedaRemoteDataSource {
     bool ignorePantry = false,
     PerfilNutricional? perfil,
     String? ingredientePrincipal,
+    String idioma = 'es',
   }) {
     return _service.buscarRecetasPorDespensaRaw(
       productosDespensa: productosDespensa,
@@ -28,6 +29,7 @@ class RecetasBusquedaRemoteDataSource {
       ignorePantry: ignorePantry,
       perfil: perfil,
       ingredientePrincipal: ingredientePrincipal,
+      idioma: idioma,
     );
   }
 
@@ -37,12 +39,14 @@ class RecetasBusquedaRemoteDataSource {
     int number = 3,
     PerfilNutricional? perfil,
     String? ingredientePrincipal,
+    String idioma = 'es',
   }) {
     return _service.buscarRecetasPorDespensaStream(
       productosDespensa: productosDespensa,
       number: number,
       perfil: perfil,
       ingredientePrincipal: ingredientePrincipal,
+      idioma: idioma,
     );
   }
 }

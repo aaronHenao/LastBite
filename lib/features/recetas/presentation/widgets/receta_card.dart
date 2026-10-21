@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 //import 'package:lastbite/features/recetas/data/services/translation_service.dart';
+import 'package:lastbite/features/recetas/domain/disponibilidad_ingrediente.dart';
 import 'package:lastbite/features/recetas/domain/receta.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 
 /// Bytes de las ilustraciones en data URI, decodificados una sola vez: sin
 /// esto cada redibujo decodificaria ~60 KB y la imagen parpadearia.
@@ -274,14 +276,16 @@ class _RecetaCardState extends State<RecetaCard> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Tags de ingredientes
+                  // Tags de ingredientes. Antes un solo "+N más" mezclaba lo que
+                  // tienes y no entraba con lo que falta: no se sabia cuanto
+                  // habia que comprar.
                   Builder(
                     builder: (context) {
                       const visibles = 2;
                       final mostrados = _ingredientes.take(visibles).toList();
-                      final ocultos =
-                          receta.ingredientesFaltantes +
-                          (_ingredientes.length - mostrados.length);
+                      final otrosQueTienes =
+                          _ingredientes.length - mostrados.length;
+                      final faltan = receta.ingredientesFaltantes;
 
                       return Row(
                         children: [
@@ -294,9 +298,16 @@ class _RecetaCardState extends State<RecetaCard> {
                             ),
                             const SizedBox(width: 6),
                           ],
-                          if (ocultos > 0)
+                          if (otrosQueTienes > 0) ...[
                             _IngredientTag(
-                              label: '+$ocultos más',
+                              label: '+$otrosQueTienes',
+                              tienes: true,
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          if (faltan > 0)
+                            _IngredientTag(
+                              label: context.t.recetasFaltan(faltan),
                               tienes: false,
                             ),
                         ],
@@ -356,6 +367,62 @@ class _IngredientTag extends StatelessWidget {
   }
 }
 
+/// Un ingrediente del detalle y si ya esta en casa.
+class _FilaIngrediente extends StatelessWidget {
+  const _FilaIngrediente({required this.texto, required this.disponibilidad});
+
+  final String texto;
+  final Disponibilidad disponibilidad;
+
+  @override
+  Widget build(BuildContext context) {
+    final paleta = context.paleta;
+    final t = context.t;
+    final (etiqueta, color) = switch (disponibilidad) {
+      Disponibilidad.tienes => ('✓ ${t.recetasIngredienteTienes}', paleta.marca),
+      Disponibilidad.basico => (t.recetasIngredienteBasico, paleta.marca),
+      Disponibilidad.falta => (t.recetasIngredienteFalta, paleta.apagado),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: paleta.superficie,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: disponibilidad == Disponibilidad.falta
+                ? paleta.contorno
+                : paleta.marca.withValues(alpha: 0.4),
+          ),
+        ),
+        // Expanded: un ingrediente largo pasa a la linea siguiente en vez de
+        // salirse de la fila.
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                texto,
+                style: TextStyle(fontSize: 14, color: paleta.tinta),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              etiqueta,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Bottom sheet de detalle ───────────────────────────────
 class RecetaDetalleSheet extends StatefulWidget {
   final Receta receta;
@@ -397,12 +464,8 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
     _cargarDetalleSiExiste();
   }
 
-  bool _tieneIngrediente(String ingrediente) {
-    final texto = ingrediente.toLowerCase();
-    return widget.productosEnDespensa.any(
-      (producto) => producto.isNotEmpty && texto.contains(producto),
-    );
-  }
+  Disponibilidad _disponibilidad(String ingrediente) =>
+      disponibilidadIngrediente(ingrediente, widget.productosEnDespensa);
 
   Future<void> _cargarDetalleSiExiste() async {
     final future = widget.detalleFuture;
@@ -420,7 +483,7 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
       if (!mounted) return;
       setState(
         () => _errorDetalle =
-            'No pudimos cargar la preparación. Revisa tu conexión.',
+            context.t.recetasErrorDetalleCarga,
       );
     } finally {
       if (mounted) setState(() => _cargandoDetalle = false);
@@ -468,6 +531,23 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
   }
 
   List<Widget> _buildChildren(Receta receta) {
+    final ingredientes = receta.ingredientes ?? const <String>[];
+    final disponibilidades = ingredientes.map(_disponibilidad).toList();
+    final disponibles = disponibilidades
+        .where((d) => d != Disponibilidad.falta)
+        .length;
+    final hayBasicos = disponibilidades.contains(Disponibilidad.basico);
+    // Con la despensa de ahora: si cambio desde que se genero la receta, el
+    // porcentaje guardado ya no coincide con las marcas de abajo.
+    final match = ingredientes.isEmpty
+        ? receta.porcentajeMatch
+        : (disponibles * 100 / ingredientes.length).round();
+    final pasos = (receta.instrucciones ?? '')
+        .split('\n')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+
     return [
       // Handle — solo en mobile
       if (!widget.isDialog)
@@ -549,7 +629,7 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
               ),
             ),
             child: Text(
-              '${receta.porcentajeMatch}% match',
+              context.t.recetasMatch(match),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
@@ -584,7 +664,7 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
           ),
           const SizedBox(width: 4),
           Text(
-            '${receta.likes} likes',
+            context.t.recetasLikes(receta.likes),
             style: TextStyle(fontSize: 13, color: context.paleta.apagado),
           ),
         ],
@@ -614,7 +694,7 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
             ),
             TextButton(
               onPressed: _cargarDetalleSiExiste,
-              child: const Text('Reintentar'),
+              child: Text(context.t.accionReintentar),
             ),
           ],
         ),
@@ -623,7 +703,7 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
 
       // Ingredientes
       Text(
-        'INGREDIENTES',
+        context.t.recetasIngredientes,
         style: TextStyle(
           fontSize: 11,
           letterSpacing: 1.5,
@@ -631,55 +711,35 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
           color: context.paleta.apagado,
         ),
       ),
+      if (ingredientes.isNotEmpty) ...[
+        const SizedBox(height: 4),
+        Text(
+          context.t.recetasTienesDeTotal(disponibles, ingredientes.length),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: context.paleta.tinta,
+          ),
+        ),
+      ],
       const SizedBox(height: 10),
-      if (receta.ingredientes != null)
-        ...receta.ingredientes!.asMap().entries.map((e) {
-          final tienes = _tieneIngrediente(e.value);
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 10,
-              ),
-              decoration: BoxDecoration(
-                color: context.paleta.superficie,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: tienes
-                      ? context.paleta.marca.withValues(alpha: 0.4)
-                      : context.paleta.contorno,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    e.value,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: context.paleta.tinta,
-                    ),
-                  ),
-                  Text(
-                    tienes ? '✓ Tienes' : 'Falta',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: tienes ? context.paleta.marca : context.paleta.apagado,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
+      for (final (indice, ingrediente) in ingredientes.indexed)
+        _FilaIngrediente(
+          texto: ingrediente,
+          disponibilidad: disponibilidades[indice],
+        ),
+      if (hayBasicos)
+        Text(
+          context.t.recetasBasicosNota,
+          style: TextStyle(fontSize: 12, color: context.paleta.apagado),
+        ),
       const SizedBox(height: 20),
 
-      // Instrucciones
-      if (receta.instrucciones != null) ...[
+      // Instrucciones, un paso por fila: en un solo bloque el texto se
+      // cortaba por renglon y costaba seguir por donde ibas.
+      if (pasos.isNotEmpty) ...[
         Text(
-          'PREPARACIÓN',
+          context.t.recetasPreparacion,
           style: TextStyle(
             fontSize: 11,
             letterSpacing: 1.5,
@@ -695,13 +755,46 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: context.paleta.contorno),
           ),
-          child: Text(
-            receta.instrucciones!,
-            style: TextStyle(
-              fontSize: 14,
-              color: context.paleta.tinta,
-              height: 1.6,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final (indice, paso) in pasos.indexed)
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: indice == pasos.length - 1 ? 0 : 12,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (pasos.length > 1) ...[
+                        CircleAvatar(
+                          radius: 12,
+                          backgroundColor: context.paleta.marcaSuave,
+                          child: Text(
+                            '${indice + 1}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: context.paleta.marca,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
+                      Expanded(
+                        child: Text(
+                          paso,
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: context.paleta.tinta,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
         const SizedBox(height: 20),
@@ -729,7 +822,9 @@ class _RecetaDetalleSheetState extends State<RecetaDetalleSheet> {
             ),
           ),
           label: Text(
-            widget.onCocinar == null ? 'Cerrar' : 'Ya la cociné',
+            widget.onCocinar == null
+                ? context.t.accionCerrar
+                : context.t.recetasYaLaCocine,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
         ),

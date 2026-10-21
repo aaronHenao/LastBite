@@ -79,11 +79,7 @@ class NvidiaNimService {
     Map<String, dynamic>? esquemaJson,
   }) async* {
     if (_apiKey.trim().isEmpty) {
-      throw const RecetasRemoteException(
-        message:
-            'Falta la clave de la IA. Ejecuta la app con '
-            '--dart-define-from-file=env.json',
-      );
+      throw const RecetasRemoteException(motivo: ErrorRecetas.faltaClave);
     }
 
     final Response<ResponseBody> response;
@@ -122,15 +118,13 @@ class NvidiaNimService {
     } on DioException catch (e) {
       throw RecetasRemoteException(
         statusCode: e.response?.statusCode,
-        message: mensajeErrorNim(e),
+        motivo: motivoErrorNim(e),
       );
     }
 
     final body = response.data;
     if (body == null) {
-      throw const RecetasRemoteException(
-        message: 'La IA respondió vacío. Intenta de nuevo.',
-      );
+      throw const RecetasRemoteException(motivo: ErrorRecetas.respuestaVacia);
     }
 
     final texto = StringBuffer();
@@ -164,39 +158,36 @@ class NvidiaNimService {
     } on DioException catch (e) {
       throw RecetasRemoteException(
         statusCode: e.response?.statusCode,
-        message: mensajeErrorNim(e),
+        motivo: motivoErrorNim(e),
       );
     }
 
     if (texto.isEmpty) {
-      throw const RecetasRemoteException(
-        message: 'La IA respondió vacío. Intenta de nuevo.',
-      );
+      throw const RecetasRemoteException(motivo: ErrorRecetas.respuestaVacia);
     }
   }
 }
 
-/// Mensaje en español para un error de cualquier endpoint de NVIDIA.
-String mensajeErrorNim(DioException e) {
+/// Motivo de un error de cualquier endpoint de NVIDIA.
+ErrorRecetas motivoErrorNim(DioException e) {
   switch (e.type) {
     case DioExceptionType.connectionTimeout:
     case DioExceptionType.sendTimeout:
     case DioExceptionType.receiveTimeout:
-      return 'La IA tardó demasiado en responder. Intenta de nuevo.';
+      return ErrorRecetas.tiempoAgotado;
     case DioExceptionType.connectionError:
-      return 'No hay conexión con el servicio de recetas. Revisa tu internet.';
+      return ErrorRecetas.sinConexion;
     default:
       break;
   }
 
   return switch (e.response?.statusCode) {
-    401 || 403 => 'La clave de la IA no es válida o expiró.',
-    402 => 'Se agotaron los créditos del servicio de IA.',
-    404 => 'El modelo de IA configurado no existe.',
-    410 => 'El modelo de IA configurado fue retirado por NVIDIA.',
-    429 => 'Demasiadas consultas a la IA. Espera un momento.',
-    final int code when code >= 500 =>
-      'El servicio de IA no está disponible ahora mismo.',
-    _ => 'No se pudieron generar recetas.',
+    401 || 403 => ErrorRecetas.claveInvalida,
+    402 => ErrorRecetas.sinCreditos,
+    404 => ErrorRecetas.modeloInexistente,
+    410 => ErrorRecetas.modeloRetirado,
+    429 => ErrorRecetas.demasiadasConsultas,
+    final int code when code >= 500 => ErrorRecetas.servicioCaido,
+    _ => ErrorRecetas.desconocido,
   };
 }

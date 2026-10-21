@@ -8,6 +8,8 @@
 /// el boton "Menor tiempo".
 library;
 
+import 'package:lastbite/l10n/app_localizations.dart';
+
 /// Dias que cuentan como fin de semana (`DateTime.saturday`, `DateTime.sunday`).
 const Set<int> diasDeFinDeSemana = {DateTime.saturday, DateTime.sunday};
 
@@ -17,8 +19,8 @@ bool priorizarRecetasRapidas(DateTime fecha) {
 }
 
 /// Texto que explica al usuario por que la lista viene ordenada asi.
-String explicacionRitmo(DateTime fecha) {
+String explicacionRitmo(L10n t, DateTime fecha) {
   return priorizarRecetasRapidas(fecha)
-      ? 'Es dia de semana: primero las mas rapidas'
-      : 'Es fin de semana: hay tiempo para algo mas elaborado';
+      ? t.recetasOrdenSemana
+      : t.recetasOrdenFinde;
 }

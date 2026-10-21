@@ -624,11 +624,5 @@ class AppTheme {
   static Color? fondoUrgencia(int dias) =>
       colorUrgencia(dias)?.withValues(alpha: 0.14);
 
-  static String diasLabel(int dias) {
-    if (dias < 0) return '¡Vencido!';
-    if (dias == 0) return 'Hoy';
-    if (dias == 1) return 'Mañana';
-    return '${dias}d';
-  }
 
 }

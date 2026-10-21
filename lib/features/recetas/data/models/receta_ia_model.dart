@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'package:lastbite/core/utils/texto.dart';
+
+import '../../domain/disponibilidad_ingrediente.dart';
 import '../datasources/recetas_remote_exception.dart';
 
 /// Receta tal como la genera el LLM, ya validada.
@@ -33,10 +36,6 @@ class RecetaIaModel {
   /// no chocar con los ids de Spoonacular que siguen guardados en alertas
   /// viejas, y por debajo de 2^31 para ser un int seguro tambien en web.
   int get id => idRecetaIa(titulo);
-
-  /// Ingredientes que se asume que hay en cualquier cocina. Cuentan como
-  /// "Tienes" para que una receta no parezca imposible por la sal.
-  static const basicos = {'sal', 'pimienta', 'aceite', 'agua'};
 
   // ------------------------------------------------------------- parseo
 
@@ -111,14 +110,14 @@ class RecetaIaModel {
       if (item is! Map) continue;
       final receta = RecetaIaModel.fromJson(Map<String, dynamic>.from(item));
       // Dos recetas con el mismo titulo tendrian el mismo id.
-      if (receta != null && titulos.add(_normalizar(receta.titulo))) {
+      if (receta != null && titulos.add(normalizarTexto(receta.titulo))) {
         recetas.add(receta);
       }
     }
 
     if (recetas.isEmpty) {
       throw const RecetasRemoteException(
-        message: 'La IA no devolvió recetas válidas. Intenta de nuevo.',
+        motivo: ErrorRecetas.sinRecetasValidas,
       );
     }
     return recetas;
@@ -186,27 +185,20 @@ class RecetaIaModel {
     List<String> despensa, {
     String imagen = '',
   }) {
-    final despensaNorm = despensa
-        .map(_normalizar)
-        .where((p) => p.length >= 3)
-        .toList();
-
     final enDespensa = <String>[];
     final basicosUsados = <String>[];
     final faltantes = <String>[];
 
+    // Los basicos cuentan como "Tienes" para que una receta no parezca
+    // imposible por la sal.
     for (final ingrediente in ingredientes) {
-      final nombre = _normalizar(ingrediente.nombre);
-      final tiene = despensaNorm.any(
-        (p) => nombre.contains(p) || (nombre.length >= 3 && p.contains(nombre)),
-      );
-
-      if (tiene) {
-        enDespensa.add(ingrediente.texto);
-      } else if (basicos.any((b) => nombre == b || nombre.startsWith('$b '))) {
-        basicosUsados.add(ingrediente.texto);
-      } else {
-        faltantes.add(ingrediente.texto);
+      switch (disponibilidadIngrediente(ingrediente.nombre, despensa)) {
+        case Disponibilidad.tienes:
+          enDespensa.add(ingrediente.texto);
+        case Disponibilidad.basico:
+          basicosUsados.add(ingrediente.texto);
+        case Disponibilidad.falta:
+          faltantes.add(ingrediente.texto);
       }
     }
 
@@ -279,7 +271,7 @@ class RecetaIaModel {
     final String cierre;
     if (inicioObjeto == -1 && inicioLista == -1) {
       throw const RecetasRemoteException(
-        message: 'La IA respondió en un formato inesperado. Intenta de nuevo.',
+        motivo: ErrorRecetas.formatoInesperado,
       );
     } else if (inicioLista == -1 ||
         (inicioObjeto != -1 && inicioObjeto < inicioLista)) {
@@ -293,7 +285,7 @@ class RecetaIaModel {
     final fin = texto.lastIndexOf(cierre);
     if (fin <= inicio) {
       throw const RecetasRemoteException(
-        message: 'La respuesta de la IA llegó incompleta. Intenta de nuevo.',
+        motivo: ErrorRecetas.respuestaIncompleta,
       );
     }
     texto = texto.substring(inicio, fin + 1);
@@ -302,7 +294,7 @@ class RecetaIaModel {
       return jsonDecode(texto);
     } on FormatException {
       throw const RecetasRemoteException(
-        message: 'La IA respondió en un formato inesperado. Intenta de nuevo.',
+        motivo: ErrorRecetas.formatoInesperado,
       );
     }
   }
@@ -310,7 +302,7 @@ class RecetaIaModel {
   /// Traduce los tipos de plato a los valores (en ingles) que entiende
   /// `momento_comida.dart`. Los desconocidos se descartan.
   static String? _tipoPlato(String raw) {
-    final t = _normalizar(raw);
+    final t = normalizarTexto(raw);
     const validos = {
       'breakfast',
       'brunch',
@@ -388,24 +380,12 @@ class IngredienteIa {
   }
 }
 
-/// Minusculas, sin tildes y sin espacios sobrantes, para comparar nombres.
-String _normalizar(String texto) {
-  const conTilde = 'áéíóúüñàèìòù';
-  const sinTilde = 'aeiouunaeiou';
-  final buffer = StringBuffer();
-  for (final c in texto.toLowerCase().trim().split('')) {
-    final i = conTilde.indexOf(c);
-    buffer.write(i == -1 ? c : sinTilde[i]);
-  }
-  return buffer.toString().replaceAll(RegExp(r'\s+'), ' ');
-}
-
 /// Hash polinomico del titulo normalizado. Las operaciones se mantienen por
 /// debajo de 2^53, asi da el mismo id en Android y en web.
 int idRecetaIa(String titulo) {
   const modulo = 1000000007;
   var hash = 0;
-  for (final unidad in _normalizar(titulo).codeUnits) {
+  for (final unidad in normalizarTexto(titulo).codeUnits) {
     hash = (hash * 31 + unidad) % modulo;
   }
   return 1000000000 + hash;
