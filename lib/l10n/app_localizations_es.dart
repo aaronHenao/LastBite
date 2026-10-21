@@ -620,4 +620,921 @@ class L10nEs extends L10n {
 
   @override
   String get agregarAgregarADespensa => 'Agregar a mi despensa';
+
+  @override
+  String get accionDeshacer => 'Deshacer';
+
+  @override
+  String get cuentaAyuda => 'Ayuda';
+
+  @override
+  String get accesoListaCompras => 'Lista de compras';
+
+  @override
+  String get accesoCompartida => 'Compartida';
+
+  @override
+  String get accesoBuscar => 'Buscar';
+
+  @override
+  String get ayudaTitulo => 'Ayuda';
+
+  @override
+  String get ayudaDescripcion =>
+      'Cómo usar LastBite y respuestas a las dudas más comunes.';
+
+  @override
+  String get ayudaAbrir => 'Abrir ayuda';
+
+  @override
+  String get ayudaPrimerosPasos => 'PRIMEROS PASOS';
+
+  @override
+  String get ayudaPaso1 =>
+      'Agrega lo que tienes en casa: escanea el código de barras o escríbelo a mano.';
+
+  @override
+  String get ayudaPaso2 =>
+      'Revisa tu despensa: arriba quedan los productos que vencen primero.';
+
+  @override
+  String get ayudaPaso3 =>
+      'Cocina con las recetas sugeridas y marca lo que usaste como consumido para sumar alimentos salvados.';
+
+  @override
+  String get ayudaPreguntas => 'PREGUNTAS FRECUENTES';
+
+  @override
+  String get ayudaSeccionDespensa => 'Despensa';
+
+  @override
+  String get ayudaSeccionAgregar => 'Agregar productos';
+
+  @override
+  String get ayudaSeccionRecetas => 'Recetas';
+
+  @override
+  String get ayudaSeccionAlertas => 'Alertas';
+
+  @override
+  String get ayudaSeccionCompartir => 'Despensa compartida y lista de compras';
+
+  @override
+  String get ayudaSeccionCuenta => 'Búsqueda, cuenta y ajustes';
+
+  @override
+  String get ayudaDespensaP1 => '¿Cómo marco que usé un producto?';
+
+  @override
+  String get ayudaDespensaR1 =>
+      'Tócalo en la despensa y elige «Marcar como consumido». Suma a tus alimentos salvados y al ahorro del mes. Si te equivocas, toca «Deshacer» en el aviso que aparece abajo.';
+
+  @override
+  String get ayudaDespensaP2 => '¿Qué significan los días de cada producto?';
+
+  @override
+  String get ayudaDespensaR2 =>
+      'Son los días que le quedan antes de vencer. «Próximos a vencer» agrupa los que vencen en 3 días o menos; los vencidos se marcan en rojo.';
+
+  @override
+  String get ayudaDespensaP3 => '¿Cómo se calcula el ahorro?';
+
+  @override
+  String get ayudaDespensaR3 =>
+      'Es un estimado: lo que consumiste antes de que se venciera, multiplicado por un precio promedio de su categoría.';
+
+  @override
+  String get ayudaAgregarP1 => '¿Qué hago si el código de barras no aparece?';
+
+  @override
+  String get ayudaAgregarR1 =>
+      'LastBite te pasa al ingreso manual. Escribe el nombre, elige la categoría y guarda.';
+
+  @override
+  String get ayudaAgregarP2 => '¿Quién elige la fecha de vencimiento?';
+
+  @override
+  String get ayudaAgregarR2 =>
+      'La app propone una según la categoría del producto. Cámbiala antes de guardar si el empaque dice otra.';
+
+  @override
+  String get ayudaRecetasP1 => '¿Qué significa el porcentaje de cada receta?';
+
+  @override
+  String get ayudaRecetasR1 =>
+      'Es la parte de los ingredientes que ya tienes. Los básicos (sal, pimienta, aceite y agua) cuentan como disponibles. En el detalle cada ingrediente dice «Tienes», «Básico» o «Falta».';
+
+  @override
+  String get ayudaRecetasP2 =>
+      '¿Por qué las recetas no cambian cuando cambio la despensa?';
+
+  @override
+  String get ayudaRecetasR2 =>
+      'Para que no pierdas la que estabas mirando. Cuando tu despensa cambia aparece un aviso con el botón «Actualizar recetas».';
+
+  @override
+  String get ayudaRecetasP3 => '¿Por qué tardan en aparecer?';
+
+  @override
+  String get ayudaRecetasR3 =>
+      'Las genera una IA a partir de tu despensa y puede tardar unos segundos. La primera aparece apenas está lista.';
+
+  @override
+  String get ayudaRecetasP4 => '¿Qué pasa al tocar «Ya la cociné»?';
+
+  @override
+  String get ayudaRecetasR4 =>
+      'Eliges qué productos se terminaron y se marcan como consumidos. Puedes deshacerlo desde el aviso.';
+
+  @override
+  String get ayudaAlertasP1 => '¿Cuándo aparece una alerta?';
+
+  @override
+  String get ayudaAlertasR1 =>
+      'Cuando un producto está por vencer o ya venció. Las alertas quedan guardadas hasta que las borres.';
+
+  @override
+  String get ayudaAlertasP2 => 'No me llegan las notificaciones';
+
+  @override
+  String get ayudaAlertasR2 =>
+      'Revisa que LastBite tenga permiso de notificaciones en los ajustes de tu teléfono.';
+
+  @override
+  String get ayudaCompartirP1 => '¿Cómo comparto la despensa con mi familia?';
+
+  @override
+  String get ayudaCompartirR1 =>
+      'Toca «Compartida» en la despensa y crea una despensa. Pasa el código a quien quieras sumar: esa persona toca «Unirme con código» y lo escribe.';
+
+  @override
+  String get ayudaCompartirP2 => '¿Dónde está la lista de compras?';
+
+  @override
+  String get ayudaCompartirR2 =>
+      'En «Lista de compras», arriba en la despensa. Al consumir o eliminar un producto, LastBite te ofrece agregarlo.';
+
+  @override
+  String get ayudaCuentaP1 => '¿Cómo busco un producto?';
+
+  @override
+  String get ayudaCuentaR1 =>
+      'Toca «Buscar» en la despensa. No hace falta escribir el nombre exacto: da igual el orden de las palabras, las tildes y un error de tipeo.';
+
+  @override
+  String get ayudaCuentaP2 =>
+      '¿Cómo cambio el tamaño del texto, el tema o el idioma?';
+
+  @override
+  String get ayudaCuentaR2 =>
+      'En el menú de tu cuenta, «Accesibilidad». Ahí también puedes restablecer todo a como venía.';
+
+  @override
+  String despensaSalvado(String nombre) {
+    return 'Salvaste $nombre.';
+  }
+
+  @override
+  String despensaSalvadoYEnLista(String nombre) {
+    return 'Salvaste $nombre. Quedó en tu lista de compras.';
+  }
+
+  @override
+  String despensaEliminado(String nombre) {
+    return 'Quitaste $nombre de la despensa.';
+  }
+
+  @override
+  String despensaEliminadoYEnLista(String nombre) {
+    return 'Quitaste $nombre de la despensa. Quedó en tu lista de compras.';
+  }
+
+  @override
+  String get recetasBuscando =>
+      'Buscando recetas con lo que tienes. Puede tardar unos segundos.';
+
+  @override
+  String get recetasDespensaCambio =>
+      'Tu despensa cambió. Estas recetas se quedan hasta que decidas actualizarlas.';
+
+  @override
+  String get recetasActualizar => 'Actualizar recetas';
+
+  @override
+  String recetasFaltan(int cantidad) {
+    String _temp0 = intl.Intl.pluralLogic(
+      cantidad,
+      locale: localeName,
+      other: 'Faltan $cantidad',
+      one: 'Falta 1',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recetasTienesDeTotal(int disponibles, int total) {
+    return 'Tienes $disponibles de $total ingredientes';
+  }
+
+  @override
+  String get recetasIngredienteTienes => 'Tienes';
+
+  @override
+  String get recetasIngredienteBasico => 'Básico';
+
+  @override
+  String get recetasIngredienteFalta => 'Falta';
+
+  @override
+  String get recetasBasicosNota =>
+      '«Básico» es sal, pimienta, aceite o agua: se asume que los tienes en casa.';
+
+  @override
+  String get recetasIngredientes => 'INGREDIENTES';
+
+  @override
+  String get recetasPreparacion => 'PREPARACIÓN';
+
+  @override
+  String agregarGuardadoVence(String nombre, int dias) {
+    String _temp0 = intl.Intl.pluralLogic(
+      dias,
+      locale: localeName,
+      other: '$nombre quedó en tu despensa. Vence en $dias días.',
+      one: '$nombre quedó en tu despensa. Vence mañana.',
+      zero: '$nombre quedó en tu despensa. Vence hoy.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ajustesRestablecer => 'Restablecer ajustes';
+
+  @override
+  String get ajustesRestablecerAyuda =>
+      'Vuelve el tamaño del texto, el contraste, el movimiento, el tema y el idioma a como venían. Tus productos, listas y alertas no se tocan.';
+
+  @override
+  String get ajustesRestablecerPregunta => '¿Restablecer los ajustes?';
+
+  @override
+  String get ajustesRestablecerAccion => 'Restablecer';
+
+  @override
+  String get ajustesRestablecidos => 'Los ajustes volvieron a como venían.';
+
+  @override
+  String consultaSinResultados(String busqueda) {
+    return 'No encontramos «$busqueda»';
+  }
+
+  @override
+  String get consultaSinResultadosDescripcion =>
+      'Prueba con otra palabra. No hace falta escribir el nombre exacto ni poner tildes.';
+
+  @override
+  String get despensaConsumir => 'Marcar como consumido';
+
+  @override
+  String get despensaConsumirAyuda => 'Suma a tus alimentos salvados';
+
+  @override
+  String get despensaEliminar => 'Eliminar';
+
+  @override
+  String get despensaEliminarAyuda => 'No suma a alimentos salvados';
+
+  @override
+  String get despensaListaPregunta => '¿Añadir a lista de compras?';
+
+  @override
+  String despensaListaDescripcion(String nombre) {
+    return 'Agregar $nombre a tu lista para la próxima compra.';
+  }
+
+  @override
+  String get despensaListaNo => 'No, gracias';
+
+  @override
+  String get despensaListaSi => 'Añadir';
+
+  @override
+  String get recetasYaLaCocine => 'Ya la cociné';
+
+  @override
+  String get categoriaVerdura => 'Verdura';
+
+  @override
+  String get categoriaFruta => 'Fruta';
+
+  @override
+  String get categoriaHierba => 'Hierba';
+
+  @override
+  String get categoriaCarne => 'Carne';
+
+  @override
+  String get categoriaPollo => 'Pollo';
+
+  @override
+  String get categoriaPescado => 'Pescado';
+
+  @override
+  String get categoriaHuevo => 'Huevo';
+
+  @override
+  String get categoriaLeche => 'Leche';
+
+  @override
+  String get categoriaYogur => 'Yogur';
+
+  @override
+  String get categoriaQueso => 'Queso';
+
+  @override
+  String get categoriaMantequilla => 'Mantequilla';
+
+  @override
+  String get categoriaPan => 'Pan';
+
+  @override
+  String get categoriaEmbutido => 'Embutido';
+
+  @override
+  String get categoriaJugo => 'Jugo';
+
+  @override
+  String get categoriaGrano => 'Grano';
+
+  @override
+  String get categoriaConserva => 'Conserva';
+
+  @override
+  String get categoriaCereal => 'Cereal';
+
+  @override
+  String get categoriaOtro => 'Otro';
+
+  @override
+  String get unidadUnidad => 'unidad';
+
+  @override
+  String get unidadCucharada => 'cda';
+
+  @override
+  String get unidadTaza => 'taza';
+
+  @override
+  String cantidadUnidades(String numero, num cantidad) {
+    String _temp0 = intl.Intl.pluralLogic(
+      cantidad,
+      locale: localeName,
+      other: 'unidades',
+      one: 'unidad',
+    );
+    return '$numero $_temp0';
+  }
+
+  @override
+  String cantidadTazas(String numero, num cantidad) {
+    String _temp0 = intl.Intl.pluralLogic(
+      cantidad,
+      locale: localeName,
+      other: 'tazas',
+      one: 'taza',
+    );
+    return '$numero $_temp0';
+  }
+
+  @override
+  String cantidadCucharadas(String numero) {
+    return '$numero cda';
+  }
+
+  @override
+  String get temaAutomaticoAccion => 'Tema: automático. Toca para cambiar.';
+
+  @override
+  String get temaClaroAccion => 'Tema: claro. Toca para cambiar.';
+
+  @override
+  String get temaOscuroAccion => 'Tema: oscuro. Toca para cambiar.';
+
+  @override
+  String get cuentaPerfilAyuda => 'Ver perfil y lista de compras';
+
+  @override
+  String get cuentaCompartidaAyuda => 'Crea una o únete con un código';
+
+  @override
+  String get cuentaConsultaRapidaAyuda => 'Buscar productos de tu despensa';
+
+  @override
+  String get cuentaAccesibilidadAyuda =>
+      'Tamaño de texto, contraste y movimiento';
+
+  @override
+  String despensaAhorroMes(DateTime mes) {
+    final intl.DateFormat mesDateFormat = intl.DateFormat.MMMM(localeName);
+    final String mesString = mesDateFormat.format(mes);
+
+    return 'Ahorro estimado de $mesString';
+  }
+
+  @override
+  String get despensaAhorroVacio =>
+      'Consume un producto antes de que venza para empezar a sumar';
+
+  @override
+  String get despensaAhorroNota =>
+      'Estimado según precios promedio por categoría';
+
+  @override
+  String get agregarCantidadEjemplo => 'Ej: 1';
+
+  @override
+  String get alertasRotulo => 'ALERTAS';
+
+  @override
+  String get alertasTitulo => 'Caducidad y recetas';
+
+  @override
+  String get alertasNota =>
+      'Las alertas se mantienen hasta que decidas borrarlas.';
+
+  @override
+  String get alertasBorrarTodo => 'Borrar todo';
+
+  @override
+  String get alertasBorrarPregunta => 'Borrar todas las alertas';
+
+  @override
+  String get alertasBorrarDescripcion =>
+      'Esta acción elimina las alertas actuales. Las nuevas se generan cuando corresponda.';
+
+  @override
+  String get alertasEliminadas => 'Alertas eliminadas';
+
+  @override
+  String alertaDescartada(String producto) {
+    return 'Alerta de $producto descartada';
+  }
+
+  @override
+  String get alertaDescartarCorto => 'Descartar';
+
+  @override
+  String get alertaDescartarTooltip => 'Descartar alerta';
+
+  @override
+  String get alertaRecetaSugerida => 'RECETA SUGERIDA';
+
+  @override
+  String get alertaTituloAviso5 => 'Primer aviso';
+
+  @override
+  String get alertaTituloAviso3 => 'Aviso crítico';
+
+  @override
+  String get alertaTituloAviso1 => 'Último día';
+
+  @override
+  String get alertaTituloVencido => 'Producto vencido';
+
+  @override
+  String alertaMensajeAviso5(String producto) {
+    return 'Tu $producto vence en 5 días. Ten cuidado.';
+  }
+
+  @override
+  String alertaMensajeAviso3(String producto) {
+    return 'Tu $producto vence en 3 días. Te sugerimos una receta.';
+  }
+
+  @override
+  String alertaMensajeAviso1(String producto) {
+    return 'Tu $producto vence mañana. Aprovéchalo hoy.';
+  }
+
+  @override
+  String alertaMensajeVencido(String producto) {
+    return 'Tu $producto ya venció. Retíralo de la despensa.';
+  }
+
+  @override
+  String get notifCanal => 'Alertas de vencimiento';
+
+  @override
+  String get notifCanalDescripcion =>
+      'Notificaciones de productos próximos a vencer';
+
+  @override
+  String notifVenceManana(String producto) {
+    return '$producto vence mañana';
+  }
+
+  @override
+  String get notifVenceMananaConReceta =>
+      'Aprovéchalo hoy: toca para ver una receta sugerida.';
+
+  @override
+  String get notifVenceMananaSinReceta =>
+      'Es tu último día para usarlo. ¡No lo desperdicies!';
+
+  @override
+  String notifVenceEn3(String producto) {
+    return '$producto vence en 3 días';
+  }
+
+  @override
+  String get notifVenceEn3Cuerpo =>
+      'Planifica una receta antes de que sea tarde.';
+
+  @override
+  String notifVencido(String producto) {
+    return '$producto ya venció';
+  }
+
+  @override
+  String get notifVencidoCuerpo => 'Retíralo de tu despensa.';
+
+  @override
+  String get authBienvenido => 'Bienvenido a';
+
+  @override
+  String get authCorreo => 'Correo electrónico';
+
+  @override
+  String get authCorreoEjemplo => 'tu@correo.com';
+
+  @override
+  String get authContrasena => 'Contraseña';
+
+  @override
+  String get authConfirmarContrasena => 'Confirmar contraseña';
+
+  @override
+  String get authIniciarSesion => 'Iniciar sesión';
+
+  @override
+  String get authOContinua => 'o continúa con';
+
+  @override
+  String get authContinuarGoogle => 'Continuar con Google';
+
+  @override
+  String get authSinCuentaPregunta => '¿No tienes cuenta? ';
+
+  @override
+  String get authRegistrate => 'Regístrate';
+
+  @override
+  String get authCreaCuenta => 'Crea tu cuenta';
+
+  @override
+  String get authCreaCuentaAyuda => 'Empieza a salvar tus alimentos';
+
+  @override
+  String get authNombre => 'Nombre';
+
+  @override
+  String get authNombreEjemplo => 'Tu nombre';
+
+  @override
+  String get authCrearCuenta => 'Crear cuenta';
+
+  @override
+  String get authCompletaCampos => 'Completa todos los campos.';
+
+  @override
+  String get authContrasenasNoCoinciden => 'Las contraseñas no coinciden.';
+
+  @override
+  String get authContrasenaCorta =>
+      'La contraseña debe tener al menos 6 caracteres.';
+
+  @override
+  String get authCredencialesIncorrectas => 'Correo o contraseña incorrectos.';
+
+  @override
+  String get authCorreoRegistrado => 'Este correo ya está registrado.';
+
+  @override
+  String get authCorreoInvalido => 'El correo no es válido.';
+
+  @override
+  String get authSinCuenta => 'No existe una cuenta con este correo.';
+
+  @override
+  String get authContrasenaIncorrecta => 'Contraseña incorrecta.';
+
+  @override
+  String get authDemasiadosIntentos =>
+      'Demasiados intentos. Espera un momento.';
+
+  @override
+  String get authSinConexion => 'Sin conexión a internet.';
+
+  @override
+  String get authVentanaBloqueada =>
+      'El navegador bloqueó la ventana de Google. Permite ventanas emergentes.';
+
+  @override
+  String authErrorDesconocido(String codigo) {
+    return 'No pudimos completar el acceso. Código: $codigo';
+  }
+
+  @override
+  String get compartidaMiembroSinNombre => 'Miembro';
+
+  @override
+  String compartidaTu(String nombre) {
+    return '$nombre (tú)';
+  }
+
+  @override
+  String get compartidaAdmin => 'ADMIN';
+
+  @override
+  String get compartidaEliminarMiembro => 'Eliminar miembro';
+
+  @override
+  String compartidaErrorLargoCodigo(int largo) {
+    return 'El código debe tener $largo caracteres.';
+  }
+
+  @override
+  String get compartidaErrorCodigoInexistente =>
+      'No existe una despensa con ese código.';
+
+  @override
+  String get compartidaErrorNoExiste => 'La despensa ya no existe.';
+
+  @override
+  String get compartidaErrorUnicoMiembro =>
+      'Eres el único miembro. Elimina la despensa en vez de salir.';
+
+  @override
+  String get compartidaErrorElegirAdmin =>
+      'Elige a quién le dejas la administración antes de salir.';
+
+  @override
+  String get compartidaErrorAdminInvalido =>
+      'El nuevo administrador debe ser otro miembro de la despensa.';
+
+  @override
+  String get compartidaErrorSoloAdminMiembros =>
+      'Solo el administrador puede eliminar miembros.';
+
+  @override
+  String get compartidaErrorAdminNoSeElimina =>
+      'El administrador no puede eliminarse a sí mismo.';
+
+  @override
+  String get compartidaErrorSoloAdminEliminar =>
+      'Solo el administrador puede eliminar la despensa.';
+
+  @override
+  String get compartidaErrorYaPerteneces =>
+      'Ya perteneces a una despensa compartida. Sal de ella primero.';
+
+  @override
+  String get compartidaErrorSinCodigo =>
+      'No se pudo generar un código. Intenta de nuevo.';
+
+  @override
+  String get compartidaErrorSinSesion => 'Debes iniciar sesión.';
+
+  @override
+  String get compartidaErrorDesconocido => 'Algo salió mal. Intenta de nuevo.';
+
+  @override
+  String get escanerPermisoTitulo => 'Permiso de cámara requerido';
+
+  @override
+  String get escanerPermisoDescripcion =>
+      'Necesitamos acceso a la cámara para escanear el código de barras.';
+
+  @override
+  String get escanerEntendido => 'Entendido';
+
+  @override
+  String get escanerTitulo => 'Escanear producto';
+
+  @override
+  String get escanerApagarFlash => 'Apagar flash';
+
+  @override
+  String get escanerEncenderFlash => 'Encender flash';
+
+  @override
+  String get escanerCambiarCamara => 'Cambiar cámara';
+
+  @override
+  String get escanerPermisoDenegado => 'Permiso de cámara denegado';
+
+  @override
+  String get escanerNoInicia => 'No se pudo iniciar la cámara';
+
+  @override
+  String get escanerAlinea => 'Alinea el código de barras dentro del marco';
+
+  @override
+  String get nutricionalRotulo => 'PERFIL NUTRICIONAL';
+
+  @override
+  String get nutricionalTitulo => 'Preferencias de recetas';
+
+  @override
+  String get nutricionalTipoUsuario => 'Tipo de usuario';
+
+  @override
+  String get nutricionalSinPreferencia => 'Sin preferencia';
+
+  @override
+  String get nutricionalDeportista => 'Deportista';
+
+  @override
+  String get nutricionalPlan => 'Plan nutricional';
+
+  @override
+  String get nutricionalObjetivo => 'Objetivo nutricional';
+
+  @override
+  String get nutricionalSinObjetivo => 'Sin objetivo específico';
+
+  @override
+  String get nutricionalPerderPeso => 'Perder peso';
+
+  @override
+  String get nutricionalMantenerPeso => 'Mantener peso';
+
+  @override
+  String get nutricionalGanarPeso => 'Ganar peso';
+
+  @override
+  String get nutricionalAlimentacion => 'Tipo de alimentación';
+
+  @override
+  String get nutricionalOmnivora => 'Omnívora';
+
+  @override
+  String get nutricionalVegetariana => 'Vegetariana';
+
+  @override
+  String get nutricionalVegana => 'Vegana';
+
+  @override
+  String get nutricionalOtra => 'Otra';
+
+  @override
+  String get nutricionalRestricciones => 'Restricciones alimentarias';
+
+  @override
+  String get nutricionalRestriccionesEjemplo => 'Ej. cerdo, mariscos';
+
+  @override
+  String get nutricionalAlergias => 'Alergias o intolerancias';
+
+  @override
+  String get nutricionalAlergiasEjemplo => 'Ej. maní, gluten';
+
+  @override
+  String get nutricionalGuardar => 'Guardar perfil';
+
+  @override
+  String get nutricionalErrorGuardar =>
+      'No se pudo guardar el perfil. Revisa tu conexión e intenta de nuevo.';
+
+  @override
+  String get nutricionalGuardado => 'Perfil nutricional guardado';
+
+  @override
+  String get consultaTitulo => 'Consulta rápida';
+
+  @override
+  String get consultaBuscar => 'Buscar producto';
+
+  @override
+  String get consultaErrorCarga => 'No pudimos cargar tus productos.';
+
+  @override
+  String get consultaVacia =>
+      'Tu despensa está vacía. Agrega productos para consultarlos aquí.';
+
+  @override
+  String get consultaCantidad => 'Cantidad';
+
+  @override
+  String get consultaFechaCaducidad => 'Fecha de vencimiento';
+
+  @override
+  String get consultaEstado => 'Estado';
+
+  @override
+  String get consultaEstadoVencido => 'Vencido';
+
+  @override
+  String get consultaEstadoPorVencer => 'Próximo a vencer';
+
+  @override
+  String get consultaEstadoVigente => 'En buen estado';
+
+  @override
+  String get recetasErrorFaltaClave =>
+      'Falta la clave de la IA. Ejecuta la app con --dart-define-from-file=env.json.';
+
+  @override
+  String get recetasErrorRespuestaVacia =>
+      'La IA respondió vacío. Intenta de nuevo.';
+
+  @override
+  String get recetasErrorTiempo =>
+      'La IA tardó demasiado en responder. Intenta de nuevo.';
+
+  @override
+  String get recetasErrorSinConexion =>
+      'No hay conexión con el servicio de recetas. Revisa tu internet.';
+
+  @override
+  String get recetasErrorClave => 'La clave de la IA no es válida o expiró.';
+
+  @override
+  String get recetasErrorCreditos =>
+      'Se agotaron los créditos del servicio de IA.';
+
+  @override
+  String get recetasErrorModeloInexistente =>
+      'El modelo de IA configurado no existe.';
+
+  @override
+  String get recetasErrorModeloRetirado =>
+      'El modelo de IA configurado fue retirado por NVIDIA.';
+
+  @override
+  String get recetasErrorDemasiadas =>
+      'Demasiadas consultas a la IA. Espera un momento.';
+
+  @override
+  String get recetasErrorServicio =>
+      'El servicio de IA no está disponible ahora mismo.';
+
+  @override
+  String get recetasErrorSinRecetas =>
+      'La IA no devolvió recetas válidas. Intenta de nuevo.';
+
+  @override
+  String get recetasErrorFormato =>
+      'La IA respondió en un formato inesperado. Intenta de nuevo.';
+
+  @override
+  String get recetasErrorIncompleta =>
+      'La respuesta de la IA llegó incompleta. Intenta de nuevo.';
+
+  @override
+  String get recetasErrorDetalle =>
+      'El detalle de esta receta ya no está disponible. Actualiza las sugerencias para generar una nueva.';
+
+  @override
+  String get recetasErrorSinIngredientes =>
+      'No hay ingredientes válidos para buscar recetas.';
+
+  @override
+  String get recetasErrorDesconocido => 'No se pudieron generar recetas.';
+
+  @override
+  String get recetasErrorDetalleCarga =>
+      'No pudimos cargar la preparación. Revisa tu conexión.';
+
+  @override
+  String get recetasOrdenDesayuno => 'Es temprano: primero las de desayuno';
+
+  @override
+  String get recetasOrdenPrincipal => 'Primero los platos fuertes';
+
+  @override
+  String get recetasOrdenSemana => 'Es día de semana: primero las más rápidas';
+
+  @override
+  String get recetasOrdenFinde =>
+      'Es fin de semana: hay tiempo para algo más elaborado';
+
+  @override
+  String recetasMatch(int porcentaje) {
+    return '$porcentaje% match';
+  }
+
+  @override
+  String recetasLikes(int cantidad) {
+    String _temp0 = intl.Intl.pluralLogic(
+      cantidad,
+      locale: localeName,
+      other: '$cantidad me gusta',
+      one: '1 me gusta',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get accionCerrar => 'Cerrar';
 }

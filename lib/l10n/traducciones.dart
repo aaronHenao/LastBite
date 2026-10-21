@@ -10,3 +10,8 @@ import 'app_localizations.dart';
 extension Traducciones on BuildContext {
   L10n get t => L10n.of(this)!;
 }
+
+/// Textos del idioma en uso para lo que se arma lejos de una pantalla, como
+/// las notificaciones o las recetas que generan las alertas. La app lo
+/// actualiza cada vez que se resuelve el idioma; hasta entonces, el base.
+L10n textosActuales = lookupL10n(const Locale('es'));

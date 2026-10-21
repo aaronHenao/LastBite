@@ -321,5 +321,455 @@
   "agregarFaltanCampos": "Completa nombre y fecha.",
   "agregarNombreVacio": "El nombre no puede estar vacío.",
   "agregarConfirmar": "CONFIRMAR PRODUCTO",
-  "agregarAgregarADespensa": "Agregar a mi despensa"
+  "agregarAgregarADespensa": "Agregar a mi despensa",
+  "accionDeshacer": "Deshacer",
+  "cuentaAyuda": "Ayuda",
+  "accesoListaCompras": "Lista de compras",
+  "accesoCompartida": "Compartida",
+  "accesoBuscar": "Buscar",
+  "ayudaTitulo": "Ayuda",
+  "ayudaDescripcion": "Cómo usar LastBite y respuestas a las dudas más comunes.",
+  "ayudaAbrir": "Abrir ayuda",
+  "ayudaPrimerosPasos": "PRIMEROS PASOS",
+  "ayudaPaso1": "Agrega lo que tienes en casa: escanea el código de barras o escríbelo a mano.",
+  "ayudaPaso2": "Revisa tu despensa: arriba quedan los productos que vencen primero.",
+  "ayudaPaso3": "Cocina con las recetas sugeridas y marca lo que usaste como consumido para sumar alimentos salvados.",
+  "ayudaPreguntas": "PREGUNTAS FRECUENTES",
+  "ayudaSeccionDespensa": "Despensa",
+  "ayudaSeccionAgregar": "Agregar productos",
+  "ayudaSeccionRecetas": "Recetas",
+  "ayudaSeccionAlertas": "Alertas",
+  "ayudaSeccionCompartir": "Despensa compartida y lista de compras",
+  "ayudaSeccionCuenta": "Búsqueda, cuenta y ajustes",
+  "ayudaDespensaP1": "¿Cómo marco que usé un producto?",
+  "ayudaDespensaR1": "Tócalo en la despensa y elige «Marcar como consumido». Suma a tus alimentos salvados y al ahorro del mes. Si te equivocas, toca «Deshacer» en el aviso que aparece abajo.",
+  "ayudaDespensaP2": "¿Qué significan los días de cada producto?",
+  "ayudaDespensaR2": "Son los días que le quedan antes de vencer. «Próximos a vencer» agrupa los que vencen en 3 días o menos; los vencidos se marcan en rojo.",
+  "ayudaDespensaP3": "¿Cómo se calcula el ahorro?",
+  "ayudaDespensaR3": "Es un estimado: lo que consumiste antes de que se venciera, multiplicado por un precio promedio de su categoría.",
+  "ayudaAgregarP1": "¿Qué hago si el código de barras no aparece?",
+  "ayudaAgregarR1": "LastBite te pasa al ingreso manual. Escribe el nombre, elige la categoría y guarda.",
+  "ayudaAgregarP2": "¿Quién elige la fecha de vencimiento?",
+  "ayudaAgregarR2": "La app propone una según la categoría del producto. Cámbiala antes de guardar si el empaque dice otra.",
+  "ayudaRecetasP1": "¿Qué significa el porcentaje de cada receta?",
+  "ayudaRecetasR1": "Es la parte de los ingredientes que ya tienes. Los básicos (sal, pimienta, aceite y agua) cuentan como disponibles. En el detalle cada ingrediente dice «Tienes», «Básico» o «Falta».",
+  "ayudaRecetasP2": "¿Por qué las recetas no cambian cuando cambio la despensa?",
+  "ayudaRecetasR2": "Para que no pierdas la que estabas mirando. Cuando tu despensa cambia aparece un aviso con el botón «Actualizar recetas».",
+  "ayudaRecetasP3": "¿Por qué tardan en aparecer?",
+  "ayudaRecetasR3": "Las genera una IA a partir de tu despensa y puede tardar unos segundos. La primera aparece apenas está lista.",
+  "ayudaRecetasP4": "¿Qué pasa al tocar «Ya la cociné»?",
+  "ayudaRecetasR4": "Eliges qué productos se terminaron y se marcan como consumidos. Puedes deshacerlo desde el aviso.",
+  "ayudaAlertasP1": "¿Cuándo aparece una alerta?",
+  "ayudaAlertasR1": "Cuando un producto está por vencer o ya venció. Las alertas quedan guardadas hasta que las borres.",
+  "ayudaAlertasP2": "No me llegan las notificaciones",
+  "ayudaAlertasR2": "Revisa que LastBite tenga permiso de notificaciones en los ajustes de tu teléfono.",
+  "ayudaCompartirP1": "¿Cómo comparto la despensa con mi familia?",
+  "ayudaCompartirR1": "Toca «Compartida» en la despensa y crea una despensa. Pasa el código a quien quieras sumar: esa persona toca «Unirme con código» y lo escribe.",
+  "ayudaCompartirP2": "¿Dónde está la lista de compras?",
+  "ayudaCompartirR2": "En «Lista de compras», arriba en la despensa. Al consumir o eliminar un producto, LastBite te ofrece agregarlo.",
+  "ayudaCuentaP1": "¿Cómo busco un producto?",
+  "ayudaCuentaR1": "Toca «Buscar» en la despensa. No hace falta escribir el nombre exacto: da igual el orden de las palabras, las tildes y un error de tipeo.",
+  "ayudaCuentaP2": "¿Cómo cambio el tamaño del texto, el tema o el idioma?",
+  "ayudaCuentaR2": "En el menú de tu cuenta, «Accesibilidad». Ahí también puedes restablecer todo a como venía.",
+  "despensaSalvado": "Salvaste {nombre}.",
+  "@despensaSalvado": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      }
+    }
+  },
+  "despensaSalvadoYEnLista": "Salvaste {nombre}. Quedó en tu lista de compras.",
+  "@despensaSalvadoYEnLista": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      }
+    }
+  },
+  "despensaEliminado": "Quitaste {nombre} de la despensa.",
+  "@despensaEliminado": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      }
+    }
+  },
+  "despensaEliminadoYEnLista": "Quitaste {nombre} de la despensa. Quedó en tu lista de compras.",
+  "@despensaEliminadoYEnLista": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      }
+    }
+  },
+  "recetasBuscando": "Buscando recetas con lo que tienes. Puede tardar unos segundos.",
+  "recetasDespensaCambio": "Tu despensa cambió. Estas recetas se quedan hasta que decidas actualizarlas.",
+  "recetasActualizar": "Actualizar recetas",
+  "recetasFaltan": "{cantidad, plural, one{Falta 1} other{Faltan {cantidad}}}",
+  "@recetasFaltan": {
+    "placeholders": {
+      "cantidad": {
+        "type": "int"
+      }
+    }
+  },
+  "recetasTienesDeTotal": "Tienes {disponibles} de {total} ingredientes",
+  "@recetasTienesDeTotal": {
+    "placeholders": {
+      "disponibles": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "recetasIngredienteTienes": "Tienes",
+  "recetasIngredienteBasico": "Básico",
+  "recetasIngredienteFalta": "Falta",
+  "recetasBasicosNota": "«Básico» es sal, pimienta, aceite o agua: se asume que los tienes en casa.",
+  "recetasIngredientes": "INGREDIENTES",
+  "recetasPreparacion": "PREPARACIÓN",
+  "agregarGuardadoVence": "{dias, plural, =0{{nombre} quedó en tu despensa. Vence hoy.} one{{nombre} quedó en tu despensa. Vence mañana.} other{{nombre} quedó en tu despensa. Vence en {dias} días.}}",
+  "@agregarGuardadoVence": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      },
+      "dias": {
+        "type": "int"
+      }
+    }
+  },
+  "ajustesRestablecer": "Restablecer ajustes",
+  "ajustesRestablecerAyuda": "Vuelve el tamaño del texto, el contraste, el movimiento, el tema y el idioma a como venían. Tus productos, listas y alertas no se tocan.",
+  "ajustesRestablecerPregunta": "¿Restablecer los ajustes?",
+  "ajustesRestablecerAccion": "Restablecer",
+  "ajustesRestablecidos": "Los ajustes volvieron a como venían.",
+  "consultaSinResultados": "No encontramos «{busqueda}»",
+  "@consultaSinResultados": {
+    "placeholders": {
+      "busqueda": {
+        "type": "String"
+      }
+    }
+  },
+  "consultaSinResultadosDescripcion": "Prueba con otra palabra. No hace falta escribir el nombre exacto ni poner tildes.",
+  "despensaConsumir": "Marcar como consumido",
+  "despensaConsumirAyuda": "Suma a tus alimentos salvados",
+  "despensaEliminar": "Eliminar",
+  "despensaEliminarAyuda": "No suma a alimentos salvados",
+  "despensaListaPregunta": "¿Añadir a lista de compras?",
+  "despensaListaDescripcion": "Agregar {nombre} a tu lista para la próxima compra.",
+  "despensaListaNo": "No, gracias",
+  "despensaListaSi": "Añadir",
+  "recetasYaLaCocine": "Ya la cociné",
+  "@despensaListaDescripcion": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      }
+    }
+  },
+  "categoriaVerdura": "Verdura",
+  "categoriaFruta": "Fruta",
+  "categoriaHierba": "Hierba",
+  "categoriaCarne": "Carne",
+  "categoriaPollo": "Pollo",
+  "categoriaPescado": "Pescado",
+  "categoriaHuevo": "Huevo",
+  "categoriaLeche": "Leche",
+  "categoriaYogur": "Yogur",
+  "categoriaQueso": "Queso",
+  "categoriaMantequilla": "Mantequilla",
+  "categoriaPan": "Pan",
+  "categoriaEmbutido": "Embutido",
+  "categoriaJugo": "Jugo",
+  "categoriaGrano": "Grano",
+  "categoriaConserva": "Conserva",
+  "categoriaCereal": "Cereal",
+  "categoriaOtro": "Otro",
+  "unidadUnidad": "unidad",
+  "unidadCucharada": "cda",
+  "unidadTaza": "taza",
+  "cantidadUnidades": "{numero} {cantidad, plural, one{unidad} other{unidades}}",
+  "@cantidadUnidades": {
+    "placeholders": {
+      "numero": {
+        "type": "String"
+      },
+      "cantidad": {
+        "type": "num"
+      }
+    }
+  },
+  "cantidadTazas": "{numero} {cantidad, plural, one{taza} other{tazas}}",
+  "@cantidadTazas": {
+    "placeholders": {
+      "numero": {
+        "type": "String"
+      },
+      "cantidad": {
+        "type": "num"
+      }
+    }
+  },
+  "cantidadCucharadas": "{numero} cda",
+  "@cantidadCucharadas": {
+    "placeholders": {
+      "numero": {
+        "type": "String"
+      }
+    }
+  },
+  "temaAutomaticoAccion": "Tema: automático. Toca para cambiar.",
+  "temaClaroAccion": "Tema: claro. Toca para cambiar.",
+  "temaOscuroAccion": "Tema: oscuro. Toca para cambiar.",
+  "cuentaPerfilAyuda": "Ver perfil y lista de compras",
+  "cuentaCompartidaAyuda": "Crea una o únete con un código",
+  "cuentaConsultaRapidaAyuda": "Buscar productos de tu despensa",
+  "cuentaAccesibilidadAyuda": "Tamaño de texto, contraste y movimiento",
+  "despensaAhorroMes": "Ahorro estimado de {mes}",
+  "@despensaAhorroMes": {
+    "placeholders": {
+      "mes": {
+        "type": "DateTime",
+        "format": "MMMM"
+      }
+    }
+  },
+  "despensaAhorroVacio": "Consume un producto antes de que venza para empezar a sumar",
+  "despensaAhorroNota": "Estimado según precios promedio por categoría",
+  "agregarCantidadEjemplo": "Ej: 1",
+  "alertasRotulo": "ALERTAS",
+  "alertasTitulo": "Caducidad y recetas",
+  "alertasNota": "Las alertas se mantienen hasta que decidas borrarlas.",
+  "alertasBorrarTodo": "Borrar todo",
+  "alertasBorrarPregunta": "Borrar todas las alertas",
+  "alertasBorrarDescripcion": "Esta acción elimina las alertas actuales. Las nuevas se generan cuando corresponda.",
+  "alertasEliminadas": "Alertas eliminadas",
+  "alertaDescartada": "Alerta de {producto} descartada",
+  "@alertaDescartada": {
+    "placeholders": {
+      "producto": {
+        "type": "String"
+      }
+    }
+  },
+  "alertaDescartarCorto": "Descartar",
+  "alertaDescartarTooltip": "Descartar alerta",
+  "alertaRecetaSugerida": "RECETA SUGERIDA",
+  "alertaTituloAviso5": "Primer aviso",
+  "alertaTituloAviso3": "Aviso crítico",
+  "alertaTituloAviso1": "Último día",
+  "alertaTituloVencido": "Producto vencido",
+  "alertaMensajeAviso5": "Tu {producto} vence en 5 días. Ten cuidado.",
+  "@alertaMensajeAviso5": {
+    "placeholders": {
+      "producto": {
+        "type": "String"
+      }
+    }
+  },
+  "alertaMensajeAviso3": "Tu {producto} vence en 3 días. Te sugerimos una receta.",
+  "@alertaMensajeAviso3": {
+    "placeholders": {
+      "producto": {
+        "type": "String"
+      }
+    }
+  },
+  "alertaMensajeAviso1": "Tu {producto} vence mañana. Aprovéchalo hoy.",
+  "@alertaMensajeAviso1": {
+    "placeholders": {
+      "producto": {
+        "type": "String"
+      }
+    }
+  },
+  "alertaMensajeVencido": "Tu {producto} ya venció. Retíralo de la despensa.",
+  "@alertaMensajeVencido": {
+    "placeholders": {
+      "producto": {
+        "type": "String"
+      }
+    }
+  },
+  "notifCanal": "Alertas de vencimiento",
+  "notifCanalDescripcion": "Notificaciones de productos próximos a vencer",
+  "notifVenceManana": "{producto} vence mañana",
+  "@notifVenceManana": {
+    "placeholders": {
+      "producto": {
+        "type": "String"
+      }
+    }
+  },
+  "notifVenceMananaConReceta": "Aprovéchalo hoy: toca para ver una receta sugerida.",
+  "notifVenceMananaSinReceta": "Es tu último día para usarlo. ¡No lo desperdicies!",
+  "notifVenceEn3": "{producto} vence en 3 días",
+  "@notifVenceEn3": {
+    "placeholders": {
+      "producto": {
+        "type": "String"
+      }
+    }
+  },
+  "notifVenceEn3Cuerpo": "Planifica una receta antes de que sea tarde.",
+  "notifVencido": "{producto} ya venció",
+  "@notifVencido": {
+    "placeholders": {
+      "producto": {
+        "type": "String"
+      }
+    }
+  },
+  "notifVencidoCuerpo": "Retíralo de tu despensa.",
+  "authBienvenido": "Bienvenido a",
+  "authCorreo": "Correo electrónico",
+  "authCorreoEjemplo": "tu@correo.com",
+  "authContrasena": "Contraseña",
+  "authConfirmarContrasena": "Confirmar contraseña",
+  "authIniciarSesion": "Iniciar sesión",
+  "authOContinua": "o continúa con",
+  "authContinuarGoogle": "Continuar con Google",
+  "authSinCuentaPregunta": "¿No tienes cuenta? ",
+  "authRegistrate": "Regístrate",
+  "authCreaCuenta": "Crea tu cuenta",
+  "authCreaCuentaAyuda": "Empieza a salvar tus alimentos",
+  "authNombre": "Nombre",
+  "authNombreEjemplo": "Tu nombre",
+  "authCrearCuenta": "Crear cuenta",
+  "authCompletaCampos": "Completa todos los campos.",
+  "authContrasenasNoCoinciden": "Las contraseñas no coinciden.",
+  "authContrasenaCorta": "La contraseña debe tener al menos 6 caracteres.",
+  "authCredencialesIncorrectas": "Correo o contraseña incorrectos.",
+  "authCorreoRegistrado": "Este correo ya está registrado.",
+  "authCorreoInvalido": "El correo no es válido.",
+  "authSinCuenta": "No existe una cuenta con este correo.",
+  "authContrasenaIncorrecta": "Contraseña incorrecta.",
+  "authDemasiadosIntentos": "Demasiados intentos. Espera un momento.",
+  "authSinConexion": "Sin conexión a internet.",
+  "authVentanaBloqueada": "El navegador bloqueó la ventana de Google. Permite ventanas emergentes.",
+  "authErrorDesconocido": "No pudimos completar el acceso. Código: {codigo}",
+  "@authErrorDesconocido": {
+    "placeholders": {
+      "codigo": {
+        "type": "String"
+      }
+    }
+  },
+  "compartidaMiembroSinNombre": "Miembro",
+  "compartidaTu": "{nombre} (tú)",
+  "@compartidaTu": {
+    "placeholders": {
+      "nombre": {
+        "type": "String"
+      }
+    }
+  },
+  "compartidaAdmin": "ADMIN",
+  "compartidaEliminarMiembro": "Eliminar miembro",
+  "compartidaErrorLargoCodigo": "El código debe tener {largo} caracteres.",
+  "@compartidaErrorLargoCodigo": {
+    "placeholders": {
+      "largo": {
+        "type": "int"
+      }
+    }
+  },
+  "compartidaErrorCodigoInexistente": "No existe una despensa con ese código.",
+  "compartidaErrorNoExiste": "La despensa ya no existe.",
+  "compartidaErrorUnicoMiembro": "Eres el único miembro. Elimina la despensa en vez de salir.",
+  "compartidaErrorElegirAdmin": "Elige a quién le dejas la administración antes de salir.",
+  "compartidaErrorAdminInvalido": "El nuevo administrador debe ser otro miembro de la despensa.",
+  "compartidaErrorSoloAdminMiembros": "Solo el administrador puede eliminar miembros.",
+  "compartidaErrorAdminNoSeElimina": "El administrador no puede eliminarse a sí mismo.",
+  "compartidaErrorSoloAdminEliminar": "Solo el administrador puede eliminar la despensa.",
+  "compartidaErrorYaPerteneces": "Ya perteneces a una despensa compartida. Sal de ella primero.",
+  "compartidaErrorSinCodigo": "No se pudo generar un código. Intenta de nuevo.",
+  "compartidaErrorSinSesion": "Debes iniciar sesión.",
+  "compartidaErrorDesconocido": "Algo salió mal. Intenta de nuevo.",
+  "escanerPermisoTitulo": "Permiso de cámara requerido",
+  "escanerPermisoDescripcion": "Necesitamos acceso a la cámara para escanear el código de barras.",
+  "escanerEntendido": "Entendido",
+  "escanerTitulo": "Escanear producto",
+  "escanerApagarFlash": "Apagar flash",
+  "escanerEncenderFlash": "Encender flash",
+  "escanerCambiarCamara": "Cambiar cámara",
+  "escanerPermisoDenegado": "Permiso de cámara denegado",
+  "escanerNoInicia": "No se pudo iniciar la cámara",
+  "escanerAlinea": "Alinea el código de barras dentro del marco",
+  "nutricionalRotulo": "PERFIL NUTRICIONAL",
+  "nutricionalTitulo": "Preferencias de recetas",
+  "nutricionalTipoUsuario": "Tipo de usuario",
+  "nutricionalSinPreferencia": "Sin preferencia",
+  "nutricionalDeportista": "Deportista",
+  "nutricionalPlan": "Plan nutricional",
+  "nutricionalObjetivo": "Objetivo nutricional",
+  "nutricionalSinObjetivo": "Sin objetivo específico",
+  "nutricionalPerderPeso": "Perder peso",
+  "nutricionalMantenerPeso": "Mantener peso",
+  "nutricionalGanarPeso": "Ganar peso",
+  "nutricionalAlimentacion": "Tipo de alimentación",
+  "nutricionalOmnivora": "Omnívora",
+  "nutricionalVegetariana": "Vegetariana",
+  "nutricionalVegana": "Vegana",
+  "nutricionalOtra": "Otra",
+  "nutricionalRestricciones": "Restricciones alimentarias",
+  "nutricionalRestriccionesEjemplo": "Ej. cerdo, mariscos",
+  "nutricionalAlergias": "Alergias o intolerancias",
+  "nutricionalAlergiasEjemplo": "Ej. maní, gluten",
+  "nutricionalGuardar": "Guardar perfil",
+  "nutricionalErrorGuardar": "No se pudo guardar el perfil. Revisa tu conexión e intenta de nuevo.",
+  "nutricionalGuardado": "Perfil nutricional guardado",
+  "consultaTitulo": "Consulta rápida",
+  "consultaBuscar": "Buscar producto",
+  "consultaErrorCarga": "No pudimos cargar tus productos.",
+  "consultaVacia": "Tu despensa está vacía. Agrega productos para consultarlos aquí.",
+  "consultaCantidad": "Cantidad",
+  "consultaFechaCaducidad": "Fecha de vencimiento",
+  "consultaEstado": "Estado",
+  "consultaEstadoVencido": "Vencido",
+  "consultaEstadoPorVencer": "Próximo a vencer",
+  "consultaEstadoVigente": "En buen estado",
+  "recetasErrorFaltaClave": "Falta la clave de la IA. Ejecuta la app con --dart-define-from-file=env.json.",
+  "recetasErrorRespuestaVacia": "La IA respondió vacío. Intenta de nuevo.",
+  "recetasErrorTiempo": "La IA tardó demasiado en responder. Intenta de nuevo.",
+  "recetasErrorSinConexion": "No hay conexión con el servicio de recetas. Revisa tu internet.",
+  "recetasErrorClave": "La clave de la IA no es válida o expiró.",
+  "recetasErrorCreditos": "Se agotaron los créditos del servicio de IA.",
+  "recetasErrorModeloInexistente": "El modelo de IA configurado no existe.",
+  "recetasErrorModeloRetirado": "El modelo de IA configurado fue retirado por NVIDIA.",
+  "recetasErrorDemasiadas": "Demasiadas consultas a la IA. Espera un momento.",
+  "recetasErrorServicio": "El servicio de IA no está disponible ahora mismo.",
+  "recetasErrorSinRecetas": "La IA no devolvió recetas válidas. Intenta de nuevo.",
+  "recetasErrorFormato": "La IA respondió en un formato inesperado. Intenta de nuevo.",
+  "recetasErrorIncompleta": "La respuesta de la IA llegó incompleta. Intenta de nuevo.",
+  "recetasErrorDetalle": "El detalle de esta receta ya no está disponible. Actualiza las sugerencias para generar una nueva.",
+  "recetasErrorSinIngredientes": "No hay ingredientes válidos para buscar recetas.",
+  "recetasErrorDesconocido": "No se pudieron generar recetas.",
+  "recetasErrorDetalleCarga": "No pudimos cargar la preparación. Revisa tu conexión.",
+  "recetasOrdenDesayuno": "Es temprano: primero las de desayuno",
+  "recetasOrdenPrincipal": "Primero los platos fuertes",
+  "recetasOrdenSemana": "Es día de semana: primero las más rápidas",
+  "recetasOrdenFinde": "Es fin de semana: hay tiempo para algo más elaborado",
+  "recetasMatch": "{porcentaje}% match",
+  "@recetasMatch": {
+    "placeholders": {
+      "porcentaje": {
+        "type": "int"
+      }
+    }
+  },
+  "recetasLikes": "{cantidad, plural, one{1 me gusta} other{{cantidad} me gusta}}",
+  "@recetasLikes": {
+    "placeholders": {
+      "cantidad": {
+        "type": "int"
+      }
+    }
+  },
+  "accionCerrar": "Cerrar"
 }
