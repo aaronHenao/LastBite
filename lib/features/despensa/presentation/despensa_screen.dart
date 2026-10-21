@@ -1,9 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/interruptor_tema.dart';
+import '../../../core/widgets/aviso_deshacer.dart';
+import '../../../core/widgets/avatar_usuario.dart';
+import '../../../core/widgets/boton_ayuda.dart';
 import '../../../core/widgets/estado_vacio.dart';
 import '../../../core/widgets/estado_error.dart';
 import '../../../core/responsive/responsive_container.dart';
@@ -12,13 +16,17 @@ import '../domain/producto.dart';
 import 'widgets/producto_card.dart';
 import '../../compartida/presentation/compartida_provider.dart';
 import '../../compartida/presentation/compartida_screen.dart';
+import '../../compartida/presentation/textos_compartida.dart';
 import '../../ajustes/presentation/ajustes_screen.dart';
+import '../../ayuda/presentation/ayuda_screen.dart';
 import '../../perfil/presentation/perfil_screen.dart';
 import '../../perfil/domain/item_compra.dart';
 import '../../perfil/presentation/perfil_provider.dart';
 import '../../consulta_rapida/presentation/consulta_rapida_screen.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:lastbite/core/responsive/responsive.dart';
+import 'package:lastbite/l10n/app_localizations.dart';
+import 'package:lastbite/l10n/textos_dominio.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 
 import '../../auth/presentation/auth_provider.dart';
 
@@ -29,17 +37,19 @@ class DespensaScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
+    final t = context.t;
     final nombreUsuario = authState.when(
       data: (user) =>
-          user?.nombre?.trim().isNotEmpty == true ? user!.nombre! : 'Mi cuenta',
-      loading: () => 'Mi cuenta',
-      error: (_, __) => 'Mi cuenta',
+          user?.nombre?.trim().isNotEmpty == true ? user!.nombre! : t.cuentaMia,
+      loading: () => t.cuentaMia,
+      error: (_, __) => t.cuentaMia,
     );
 
     final despensaCompartida = ref
         .watch(despensaCompartidaProvider)
         .valueOrNull;
-    final tituloDespensa = despensaCompartida?.nombre ?? 'Mi Despensa';
+    final tituloDespensa =
+        despensaCompartida?.nombreVisible(t) ?? t.despensaTitulo;
 
     final asyncProductos = ref.watch(despensaProvider);
     final paleta = context.paleta;
@@ -49,7 +59,7 @@ class DespensaScreen extends ConsumerWidget {
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
         body: EstadoError(
-          mensaje: 'No pudimos cargar tu despensa.',
+          mensaje: t.despensaErrorCarga,
           detalle: e,
           onReintentar: () => ref.invalidate(despensaProvider),
         ),
@@ -89,11 +99,9 @@ class DespensaScreen extends ConsumerWidget {
               hasScrollBody: false,
               child: EstadoVacio(
                 icono: CupertinoIcons.cube_box,
-                titulo: 'Tu despensa está vacía',
-                descripcion:
-                    'Agregá lo que tengas en casa y te avisamos antes '
-                    'de que se venza.',
-                textoAccion: 'Agregar producto',
+                titulo: t.despensaVaciaTitulo,
+                descripcion: t.despensaVaciaDescripcion,
+                textoAccion: t.accionAgregarProducto,
                 onAccion: onAgregar,
               ),
             )
@@ -106,7 +114,7 @@ class DespensaScreen extends ConsumerWidget {
                 context: context,
                 ref: ref,
                 icono: CupertinoIcons.exclamationmark_triangle_fill,
-                titulo: 'PRÓXIMOS A VENCER',
+                titulo: t.despensaProximosAVencer,
                 color: paleta.critico,
                 productos: urgentes,
                 anchoAmplio: anchoAmplio,
@@ -116,7 +124,7 @@ class DespensaScreen extends ConsumerWidget {
                 context: context,
                 ref: ref,
                 icono: CupertinoIcons.cube_box_fill,
-                titulo: 'EN BUEN ESTADO',
+                titulo: t.despensaEnBuenEstado,
                 color: paleta.apagado,
                 productos: enBuenEstado,
                 anchoAmplio: anchoAmplio,
@@ -193,7 +201,26 @@ class DespensaScreen extends ConsumerWidget {
                   style: textTheme.labelSmall?.copyWith(color: color),
                 ),
               ),
-              Text('${productos.length}', style: AppTextStyles.rotulo(context)),
+              // El contador era casi imperceptible (11px en gris): ahora es
+              // una pastilla con el color de la seccion.
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: context.paleta.superficie,
+                  borderRadius: BorderRadius.circular(AppRadius.chip),
+                  border: Border.all(color: color.withValues(alpha: 0.5)),
+                ),
+                child: Text(
+                  '${productos.length}',
+                  style: textTheme.labelLarge?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -233,97 +260,144 @@ class DespensaScreen extends ConsumerWidget {
     WidgetRef ref,
     String nombreUsuario,
   ) {
+    // Desplazable: con la ayuda suma un item y en telefonos bajos ya no
+    // entraba en el alto que deja una hoja inferior.
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
+      isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(16),
+        // Material y no un Container decorado: sobre el fondo de un
+        // DecoratedBox la tinta de los ListTile no se veia al tocar.
+        child: Material(
           color: context.paleta.marcaSuave,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: context.paleta.contorno),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: context.paleta.contorno,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
-            InkWell(
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PerfilScreen()),
-                );
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: context.paleta.marcaClara.withValues(
-                        alpha: 0.15,
-                      ),
-                      child: Icon(
-                        Icons.person,
-                        color: context.paleta.marcaClara,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            nombreUsuario,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: context.paleta.tinta,
-                            ),
-                          ),
-                          Text(
-                            'Ver perfil y lista de compras',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: context.paleta.apagado,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: context.paleta.apagado,
-                    ),
-                  ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: context.paleta.contorno),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: context.paleta.contorno,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-            ),
-            Divider(color: context.paleta.contorno),
-            Consumer(
-              builder: (context, ref, _) {
-                final compartida = ref
-                    .watch(despensaCompartidaProvider)
-                    .valueOrNull;
 
-                return ListTile(
+                InkWell(
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PerfilScreen()),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: context.paleta.marcaClara.withValues(
+                            alpha: 0.15,
+                          ),
+                          child: Icon(
+                            Icons.person,
+                            color: context.paleta.marcaClara,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                nombreUsuario,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: context.paleta.tinta,
+                                ),
+                              ),
+                              Text(
+                                context.t.cuentaPerfilAyuda,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: context.paleta.apagado,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: context.paleta.apagado,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Divider(color: context.paleta.contorno),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final compartida = ref
+                        .watch(despensaCompartidaProvider)
+                        .valueOrNull;
+
+                    return ListTile(
+                      leading: Icon(
+                        Icons.groups_rounded,
+                        color: context.paleta.marca,
+                      ),
+                      title: Text(
+                        context.t.cuentaCompartida,
+                        style: TextStyle(
+                          color: context.paleta.tinta,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        compartida == null
+                            ? context.t.cuentaCompartidaAyuda
+                            : compartida.nombreVisible(context.t),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.paleta.apagado,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right_rounded,
+                        color: context.paleta.apagado,
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DespensaCompartidaScreen(),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+                Divider(color: context.paleta.contorno),
+                ListTile(
                   leading: Icon(
-                    Icons.groups_rounded,
-                    color: context.paleta.marca,
+                    CupertinoIcons.search,
+                    color: context.paleta.marcaClara,
                   ),
                   title: Text(
-                    'Despensa compartida',
+                    context.t.cuentaConsultaRapida,
                     style: TextStyle(
                       color: context.paleta.tinta,
                       fontSize: 16,
@@ -331,100 +405,84 @@ class DespensaScreen extends ConsumerWidget {
                     ),
                   ),
                   subtitle: Text(
-                    compartida == null
-                        ? 'Crea una o únete con un código'
-                        : compartida.nombre,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.paleta.apagado,
-                    ),
-                  ),
-                  trailing: Icon(
-                    Icons.chevron_right_rounded,
-                    color: context.paleta.apagado,
+                    context.t.cuentaConsultaRapidaAyuda,
+                    style: TextStyle(color: context.paleta.apagado, fontSize: 12),
                   ),
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const DespensaCompartidaScreen(),
+                        builder: (_) => const ConsultaRapidaScreen(),
                       ),
                     );
                   },
-                );
-              },
-            ),
-            Divider(color: context.paleta.contorno),
-            ListTile(
-              leading: Icon(
-                CupertinoIcons.search,
-                color: context.paleta.marcaClara,
-              ),
-              title: Text(
-                'Consulta Rápida',
-                style: TextStyle(
-                  color: context.paleta.tinta,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
                 ),
-              ),
-              subtitle: Text(
-                'Buscar productos de tu despensa',
-                style: TextStyle(color: context.paleta.apagado, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ConsultaRapidaScreen(),
+                ListTile(
+                  leading: Icon(
+                    Icons.accessibility_new_rounded,
+                    color: context.paleta.marca,
                   ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.accessibility_new_rounded,
-                color: context.paleta.marca,
-              ),
-              title: Text(
-                'Accesibilidad',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              subtitle: Text(
-                'Tamaño de texto, contraste y movimiento',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AjustesScreen()),
-                );
-              },
-            ),
-            Divider(color: context.paleta.contorno),
-            ListTile(
-              leading: Icon(
-                Icons.logout_rounded,
-                color: context.paleta.vencido,
-              ),
-              title: Text(
-                'Cerrar sesión',
-                style: TextStyle(
-                  color: context.paleta.vencido,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  title: Text(
+                    context.t.cuentaAccesibilidad,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  subtitle: Text(
+                    context.t.cuentaAccesibilidadAyuda,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AjustesScreen()),
+                    );
+                  },
                 ),
-              ),
-              onTap: () async {
-                Navigator.pop(context);
-                await ref.read(authServiceProvider).cerrarSesion();
-              },
+                ListTile(
+                  leading: Icon(
+                    Icons.help_outline_rounded,
+                    color: context.paleta.marca,
+                  ),
+                  title: Text(
+                    context.t.cuentaAyuda,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  subtitle: Text(
+                    context.t.ayudaDescripcion,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AyudaScreen()),
+                    );
+                  },
+                ),
+                Divider(color: context.paleta.contorno),
+                ListTile(
+                  leading: Icon(
+                    Icons.logout_rounded,
+                    color: context.paleta.vencido,
+                  ),
+                  title: Text(
+                    context.t.cuentaCerrarSesion,
+                    style: TextStyle(
+                      color: context.paleta.vencido,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await ref.read(authServiceProvider).cerrarSesion();
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
-            const SizedBox(height: 16),
-          ],
+          ),
         ),
       ),
     );
@@ -438,101 +496,112 @@ class DespensaScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(16),
+        // Material y no un Container decorado: sobre el fondo de un
+        // DecoratedBox la tinta de los ListTile no se veia al tocar.
+        child: Material(
           color: context.paleta.marcaSuave,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: context.paleta.contorno),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: context.paleta.contorno,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-              child: Row(
-                children: [
-                  Text(producto.emoji, style: const TextStyle(fontSize: 28)),
-                  const SizedBox(width: 12),
-                  Text(
-                    producto.nombre,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: context.paleta.tinta,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Divider(color: context.paleta.contorno),
-            ListTile(
-              leading: Icon(
-                CupertinoIcons.check_mark_circled,
-                color: context.paleta.marca,
-              ),
-              title: Text(
-                'Marcar como consumido',
-                style: TextStyle(
-                  color: context.paleta.tinta,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: context.paleta.contorno),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.paleta.contorno,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              subtitle: Text(
-                'Suma a tus alimentos salvados',
-                style: TextStyle(color: context.paleta.apagado, fontSize: 12),
-              ),
-              onTap: () async {
-                Navigator.pop(context);
-                await ref.read(despensaProvider.notifier).consumir(producto.id);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('¡${producto.nombre} salvado! ✅'),
-                      backgroundColor: context.paleta.marca,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Row(
+                  children: [
+                    Text(producto.emoji, style: const TextStyle(fontSize: 28)),
+                    const SizedBox(width: 12),
+                    Text(
+                      producto.nombre,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: context.paleta.tinta,
+                      ),
                     ),
-                  );
-                  _preguntarListaCompras(
+                  ],
+                ),
+              ),
+              Divider(color: context.paleta.contorno),
+              ListTile(
+                leading: Icon(
+                  CupertinoIcons.check_mark_circled,
+                  color: context.paleta.marca,
+                ),
+                title: Text(
+                  context.t.despensaConsumir,
+                  style: TextStyle(
+                    color: context.paleta.tinta,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: Text(
+                  context.t.despensaConsumirAyuda,
+                  style: TextStyle(color: context.paleta.apagado, fontSize: 12),
+                ),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final t = context.t;
+                  final despensa = ref.read(despensaProvider.notifier);
+                  await despensa.consumir(producto.id);
+                  if (!context.mounted) return;
+                  final item = await _preguntarListaCompras(
                     context,
                     ref,
                     producto,
                     fechaConsumido: DateTime.now(),
                   );
-                }
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                CupertinoIcons.delete,
-                color: context.paleta.vencido,
+                  if (!context.mounted) return;
+                  _avisarConDeshacer(
+                    context,
+                    ref,
+                    mensaje: item == null
+                        ? t.despensaSalvado(producto.nombre)
+                        : t.despensaSalvadoYEnLista(producto.nombre),
+                    itemLista: item,
+                    deshacer: () => despensa.deshacerConsumo(producto),
+                  );
+                },
               ),
-              title: Text(
-                'Eliminar',
-                style: TextStyle(
+              ListTile(
+                leading: Icon(
+                  CupertinoIcons.delete,
                   color: context.paleta.vencido,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
                 ),
-              ),
-              subtitle: Text(
-                'No suma a alimentos salvados',
-                style: TextStyle(color: context.paleta.apagado, fontSize: 12),
-              ),
-              onTap: () async {
-                Navigator.pop(context);
-                await ref.read(despensaProvider.notifier).eliminar(producto.id);
-                if (context.mounted) {
-                  _preguntarListaCompras(
+                title: Text(
+                  context.t.despensaEliminar,
+                  style: TextStyle(
+                    color: context.paleta.vencido,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                  ),
+                ),
+                subtitle: Text(
+                  context.t.despensaEliminarAyuda,
+                  style: TextStyle(color: context.paleta.apagado, fontSize: 12),
+                ),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final t = context.t;
+                  final despensa = ref.read(despensaProvider.notifier);
+                  await despensa.eliminar(producto.id);
+                  if (!context.mounted) return;
+                  final item = await _preguntarListaCompras(
                     context,
                     ref,
                     producto,
@@ -540,11 +609,21 @@ class DespensaScreen extends ConsumerWidget {
                         ? producto.fechaCaducidad
                         : null,
                   );
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
+                  if (!context.mounted) return;
+                  _avisarConDeshacer(
+                    context,
+                    ref,
+                    mensaje: item == null
+                        ? t.despensaEliminado(producto.nombre)
+                        : t.despensaEliminadoYEnLista(producto.nombre),
+                    itemLista: item,
+                    deshacer: () => despensa.agregar(producto),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -604,39 +683,22 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-const _mesesEs = [
-  'enero',
-  'febrero',
-  'marzo',
-  'abril',
-  'mayo',
-  'junio',
-  'julio',
-  'agosto',
-  'septiembre',
-  'octubre',
-  'noviembre',
-  'diciembre',
-];
+/// Pesos colombianos con los separadores del idioma: "$47.000" en español,
+/// "$47,000" en ingles.
+String _formatearCop(L10n t, int valor) => NumberFormat.currency(
+  locale: t.localeName,
+  symbol: r'$',
+  decimalDigits: 0,
+).format(valor);
 
-/// Formatea un entero como pesos colombianos: 47000 -> "$47.000".
-String _formatearCop(int valor) {
-  final digitos = valor.toString();
-  final buffer = StringBuffer();
-  for (var i = 0; i < digitos.length; i++) {
-    if (i > 0 && (digitos.length - i) % 3 == 0) buffer.write('.');
-    buffer.write(digitos[i]);
-  }
-  return '\$$buffer';
-}
-
-/// Muestra "1,2 kg", "500 g", "3 unidades" segun la magnitud.
-String _formatearCantidad(String categoria, double cantidad) {
+/// Muestra "1,2 kg", "500 g", "3 unidades" segun la magnitud, con el
+/// separador decimal del idioma.
+String _formatearCantidad(L10n t, String categoria, double cantidad) {
   final base = precioDeCategoria(categoria).base;
 
   if (base == BaseMedida.unidad) {
     final entero = cantidad.round();
-    return entero == 1 ? '1 unidad' : '$entero unidades';
+    return t.cantidadUnidades('$entero', entero);
   }
 
   if (cantidad < 1) {
@@ -644,9 +706,7 @@ String _formatearCantidad(String categoria, double cantidad) {
     return base == BaseMedida.kilo ? '$chico g' : '$chico ml';
   }
 
-  final texto = cantidad
-      .toStringAsFixed(cantidad.truncateToDouble() == cantidad ? 0 : 1)
-      .replaceAll('.', ',');
+  final texto = NumberFormat('0.#', t.localeName).format(cantidad);
   return '$texto ${base.abreviatura}';
 }
 
@@ -659,7 +719,7 @@ class _AhorroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final mes = _mesesEs[DateTime.now().month - 1];
+    final t = context.t;
     final top = conteo.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
@@ -683,7 +743,7 @@ class _AhorroCard extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Ahorro estimado de $mes'.toUpperCase(),
+                  t.despensaAhorroMes(DateTime.now()).toUpperCase(),
                   style: textTheme.labelSmall?.copyWith(
                     fontSize: 10,
                     color: context.paleta.apagado,
@@ -694,7 +754,7 @@ class _AhorroCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            _formatearCop(ahorro),
+            _formatearCop(t, ahorro),
             style: textTheme.titleLarge?.copyWith(
               fontSize: 28,
               fontWeight: FontWeight.w700,
@@ -705,7 +765,7 @@ class _AhorroCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Text(
-                'Consume un producto antes de que venza para empezar a sumar',
+                t.despensaAhorroVacio,
                 style: textTheme.bodySmall?.copyWith(
                   fontSize: 11,
                   color: context.paleta.apagado,
@@ -717,7 +777,11 @@ class _AhorroCard extends StatelessWidget {
             Text(
               top
                   .take(3)
-                  .map((e) => '${e.key} ${_formatearCantidad(e.key, e.value)}')
+                  .map(
+                    (e) =>
+                        '${t.categoria(e.key)} '
+                        '${_formatearCantidad(t, e.key, e.value)}',
+                  )
                   .join('  ·  '),
               style: textTheme.bodySmall?.copyWith(
                 fontSize: 11,
@@ -726,7 +790,7 @@ class _AhorroCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Estimado según precios promedio por categoría',
+              t.despensaAhorroNota,
               style: textTheme.labelSmall?.copyWith(
                 fontSize: 9,
                 color: context.paleta.apagado,
@@ -739,14 +803,38 @@ class _AhorroCard extends StatelessWidget {
   }
 }
 
-void _preguntarListaCompras(
+/// Cierra una accion sobre un producto: dice que paso y deja deshacerla.
+/// Si ademas se sumo a la lista de compras, deshacer tambien lo saca de ahi:
+/// la persona revierte lo que hizo, no la mitad.
+void _avisarConDeshacer(
+  BuildContext context,
+  WidgetRef ref, {
+  required String mensaje,
+  required ItemCompra? itemLista,
+  required Future<void> Function() deshacer,
+}) {
+  final lista = ref.read(listaComprasProvider.notifier);
+  mostrarAvisoDeshacer(
+    context,
+    mensaje: mensaje,
+    onDeshacer: () async {
+      await deshacer();
+      if (itemLista != null) await lista.eliminar(itemLista.id);
+    },
+  );
+}
+
+/// Ofrece sumar el producto a la lista de compras. Devuelve lo que se agrego,
+/// o null si la persona dijo que no.
+Future<ItemCompra?> _preguntarListaCompras(
   BuildContext context,
   WidgetRef ref,
   Producto producto, {
   DateTime? fechaConsumido,
   DateTime? fechaVencido,
-}) {
-  showDialog(
+}) async {
+  final lista = ref.read(listaComprasProvider.notifier);
+  final anadir = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       backgroundColor: context.paleta.marcaSuave,
@@ -757,7 +845,7 @@ void _preguntarListaCompras(
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '¿Añadir a lista de compras?',
+              context.t.despensaListaPregunta,
               style: TextStyle(
                 color: context.paleta.tinta,
                 fontWeight: FontWeight.w800,
@@ -768,47 +856,42 @@ void _preguntarListaCompras(
         ],
       ),
       content: Text(
-        'Agregar ${producto.nombre} a tu lista para la próxima compra.',
+        context.t.despensaListaDescripcion(producto.nombre),
         style: TextStyle(color: context.paleta.apagado, fontSize: 13),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(dialogContext),
+          onPressed: () => Navigator.pop(dialogContext, false),
           child: Text(
-            'No, gracias',
+            context.t.despensaListaNo,
             style: TextStyle(color: context.paleta.apagado),
           ),
         ),
         FilledButton(
-          onPressed: () async {
-            Navigator.pop(dialogContext);
-            final item = ItemCompra(
-              id: '${producto.id}_${DateTime.now().millisecondsSinceEpoch}',
-              nombre: producto.nombre,
-              emoji: producto.emoji,
-              comprado: false,
-              agregadoEn: DateTime.now(),
-              fechaConsumido: fechaConsumido,
-              fechaVencido: fechaVencido,
-            );
-            await ref.read(listaComprasProvider.notifier).agregar(item);
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${producto.nombre} añadido a tu lista 🛒'),
-                  backgroundColor: context.paleta.marcaClara,
-                ),
-              );
-            }
-          },
+          onPressed: () => Navigator.pop(dialogContext, true),
           style: FilledButton.styleFrom(
             backgroundColor: context.paleta.marcaClara,
           ),
-          child: const Text('Añadir'),
+          child: Text(context.t.despensaListaSi),
         ),
       ],
     ),
   );
+  if (anadir != true) return null;
+
+  // El resultado se cuenta en el aviso con "Deshacer": un segundo aviso
+  // propio quedaria en cola y taparia esa opcion.
+  final item = ItemCompra(
+    id: '${producto.id}_${DateTime.now().millisecondsSinceEpoch}',
+    nombre: producto.nombre,
+    emoji: producto.emoji,
+    comprado: false,
+    agregadoEn: DateTime.now(),
+    fechaConsumido: fechaConsumido,
+    fechaVencido: fechaVencido,
+  );
+  await lista.agregar(item);
+  return item;
 }
 
 class _BotonPerfil extends StatelessWidget {
@@ -819,27 +902,15 @@ class _BotonPerfil extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final paleta = context.paleta;
-    final mostrarFoto = fotoUrl != null && !Responsive.isTabletOrWeb(context);
-
     return Semantics(
       button: true,
-      label: 'Abrir menú de cuenta',
+      label: context.t.cuentaMenu,
       child: InkWell(
         onTap: onTap,
         customBorder: const CircleBorder(),
         child: Padding(
           padding: const EdgeInsets.all(6),
-          child: CircleAvatar(
-            radius: 18,
-            backgroundColor: paleta.marcaSuave,
-            backgroundImage: mostrarFoto
-                ? CachedNetworkImageProvider(fotoUrl!)
-                : null,
-            child: mostrarFoto
-                ? null
-                : Icon(Icons.person, size: 20, color: paleta.marca),
-          ),
+          child: AvatarUsuario(fotoUrl: fotoUrl),
         ),
       ),
     );
@@ -902,7 +973,10 @@ class _Encabezado extends StatelessWidget {
         ),
         if (!enColumna) ...[
           const SizedBox(width: AppSpacing.sm),
-          if (!Responsive.isTabletOrWeb(context)) const InterruptorTema(),
+          if (!Responsive.isTabletOrWeb(context)) ...[
+            const InterruptorTema(),
+            const BotonAyuda(seccion: SeccionAyuda.despensa),
+          ],
           _BotonPerfil(fotoUrl: fotoUrl, onTap: onPerfil),
         ],
       ],
@@ -912,7 +986,7 @@ class _Encabezado extends StatelessWidget {
       _StatCard(
         icon: CupertinoIcons.archivebox,
         value: '$productos',
-        label: 'Productos',
+        label: context.t.despensaProductos,
         color: paleta.tinta,
         bg: paleta.superficieSuave,
         expandido: !enColumna,
@@ -920,7 +994,7 @@ class _Encabezado extends StatelessWidget {
       _StatCard(
         icon: CupertinoIcons.check_mark_circled,
         value: '$salvados',
-        label: 'Salvados',
+        label: context.t.despensaSalvados,
         color: paleta.marca,
         bg: paleta.marcaSuave,
         expandido: !enColumna,
@@ -928,7 +1002,7 @@ class _Encabezado extends StatelessWidget {
       _StatCard(
         icon: CupertinoIcons.clock,
         value: '$porVencer',
-        label: 'Por vencer',
+        label: context.t.despensaPorVencer,
         color: paleta.critico,
         bg: paleta.critico.withValues(alpha: 0.12),
         expandido: !enColumna,
@@ -957,6 +1031,8 @@ class _Encabezado extends StatelessWidget {
                 cifras[2],
               ],
             ),
+            const SizedBox(height: AppSpacing.md),
+            const _AccesosRapidos(enColumna: false),
             const SizedBox(height: AppSpacing.md),
             _AhorroCard(ahorro: ahorro, conteo: conteoAhorro),
             const SizedBox(height: AppSpacing.lg),
@@ -990,12 +1066,130 @@ class _Encabezado extends StatelessWidget {
                   cifras[1],
                   const SizedBox(height: AppSpacing.sm),
                   cifras[2],
+                  const SizedBox(height: AppSpacing.lg),
+                  const _AccesosRapidos(enColumna: true),
                   const Spacer(),
                   const SizedBox(height: AppSpacing.lg),
                   _AhorroCard(ahorro: ahorro, conteo: conteoAhorro),
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Accesos directos a las vistas que vivian escondidas en el menu de la
+/// cuenta. La evaluacion marco con severidad Mayor que la lista de compras,
+/// la despensa compartida y la consulta rapida no se encontraban, y que
+/// costaba volver a localizar lo que se habia buscado antes.
+class _AccesosRapidos extends StatelessWidget {
+  const _AccesosRapidos({required this.enColumna});
+
+  /// En el rail van uno debajo del otro; en movil, en fila como las cifras.
+  final bool enColumna;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.t;
+
+    void abrir(Widget pantalla) => Navigator.push(
+      context,
+      MaterialPageRoute<void>(builder: (_) => pantalla),
+    );
+
+    final accesos = [
+      _Acceso(
+        icono: CupertinoIcons.cart,
+        etiqueta: t.accesoListaCompras,
+        onTap: () => abrir(const PerfilScreen()),
+      ),
+      _Acceso(
+        icono: Icons.groups_rounded,
+        etiqueta: t.accesoCompartida,
+        onTap: () => abrir(const DespensaCompartidaScreen()),
+      ),
+      _Acceso(
+        icono: CupertinoIcons.search,
+        etiqueta: t.accesoBuscar,
+        onTap: () => abrir(const ConsultaRapidaScreen()),
+      ),
+    ];
+
+    if (enColumna) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final acceso in accesos) ...[
+            acceso,
+            if (acceso != accesos.last) const SizedBox(height: AppSpacing.sm),
+          ],
+        ],
+      );
+    }
+
+    // Mismo alto para los tres aunque una etiqueta ocupe dos lineas.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final acceso in accesos) ...[
+            Expanded(child: acceso),
+            if (acceso != accesos.last) const SizedBox(width: AppSpacing.sm),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Acceso extends StatelessWidget {
+  const _Acceso({
+    required this.icono,
+    required this.etiqueta,
+    required this.onTap,
+  });
+
+  final IconData icono;
+  final String etiqueta;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final paleta = context.paleta;
+
+    return Material(
+      color: paleta.superficie,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(color: paleta.contorno),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icono, size: 18, color: paleta.marca),
+              const SizedBox(width: AppSpacing.xs),
+              Flexible(
+                child: Text(
+                  etiqueta,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(color: paleta.marca),
+                ),
+              ),
+            ],
           ),
         ),
       ),

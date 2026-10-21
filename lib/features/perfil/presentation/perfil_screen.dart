@@ -1,6 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:lastbite/core/widgets/avatar_usuario.dart';
 import 'package:lastbite/core/widgets/boton_volver.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
@@ -10,7 +10,6 @@ import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import '../domain/item_compra.dart';
 import 'perfil_provider.dart';
-import 'package:lastbite/core/responsive/responsive.dart';
 import 'perfil_nutricional_screen.dart';
 
 class PerfilScreen extends ConsumerWidget {
@@ -43,41 +42,7 @@ class PerfilScreen extends ConsumerWidget {
                     children: [
                       const BotonVolver(),
                       const SizedBox(height: 16),
-                      Builder(
-                        builder: (context) {
-                          final isWeb = Responsive.isTabletOrWeb(context);
-                          final fotoUrl = user?.fotoUrl;
-
-                          if (!isWeb && fotoUrl != null) {
-                            return CircleAvatar(
-                              radius: 44,
-                              backgroundColor: context.paleta.marcaSuave,
-                              backgroundImage: CachedNetworkImageProvider(
-                                fotoUrl,
-                              ),
-                            );
-                          }
-                          if (fotoUrl != null) {
-                            // En web CachedNetworkImage no se comporta bien,
-                            // pero NetworkImage si: no hay razon para perder
-                            // la foto del usuario en pantallas anchas.
-                            return CircleAvatar(
-                              radius: 44,
-                              backgroundColor: context.paleta.marcaSuave,
-                              backgroundImage: _buildImageProvider(fotoUrl),
-                            );
-                          }
-                          return CircleAvatar(
-                            radius: 44,
-                            backgroundColor: context.paleta.marcaSuave,
-                            child: Icon(
-                              Icons.person,
-                              size: 44,
-                              color: context.paleta.apagado,
-                            ),
-                          );
-                        },
-                      ),
+                      AvatarUsuario(fotoUrl: user?.fotoUrl, radio: 44),
                       const SizedBox(height: 12),
                       Text(
                         user?.nombre ?? context.t.perfilUsuario,
@@ -486,13 +451,13 @@ class _ItemCompraCard extends StatelessWidget {
                           if (item.fechaConsumido != null)
                             _FechaPill(
                               text:
-                                  context.t.perfilConsumido(_formatearFecha(item.fechaConsumido!)),
+                                  context.t.perfilConsumido(_formatearFecha(context, item.fechaConsumido!)),
                               color: context.paleta.marca,
                             ),
                           if (item.fechaVencido != null)
                             _FechaPill(
                               text:
-                                  context.t.perfilVencido(_formatearFecha(item.fechaVencido!)),
+                                  context.t.perfilVencido(_formatearFecha(context, item.fechaVencido!)),
                               color: context.paleta.vencido,
                             ),
                         ],
@@ -536,15 +501,6 @@ class _FechaPill extends StatelessWidget {
   }
 }
 
-String _formatearFecha(DateTime date) {
-  final day = date.day.toString().padLeft(2, '0');
-  final month = date.month.toString().padLeft(2, '0');
-  final year = date.year;
-  return '$day/$month/$year';
-}
-
-ImageProvider _buildImageProvider(String url) {
-  // En web CachedNetworkImage no funciona bien
-  // usamos NetworkImage directamente
-  return NetworkImage(url);
-}
+/// Con el formato de fecha del idioma activo: 20/10/2026 o 10/20/2026.
+String _formatearFecha(BuildContext context, DateTime date) =>
+    MaterialLocalizations.of(context).formatCompactDate(date);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lastbite/l10n/textos_dominio.dart';
 import 'package:lastbite/l10n/traducciones.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/pastilla_estado.dart';
@@ -85,7 +86,8 @@ class ProductoCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${producto.cantidad} · ${producto.categoria}',
+                        '${context.t.cantidad(producto.cantidad)} · '
+                        '${context.t.categoria(producto.categoria)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.bodySmall,
@@ -119,8 +121,8 @@ class ProductoCard extends StatelessWidget {
 
     return t.lectorProducto(
       producto.nombre,
-      producto.cantidad,
-      producto.categoria,
+      t.cantidad(producto.cantidad),
+      t.categoria(producto.categoria),
       estado,
     );
   }

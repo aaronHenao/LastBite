@@ -7,6 +7,10 @@ import 'package:lastbite/core/constants/vida_util.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
 import 'package:lastbite/core/utils/categoria_mapper.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
+import 'package:lastbite/core/widgets/aviso_deshacer.dart';
+import 'package:lastbite/core/widgets/boton_ayuda.dart';
+import 'package:lastbite/features/ayuda/presentation/ayuda_screen.dart';
+import 'package:lastbite/l10n/textos_dominio.dart';
 import 'package:lastbite/l10n/traducciones.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
@@ -93,17 +97,26 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
         producto: producto,
         onConfirmar: (productoEditado) async {
           await ref.read(despensaProvider.notifier).agregar(productoEditado);
-          widget.onBackToPantry?.call();
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${productoEditado.nombre} agregado'),
-                backgroundColor: context.paleta.marca,
-              ),
-            );
-          }
+          if (mounted) _confirmarGuardado(productoEditado);
         },
       ),
+    );
+  }
+
+  /// Cierra el alta: vuelve a la despensa, dice que quedo guardado y hasta
+  /// cuando dura, y deja deshacerlo. En la prueba con expresiones faciales
+  /// el cierre del flujo fue la reaccion mas fuerte del usuario nuevo: el
+  /// final tiene que confirmar que se logro y que sigue.
+  void _confirmarGuardado(Producto producto) {
+    final despensa = ref.read(despensaProvider.notifier);
+    final dias = producto.diasRestantes;
+    widget.onBackToPantry?.call();
+    mostrarAvisoDeshacer(
+      context,
+      mensaje: dias < 0
+          ? context.t.agregarGuardado(producto.nombre)
+          : context.t.agregarGuardadoVence(producto.nombre, dias),
+      onDeshacer: () => despensa.eliminar(producto.id),
     );
   }
 
@@ -118,21 +131,33 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                context.t.agregarRotulo,
-                style: textTheme.titleSmall?.copyWith(
-                  letterSpacing: 2.4,
-                  color: context.paleta.apagado,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                context.t.agregarTitulo,
-                style: textTheme.bodyLarge?.copyWith(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: context.paleta.tinta,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          context.t.agregarRotulo,
+                          style: textTheme.titleSmall?.copyWith(
+                            letterSpacing: 2.4,
+                            color: context.paleta.apagado,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          context.t.agregarTitulo,
+                          style: textTheme.bodyLarge?.copyWith(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: context.paleta.tinta,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const BotonAyuda(seccion: SeccionAyuda.agregar),
+                ],
               ),
               const SizedBox(height: 18),
               _HybridModeSwitch(
@@ -158,21 +183,10 @@ class _AgregarScreenState extends ConsumerState<AgregarScreen> {
                     : _ManualEntryForm(
                         key: ValueKey('manual'),
                         onGuardar: (producto) async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          final colorExito = context.paleta.marca;
-                          final aviso = context.t.agregarGuardado(
-                            producto.nombre,
-                          );
                           await ref
                               .read(despensaProvider.notifier)
                               .agregar(producto);
-                          widget.onBackToPantry?.call();
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(aviso),
-                              backgroundColor: colorExito,
-                            ),
-                          );
+                          if (mounted) _confirmarGuardado(producto);
                         },
                       ),
               ),
@@ -417,6 +431,7 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
       _nombreCtrl.clear();
       _cantidadCtrl.clear();
       _fechaCtrl.clear();
+      _fecha = null;
       _categoriaSeleccionada = null;
       _unidadSeleccionada = null;
       _mostrarMensajeRecomendacion = false;
@@ -426,6 +441,9 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
   final _nombreCtrl = TextEditingController();
   final _cantidadCtrl = TextEditingController();
   final _fechaCtrl = TextEditingController();
+
+  /// La fecha elegida. El campo solo la muestra, con el formato del idioma.
+  DateTime? _fecha;
 
   bool _mostrarMensajeRecomendacion = false;
   String? _categoriaSeleccionada;
@@ -441,10 +459,7 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
     );
     if (fecha != null) {
       setState(() {
-        _fechaCtrl.text =
-            '${fecha.day.toString().padLeft(2, '0')}/'
-            '${fecha.month.toString().padLeft(2, '0')}/'
-            '${fecha.year}';
+        _mostrarFecha(fecha);
         // La fecha ya no es la recomendada: la eligio el usuario.
         _mostrarMensajeRecomendacion = false;
       });
@@ -453,11 +468,12 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
 
   void _recomendarFechaParaCategoria(String categoria) {
     final diasVida = vidaUtilRecomendada(categoria);
-    final fechaRecomendada = DateTime.now().add(Duration(days: diasVida));
-    _fechaCtrl.text =
-        '${fechaRecomendada.day.toString().padLeft(2, '0')}/'
-        '${fechaRecomendada.month.toString().padLeft(2, '0')}/'
-        '${fechaRecomendada.year}';
+    _mostrarFecha(DateTime.now().add(Duration(days: diasVida)));
+  }
+
+  void _mostrarFecha(DateTime fecha) {
+    _fecha = fecha;
+    _fechaCtrl.text = MaterialLocalizations.of(context).formatCompactDate(fecha);
   }
 
   @override
@@ -513,7 +529,7 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
                 flex: 2,
                 child: _InputField(
                   label: context.t.agregarCantidad,
-                  hint: 'Ej: 1',
+                  hint: context.t.agregarCantidadEjemplo,
                   controller: _cantidadCtrl,
                 ),
               ),
@@ -560,19 +576,13 @@ class _ManualEntryFormState extends State<_ManualEntryForm> {
           const SizedBox(height: 16),
           _SaveButton(
             onPressed: () {
-              if (_nombreCtrl.text.isEmpty || _fechaCtrl.text.isEmpty) {
+              final fecha = _fecha;
+              if (_nombreCtrl.text.isEmpty || fecha == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(context.t.agregarFaltanCampos)),
                 );
                 return;
               }
-
-              final partesFecha = _fechaCtrl.text.split('/');
-              final fecha = DateTime(
-                int.parse(partesFecha[2]),
-                int.parse(partesFecha[1]),
-                int.parse(partesFecha[0]),
-              );
 
               final producto = Producto(
                 id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -690,7 +700,7 @@ class _CategoriaDropdown extends StatelessWidget {
           return DropdownMenuItem<String>(
             value: categoria,
             child: Text(
-              categoria,
+              context.t.categoria(categoria),
               style: textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w500,
                 color: context.paleta.tinta,
@@ -753,7 +763,7 @@ class _UnidadDropdown extends StatelessWidget {
           return DropdownMenuItem<UnidadMedida>(
             value: unidad,
             child: Text(
-              unidad.abreviatura,
+              context.t.unidad(unidad),
               style: textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w500,
                 color: context.paleta.tinta,
@@ -874,9 +884,7 @@ class _ConfirmacionProductoSheetState
   }
 
   String get _fechaFormateada =>
-      '${_fechaSeleccionada.day.toString().padLeft(2, '0')}/'
-      '${_fechaSeleccionada.month.toString().padLeft(2, '0')}/'
-      '${_fechaSeleccionada.year}';
+      MaterialLocalizations.of(context).formatCompactDate(_fechaSeleccionada);
 
   Future<void> _seleccionarFecha() async {
     final hoy = DateTime.now();
@@ -985,7 +993,7 @@ class _ConfirmacionProductoSheetState
                     return DropdownMenuItem<String>(
                       value: cat,
                       child: Text(
-                        cat,
+                        context.t.categoria(cat),
                         style: textTheme.titleMedium?.copyWith(
                           color: context.paleta.tinta,
                           fontWeight: FontWeight.w500,

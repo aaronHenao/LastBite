@@ -1,11 +1,16 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
+import 'package:lastbite/core/utils/texto.dart';
+import 'package:lastbite/core/widgets/estado_vacio.dart';
 import 'package:lastbite/core/widgets/pastilla_estado.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
+import 'package:lastbite/core/widgets/estado_error.dart';
+import 'package:lastbite/l10n/textos_dominio.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 
 class ConsultaRapidaScreen extends ConsumerStatefulWidget {
   const ConsultaRapidaScreen({super.key});
@@ -25,6 +30,11 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
     super.dispose();
   }
 
+  void _limpiar() {
+    _searchController.clear();
+    setState(() => _query = '');
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncProductos = ref.watch(despensaProvider);
@@ -36,18 +46,18 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
         ),
       ),
       error: (error, _) => Scaffold(
-        body: Center(
-          child: Text(
-            'Error cargando productos: $error',
-            style: TextStyle(color: context.paleta.vencido),
-          ),
+        body: EstadoError(
+          mensaje: context.t.consultaErrorCarga,
+          detalle: error,
+          onReintentar: () => ref.invalidate(despensaProvider),
         ),
       ),
       data: (productos) {
-        final productosFiltrados = productos.where((producto) {
-          final nombre = producto.nombre.toLowerCase();
-          return nombre.contains(_query.trim().toLowerCase());
-        }).toList()..sort((a, b) => a.nombre.compareTo(b.nombre));
+        final productosFiltrados =
+            productos
+                .where((p) => coincideBusqueda(p.nombre, _query))
+                .toList()
+              ..sort((a, b) => a.nombre.compareTo(b.nombre));
 
         return Scaffold(
           backgroundColor: context.paleta.papel,
@@ -57,7 +67,7 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
             scrolledUnderElevation: 0,
             leading: BackButton(color: context.paleta.tinta),
             title: Text(
-              'Consulta Rápida',
+              context.t.consultaTitulo,
               style: TextStyle(
                 color: context.paleta.tinta,
                 fontWeight: FontWeight.w800,
@@ -79,12 +89,22 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
                       controller: _searchController,
                       onChanged: (value) => setState(() => _query = value),
                       decoration: InputDecoration(
-                        hintText: 'Buscar producto',
+                        hintText: context.t.consultaBuscar,
                         hintStyle: TextStyle(color: context.paleta.apagado),
                         prefixIcon: Icon(
                           CupertinoIcons.search,
                           color: context.paleta.apagado,
                         ),
+                        suffixIcon: _query.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: context.t.accionLimpiarBusqueda,
+                                icon: Icon(
+                                  Icons.close_rounded,
+                                  color: context.paleta.apagado,
+                                ),
+                                onPressed: _limpiar,
+                              ),
                         filled: true,
                         fillColor: context.paleta.superficie,
                         contentPadding: const EdgeInsets.symmetric(
@@ -115,7 +135,7 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 32),
                             child: Text(
-                              'Tu despensa está vacía.\nAgrega productos para consultarlos aquí.',
+                              context.t.consultaVacia,
                               textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
@@ -127,15 +147,19 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
                         ),
                       )
                     else if (productosFiltrados.isEmpty)
+                      // Dice que buscaste, que probar y como salir: antes era
+                      // un "No se encontraron productos" sin siguiente paso.
                       Expanded(
-                        child: Center(
-                          child: Text(
-                            'No se encontraron productos',
-                            style: Theme.of(context).textTheme.bodyLarge
-                                ?.copyWith(
-                                  color: context.paleta.apagado,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                        child: SingleChildScrollView(
+                          child: EstadoVacio(
+                            icono: Icons.search_off_rounded,
+                            titulo: context.t.consultaSinResultados(
+                              _query.trim(),
+                            ),
+                            descripcion:
+                                context.t.consultaSinResultadosDescripcion,
+                            textoAccion: context.t.accionLimpiarBusqueda,
+                            onAccion: _limpiar,
                           ),
                         ),
                       )
@@ -203,7 +227,8 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                              '${producto.cantidad} · ${_formatearFecha(producto.fechaCaducidad)}',
+                                              '${context.t.cantidad(producto.cantidad)} · '
+                                              '${_formatearFecha(producto.fechaCaducidad)}',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall
@@ -243,17 +268,14 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
   }
 
   String _estadoProducto(Producto producto) {
-    if (producto.vencido) return 'vencido';
-    if (producto.urgente) return 'próximo a vencer';
-    return 'vigente';
+    if (producto.vencido) return context.t.consultaEstadoVencido;
+    if (producto.urgente) return context.t.consultaEstadoPorVencer;
+    return context.t.consultaEstadoVigente;
   }
 
-  String _formatearFecha(DateTime fecha) {
-    final dia = fecha.day.toString().padLeft(2, '0');
-    final mes = fecha.month.toString().padLeft(2, '0');
-    final anio = fecha.year.toString();
-    return '$dia/$mes/$anio';
-  }
+  /// Con el formato de fecha del idioma activo: 20/10/2026 o 10/20/2026.
+  String _formatearFecha(DateTime fecha) =>
+      MaterialLocalizations.of(context).formatCompactDate(fecha);
 
   Color _estadoColor(Producto producto) {
     if (producto.vencido) return context.paleta.vencido;
@@ -319,12 +341,15 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            _DetalleFila(label: 'Cantidad', valor: producto.cantidad),
             _DetalleFila(
-              label: 'Fecha de caducidad',
+              label: context.t.consultaCantidad,
+              valor: context.t.cantidad(producto.cantidad),
+            ),
+            _DetalleFila(
+              label: context.t.consultaFechaCaducidad,
               valor: _formatearFecha(producto.fechaCaducidad),
             ),
-            _DetalleFila(label: 'Estado', valor: estado),
+            _DetalleFila(label: context.t.consultaEstado, valor: estado),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -335,7 +360,7 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
               ),
               child: Center(
                 child: Text(
-                  'Producto $estado',
+                  estado,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     color: _estadoColor(producto),
                     fontWeight: FontWeight.w800,

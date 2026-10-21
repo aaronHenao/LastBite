@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import 'package:lastbite/l10n/traducciones.dart';
+
 import '../../../core/theme/app_theme.dart';
 
 class ScanProductoScreen extends StatefulWidget {
@@ -62,14 +64,12 @@ class _ScanProductoScreenState extends State<ScanProductoScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Permiso de camara requerido'),
-        content: const Text(
-          'Necesitamos acceso a la camara para escanear el codigo de barras.',
-        ),
+        title: Text(context.t.escanerPermisoTitulo),
+        content: Text(context.t.escanerPermisoDescripcion),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Entendido'),
+            child: Text(context.t.escanerEntendido),
           ),
         ],
       ),
@@ -83,21 +83,23 @@ class _ScanProductoScreenState extends State<ScanProductoScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: const Text('Escanear producto'),
+        title: Text(context.t.escanerTitulo),
         actions: [
           ValueListenableBuilder<MobileScannerState>(
             valueListenable: _controller,
             builder: (context, state, child) {
               final isOn = state.torchState == TorchState.on;
               return IconButton(
-                tooltip: isOn ? 'Apagar flash' : 'Encender flash',
+                tooltip: isOn
+                    ? context.t.escanerApagarFlash
+                    : context.t.escanerEncenderFlash,
                 icon: Icon(isOn ? Icons.flash_on : Icons.flash_off),
                 onPressed: _controller.toggleTorch,
               );
             },
           ),
           IconButton(
-            tooltip: 'Cambiar camara',
+            tooltip: context.t.escanerCambiarCamara,
             icon: const Icon(Icons.cameraswitch),
             onPressed: _controller.switchCamera,
           ),
@@ -112,18 +114,18 @@ class _ScanProductoScreenState extends State<ScanProductoScreen> {
             errorBuilder: (context, error, child) {
               if (error.errorCode == MobileScannerErrorCode.permissionDenied) {
                 _handlePermissionDenied();
-                return const Center(
+                return Center(
                   child: Text(
-                    'Permiso de camara denegado',
-                    style: TextStyle(color: Colors.white),
+                    context.t.escanerPermisoDenegado,
+                    style: const TextStyle(color: Colors.white),
                   ),
                 );
               }
 
-              return const Center(
+              return Center(
                 child: Text(
-                  'No se pudo iniciar la camara',
-                  style: TextStyle(color: Colors.white),
+                  context.t.escanerNoInicia,
+                  style: const TextStyle(color: Colors.white),
                 ),
               );
             },
@@ -150,10 +152,10 @@ class _ScanProductoScreenState extends State<ScanProductoScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.white24),
               ),
-              child: const Text(
-                'Alinea el codigo de barras dentro del marco',
+              child: Text(
+                context.t.escanerAlinea,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 13),
+                style: const TextStyle(color: Colors.white, fontSize: 13),
               ),
             ),
           ),

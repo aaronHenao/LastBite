@@ -3,6 +3,7 @@ import 'package:lastbite/core/widgets/boton_volver.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import '../domain/perfil_nutricional.dart';
 import 'perfil_nutricional_provider.dart';
 
@@ -68,66 +69,66 @@ class _PerfilNutricionalScreenState
               const BotonVolver(),
               const SizedBox(height: 24),
               Text(
-                'PERFIL NUTRICIONAL',
+                context.t.nutricionalRotulo,
                 style: textTheme.titleSmall?.copyWith(
                   letterSpacing: 1.5,
                   color: context.paleta.apagado,
                 ),
               ),
               const SizedBox(height: 6),
-              Text('Preferencias de recetas', style: textTheme.headlineMedium),
+              Text(context.t.nutricionalTitulo, style: textTheme.headlineMedium),
               const SizedBox(height: 24),
               _buildDropdown(
-                label: 'Tipo de usuario',
+                label: context.t.nutricionalTipoUsuario,
                 value: _userType,
-                items: const {
-                  'none': 'Sin preferencia',
-                  'athlete': 'Deportista',
-                  'nutritional_plan': 'Plan nutricional',
+                items: {
+                  'none': context.t.nutricionalSinPreferencia,
+                  'athlete': context.t.nutricionalDeportista,
+                  'nutritional_plan': context.t.nutricionalPlan,
                 },
                 onChanged: (value) => setState(() => _userType = value!),
               ),
               const SizedBox(height: 16),
               _buildDropdown(
-                label: 'Objetivo nutricional',
+                label: context.t.nutricionalObjetivo,
                 value: _goal,
-                items: const {
-                  'none': 'Sin objetivo específico',
-                  'lose_weight': 'Perder peso',
-                  'maintain_weight': 'Mantener peso',
-                  'gain_weight': 'Ganar peso',
+                items: {
+                  'none': context.t.nutricionalSinObjetivo,
+                  'lose_weight': context.t.nutricionalPerderPeso,
+                  'maintain_weight': context.t.nutricionalMantenerPeso,
+                  'gain_weight': context.t.nutricionalGanarPeso,
                 },
                 onChanged: (value) => setState(() => _goal = value!),
               ),
               const SizedBox(height: 16),
               _buildDropdown(
-                label: 'Tipo de alimentación',
+                label: context.t.nutricionalAlimentacion,
                 value: _dietaryType,
-                items: const {
-                  'omnivore': 'Omnívora',
-                  'vegetarian': 'Vegetariana',
-                  'vegan': 'Vegana',
-                  'other': 'Otra',
+                items: {
+                  'omnivore': context.t.nutricionalOmnivora,
+                  'vegetarian': context.t.nutricionalVegetariana,
+                  'vegan': context.t.nutricionalVegana,
+                  'other': context.t.nutricionalOtra,
                 },
                 onChanged: (value) => setState(() => _dietaryType = value!),
               ),
               const SizedBox(height: 16),
               _buildTextField(
                 controller: _restriccionesController,
-                label: 'Restricciones alimentarias',
-                hint: 'Ej. cerdo, mariscos',
+                label: context.t.nutricionalRestricciones,
+                hint: context.t.nutricionalRestriccionesEjemplo,
               ),
               const SizedBox(height: 16),
               _buildTextField(
                 controller: _alergiasController,
-                label: 'Alergias o intolerancias',
-                hint: 'Ej. maní, gluten',
+                label: context.t.nutricionalAlergias,
+                hint: context.t.nutricionalAlergiasEjemplo,
               ),
               const SizedBox(height: 28),
               FilledButton.icon(
                 onPressed: perfilState.isLoading ? null : _guardar,
                 icon: const Icon(Icons.save_outlined),
-                label: const Text('Guardar perfil'),
+                label: Text(context.t.nutricionalGuardar),
                 // Colores del tema: con la paleta nueva, texto oscuro sobre
                 // el verde de marca no llegaba al contraste minimo.
                 style: FilledButton.styleFrom(
@@ -137,7 +138,7 @@ class _PerfilNutricionalScreenState
               if (perfilState.hasError) ...[
                 const SizedBox(height: 12),
                 Text(
-                  'No se pudo guardar el perfil: ${perfilState.error}',
+                  context.t.nutricionalErrorGuardar,
                   style: TextStyle(color: context.paleta.vencido),
                 ),
               ],
@@ -195,7 +196,7 @@ class _PerfilNutricionalScreenState
     if (!mounted) return;
     if (!ref.read(perfilNutricionalProvider).hasError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Perfil nutricional guardado')),
+        SnackBar(content: Text(context.t.nutricionalGuardado)),
       );
     }
   }

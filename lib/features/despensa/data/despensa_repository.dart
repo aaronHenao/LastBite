@@ -85,9 +85,10 @@ class DespensaRepository {
     return (doc.data()?['salvados'] as int?) ?? 0;
   }
 
-  Future<void> incrementarSalvados() async {
+  /// [delta] negativo descuenta: deshacer un consumo resta lo que sumo.
+  Future<void> incrementarSalvados([int delta = 1]) async {
     await _statsDoc.set({
-      'salvados': FieldValue.increment(1),
+      'salvados': FieldValue.increment(delta),
     }, SetOptions(merge: true));
   }
 

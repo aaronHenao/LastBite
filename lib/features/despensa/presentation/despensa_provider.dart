@@ -82,6 +82,32 @@ class DespensaNotifier extends StreamNotifier<List<Producto>> {
     VencimientoChecker.instance.verificar();
   }
 
+  /// Revierte [consumir]: el producto vuelve a la despensa y se descuenta de
+  /// salvados y del ahorro del mes. Las recetas que se invalidaron no vuelven,
+  /// pero se regeneran solas.
+  Future<void> deshacerConsumo(Producto producto) async {
+    await _repo.guardar(producto);
+    await _repo.incrementarSalvados(-1);
+
+    final cantidad = cantidadEnBase(producto.categoria, producto.cantidad);
+    unawaited(
+      _repo
+          .registrarSalvado(producto.categoria, -cantidad, DateTime.now())
+          .catchError((Object _) {}),
+    );
+
+    _salvados = _salvados > 0 ? _salvados - 1 : 0;
+    // Con margen: restar decimales deja restos como 1e-17 que se verian
+    // como "0 g" en el ahorro.
+    final restante = (_conteoMes[producto.categoria] ?? 0) - cantidad;
+    if (restante > 1e-9) {
+      _conteoMes[producto.categoria] = restante;
+    } else {
+      _conteoMes.remove(producto.categoria);
+    }
+    VencimientoChecker.instance.verificar();
+  }
+
   Future<void> eliminar(String id) async {
     await _repo.eliminar(id);
   }
