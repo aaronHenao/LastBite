@@ -3,7 +3,9 @@ import 'package:lastbite/core/widgets/boton_volver.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
 import '../../../core/theme/app_theme.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import 'auth_provider.dart';
+import 'mensaje_error_auth.dart';
 import 'widgets/auth_field.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -35,17 +37,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (_nombreCtrl.text.isEmpty ||
         _emailCtrl.text.isEmpty ||
         _passwordCtrl.text.isEmpty) {
-      setState(() => _error = 'Completa todos los campos.');
+      setState(() => _error = context.t.authCompletaCampos);
       return;
     }
     if (_passwordCtrl.text != _confirmCtrl.text) {
-      setState(() => _error = 'Las contraseñas no coinciden.');
+      setState(() => _error = context.t.authContrasenasNoCoinciden);
       return;
     }
     if (_passwordCtrl.text.length < 6) {
-      setState(
-        () => _error = 'La contraseña debe tener al menos 6 caracteres.',
-      );
+      setState(() => _error = context.t.authContrasenaCorta);
       return;
     }
 
@@ -66,7 +66,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = mensajeErrorAuth(context.t, e));
     } finally {
       if (mounted) setState(() => _cargando = false);
     }
@@ -90,7 +90,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                   //header
                   Text(
-                    'Crea tu cuenta',
+                    context.t.authCreaCuenta,
                     style: textTheme.bodyLarge?.copyWith(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
@@ -99,7 +99,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Empieza a salvar tus alimentos',
+                    context.t.authCreaCuentaAyuda,
                     style: textTheme.bodyMedium?.copyWith(
                       fontSize: 15,
                       color: context.paleta.apagado,
@@ -109,16 +109,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                   //nombre
                   AuthField(
-                    label: 'Nombre',
-                    hint: 'Tu nombre',
+                    label: context.t.authNombre,
+                    hint: context.t.authNombreEjemplo,
                     controller: _nombreCtrl,
                   ),
                   const SizedBox(height: 14),
 
                   //email
                   AuthField(
-                    label: 'Correo electrónico',
-                    hint: 'tu@correo.com',
+                    label: context.t.authCorreo,
+                    hint: context.t.authCorreoEjemplo,
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
                   ),
@@ -126,7 +126,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                   //password
                   AuthField(
-                    label: 'Contraseña',
+                    label: context.t.authContrasena,
                     hint: '••••••••',
                     controller: _passwordCtrl,
                     obscureText: !_verPassword,
@@ -146,7 +146,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                   //confirmar password
                   AuthField(
-                    label: 'Confirmar contraseña',
+                    label: context.t.authConfirmarContrasena,
                     hint: '••••••••',
                     controller: _confirmCtrl,
                     obscureText: !_verPassword,
@@ -199,7 +199,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               ),
                             )
                           : Text(
-                              'Crear cuenta',
+                              context.t.authCrearCuenta,
                               style: textTheme.titleMedium?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,

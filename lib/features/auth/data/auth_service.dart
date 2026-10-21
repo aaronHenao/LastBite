@@ -3,6 +3,24 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 import '../domain/auth_user.dart';
 
+/// Error al entrar o registrarse. [codigo] es el de Firebase
+/// ('email-already-in-use', 'popup-blocked'...) o [cancelado]. El servicio no
+/// arma frases: la pantalla las pone en el idioma activo.
+class ErrorAuth implements Exception {
+  const ErrorAuth(this.codigo, [this.detalle]);
+
+  /// La persona cerro la ventana de Google: no es un error que mostrar.
+  static const cancelado = 'cancelado';
+
+  final String codigo;
+
+  /// Mensaje tecnico de Firebase, para diagnosticar.
+  final String? detalle;
+
+  @override
+  String toString() => 'ErrorAuth($codigo${detalle == null ? '' : ': $detalle'})';
+}
+
 class AuthService {
   final _auth = FirebaseAuth.instance;
 
@@ -64,7 +82,7 @@ class AuthService {
       }
 
       final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) throw Exception('Login cancelado');
+      if (googleUser == null) throw const ErrorAuth(ErrorAuth.cancelado);
 
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
@@ -77,7 +95,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       if (e.code == 'popup-closed-by-user' ||
           e.code == 'cancelled-popup-request') {
-        throw Exception('Login cancelado');
+        throw const ErrorAuth(ErrorAuth.cancelado);
       }
       throw _mapError(e);
     }
@@ -99,30 +117,5 @@ class AuthService {
     fotoUrl: user.photoURL,
   );
 
-  String _mapError(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'INVALID_LOGIN_CREDENTIALS':
-        return 'Correo o contraseña incorrectos.';
-      case 'invalid-credential':
-        return 'Correo o contraseña incorrectos.';
-      case 'email-already-in-use':
-        return 'Este correo ya está registrado.';
-      case 'invalid-email':
-        return 'El correo no es válido.';
-      case 'weak-password':
-        return 'La contraseña debe tener al menos 6 caracteres.';
-      case 'user-not-found':
-        return 'No existe una cuenta con este correo.';
-      case 'wrong-password':
-        return 'Contraseña incorrecta.';
-      case 'too-many-requests':
-        return 'Demasiados intentos. Espera un momento.';
-      case 'network-request-failed':
-        return 'Sin conexión a internet.';
-      case 'popup-blocked':
-        return 'El navegador bloqueó la ventana de Google. Permite ventanas emergentes.';
-      default:
-        return 'Error de autenticación: ${e.message}';
-    }
-  }
+  ErrorAuth _mapError(FirebaseAuthException e) => ErrorAuth(e.code, e.message);
 }

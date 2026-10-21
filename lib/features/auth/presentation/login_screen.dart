@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/responsive/responsive_container.dart';
 import '../../../core/theme/app_theme.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import 'auth_provider.dart';
+import 'mensaje_error_auth.dart';
 import 'register_screen.dart';
 import 'widgets/auth_field.dart';
 
@@ -36,7 +38,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _login() async {
     if (_autenticando) return;
     if (_emailCtrl.text.isEmpty || _passwordCtrl.text.isEmpty) {
-      setState(() => _error = 'Completa todos los campos.');
+      setState(() => _error = context.t.authCompletaCampos);
       return;
     }
     setState(() {
@@ -69,15 +71,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  /// AuthService ya devuelve mensajes en español para los errores de Firebase.
-  /// El resto llegaba como "Exception: Login cancelado", que le decia al
-  /// usuario que rompio algo cuando solo cerro la hoja de Google.
-  String? _mensajeDeError(Object error) {
-    if (error is String) return error;
-    final texto = error.toString();
-    if (texto.contains('cancelado')) return null;
-    return texto.replaceFirst(RegExp(r'^Exception:\s*'), '');
-  }
+  /// Cerrar la hoja de Google no es un error: [mensajeErrorAuth] devuelve
+  /// null y no se muestra nada.
+  String? _mensajeDeError(Object error) => mensajeErrorAuth(context.t, error);
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +93,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     //header
                     Text(
-                      'Bienvenido a',
+                      context.t.authBienvenido,
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 16,
                         color: context.paleta.apagado,
@@ -113,8 +109,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     //email
                     AuthField(
-                      label: 'Correo electrónico',
-                      hint: 'tu@correo.com',
+                      label: context.t.authCorreo,
+                      hint: context.t.authCorreoEjemplo,
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
                     ),
@@ -122,7 +118,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     //password
                     AuthField(
-                      label: 'Contraseña',
+                      label: context.t.authContrasena,
                       hint: '••••••••',
                       controller: _passwordCtrl,
                       obscureText: !_verPassword,
@@ -186,7 +182,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                               )
                             : Text(
-                                'Iniciar sesión',
+                                context.t.authIniciarSesion,
                                 style: textTheme.titleMedium?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w700,
@@ -203,7 +199,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
-                            'o continúa con',
+                            context.t.authOContinua,
                             style: TextStyle(
                               fontSize: 12,
                               color: context.paleta.apagado,
@@ -238,7 +234,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                               ),
                         label: Text(
-                          'Continuar con Google',
+                          context.t.authContinuarGoogle,
                           style: textTheme.titleMedium?.copyWith(
                             color: context.paleta.tinta,
                             fontWeight: FontWeight.w600,
@@ -260,7 +256,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          '¿No tienes cuenta? ',
+                          context.t.authSinCuentaPregunta,
                           style: TextStyle(
                             color: context.paleta.apagado,
                             fontSize: 14,
@@ -274,7 +270,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                           child: Text(
-                            'Regístrate',
+                            context.t.authRegistrate,
                             style: TextStyle(
                               color: context.paleta.marca,
                               fontSize: 14,
