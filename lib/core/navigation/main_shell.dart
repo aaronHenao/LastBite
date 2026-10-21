@@ -11,6 +11,7 @@ import 'package:lastbite/features/despensa/presentation/despensa_screen.dart';
 import 'package:lastbite/features/recetas/presentation/recetas_screen.dart';
 import 'package:lastbite/core/notifications/notification_service.dart';
 import 'package:lastbite/core/theme/interruptor_tema.dart';
+import 'package:lastbite/core/widgets/boton_ayuda.dart';
 import 'package:lastbite/core/widgets/marca_lastbite.dart';
 import 'package:lastbite/core/widgets/menu_cuenta.dart';
 
@@ -176,21 +177,43 @@ class _MenuItem extends StatelessWidget {
     final paleta = context.paleta;
     final color = selected ? paleta.marca : paleta.apagado;
 
+    // La etiqueta se ve, no solo la anuncia el lector: la evaluacion pidio
+    // acompañar los iconos con texto, y una camara o un gorro de chef no
+    // dicen solos "Agregar" o "Recetas". Se acota el escalado porque la barra
+    // tiene alto fijo; el texto grande sigue en el resto de la pantalla.
     return Expanded(
       child: Semantics(
         button: true,
         selected: selected,
         label: label,
-        child: Tooltip(
-          message: label,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(AppRadius.md),
+        excludeSemantics: true,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: MediaQuery.withClampedTextScaling(
+            maxScaleFactor: 1.3,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 24, color: color),
-                const SizedBox(height: AppSpacing.xs),
+                Icon(icon, size: 22, color: color),
+                const SizedBox(height: 2),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: color,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 2),
                 AnimatedContainer(
                   duration: AppMotion.duracion(context, AppMotion.pulsa),
                   curve: AppMotion.curvaPulsa,
@@ -256,6 +279,7 @@ class _BarraNavegacion extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: const [
                 InterruptorTema(),
+                BotonAyuda(),
                 SizedBox(width: AppSpacing.xs),
                 MenuCuenta(),
               ],

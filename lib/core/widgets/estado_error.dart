@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:lastbite/l10n/traducciones.dart';
+
 import '../theme/app_theme.dart';
 
 /// Error de carga de una pantalla.
@@ -51,7 +53,7 @@ class EstadoError extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: onReintentar,
                   icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Reintentar'),
+                  label: Text(context.t.accionReintentar),
                 ),
               ],
               if (detalle != null) ...[
@@ -63,7 +65,7 @@ class EstadoError extends StatelessWidget {
                   child: ExpansionTile(
                     tilePadding: EdgeInsets.zero,
                     title: Text(
-                      'Detalle técnico',
+                      context.t.accionDetalleTecnico,
                       style: textTheme.bodySmall?.copyWith(
                         color: paleta.apagado,
                       ),

@@ -54,6 +54,9 @@ class PreferenciasNotifier extends StreamNotifier<Preferencias> {
   Future<void> cambiarIdioma(String? codigo) => _guardar(
     _actuales.copyWith(idioma: codigo, limpiarIdioma: codigo == null),
   );
+
+  /// Vuelve todo a los valores de fabrica.
+  Future<void> restablecer() => _guardar(const Preferencias());
 }
 
 final preferenciasProvider =

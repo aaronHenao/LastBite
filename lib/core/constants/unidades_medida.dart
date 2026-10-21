@@ -15,18 +15,9 @@ enum UnidadMedida {
 /// sentido para cada categoría de alimento.
 enum DimensionMedida { masa, volumen, conteo }
 
-/// Extensión para obtener la representación en string de la unidad
+/// Abreviatura con la que se guarda la cantidad. Para mostrarla en el idioma
+/// activo, `L10n.unidad` (textos_dominio.dart).
 extension UnidadMedidaExt on UnidadMedida {
-  String get label => switch (this) {
-    UnidadMedida.unidad => 'Unidad',
-    UnidadMedida.kilogramo => 'Kilogramo (kg)',
-    UnidadMedida.gramo => 'Gramo (g)',
-    UnidadMedida.litro => 'Litro (L)',
-    UnidadMedida.mililitro => 'Mililitro (ml)',
-    UnidadMedida.cucharada => 'Cucharada',
-    UnidadMedida.taza => 'Taza',
-  };
-
   String get abreviatura => switch (this) {
     UnidadMedida.unidad => 'unidad',
     UnidadMedida.kilogramo => 'kg',

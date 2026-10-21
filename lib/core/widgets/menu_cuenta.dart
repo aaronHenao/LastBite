@@ -1,12 +1,13 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:lastbite/l10n/traducciones.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lastbite/core/theme/app_theme.dart';
+import 'package:lastbite/core/widgets/avatar_usuario.dart';
 import 'package:lastbite/features/auth/presentation/auth_provider.dart';
 import 'package:lastbite/features/ajustes/presentation/ajustes_screen.dart';
+import 'package:lastbite/features/ayuda/presentation/ayuda_screen.dart';
 import 'package:lastbite/features/compartida/presentation/compartida_screen.dart';
 import 'package:lastbite/features/consulta_rapida/presentation/consulta_rapida_screen.dart';
 import 'package:lastbite/features/perfil/presentation/perfil_screen.dart';
@@ -41,16 +42,7 @@ class MenuCuenta extends ConsumerWidget {
             customBorder: const CircleBorder(),
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.xs),
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: paleta.marcaSuave,
-                backgroundImage: fotoUrl == null
-                    ? null
-                    : CachedNetworkImageProvider(fotoUrl),
-                child: fotoUrl != null
-                    ? null
-                    : Icon(Icons.person, size: 20, color: paleta.marca),
-              ),
+              child: AvatarUsuario(fotoUrl: fotoUrl),
             ),
           ),
         ),
@@ -75,6 +67,11 @@ class MenuCuenta extends ConsumerWidget {
           leadingIcon: const Icon(Icons.accessibility_new_rounded),
           onPressed: () => abrir(const AjustesScreen()),
           child: Text(context.t.cuentaAccesibilidad),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.help_outline_rounded),
+          onPressed: () => abrir(const AyudaScreen()),
+          child: Text(context.t.cuentaAyuda),
         ),
         MenuItemButton(
           leadingIcon: Icon(Icons.logout_rounded, color: paleta.vencido),

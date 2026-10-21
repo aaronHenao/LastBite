@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -54,17 +55,17 @@ class AjustesScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final paso in Preferencias.escalasDisponibles)
+                    for (final escala in Preferencias.escalasDisponibles)
                       RadioListTile<double>(
-                        value: paso.valor,
+                        value: escala,
                         contentPadding: EdgeInsets.zero,
                         activeColor: paleta.marca,
                         title: Text(
-                          _etiquetaEscala(t, paso.valor),
+                          _etiquetaEscala(t, escala),
                           // Cada opcion se muestra a su propio tamaño: se
                           // elige viendo, no imaginando.
                           style: textTheme.bodyLarge?.copyWith(
-                            fontSize: 16 * paso.valor,
+                            fontSize: 16 * escala,
                           ),
                         ),
                       ),
@@ -175,6 +176,11 @@ class AjustesScreen extends ConsumerWidget {
               ),
 
               const _NotaLector(),
+              const SizedBox(height: AppSpacing.xl),
+              _Restablecer(
+                activo: !mapEquals(prefs.toMap(), const Preferencias().toMap()),
+                onRestablecer: notifier.restablecer,
+              ),
             ],
           ),
         ),
@@ -237,6 +243,68 @@ class _Seccion extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Vuelve a los valores de fabrica. La evaluacion marco que no habia forma de
+/// hacerlo ni se decia que se pierde: la confirmacion lo explica antes, y
+/// aclara que los datos no se tocan.
+class _Restablecer extends StatelessWidget {
+  const _Restablecer({required this.activo, required this.onRestablecer});
+
+  /// Solo si algo difiere de fabrica: si no, el boton no haria nada.
+  final bool activo;
+  final Future<void> Function() onRestablecer;
+
+  Future<void> _confirmar(BuildContext context) async {
+    final t = context.t;
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t.ajustesRestablecerPregunta),
+        content: Text(t.ajustesRestablecerAyuda),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(t.accionCancelar),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(t.ajustesRestablecerAccion),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true) return;
+
+    await onRestablecer();
+    messenger.showSnackBar(SnackBar(content: Text(t.ajustesRestablecidos)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final paleta = context.paleta;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          context.t.ajustesRestablecerAyuda,
+          style: textTheme.bodySmall?.copyWith(color: paleta.apagado),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        OutlinedButton.icon(
+          onPressed: activo ? () => _confirmar(context) : null,
+          icon: const Icon(Icons.restart_alt_rounded, size: 18),
+          label: Text(context.t.ajustesRestablecer),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 48),
+          ),
+        ),
+      ],
     );
   }
 }

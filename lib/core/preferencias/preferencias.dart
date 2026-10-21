@@ -38,12 +38,8 @@ class Preferencias {
   ];
 
   /// Los pasos que ofrece el ajuste. La app esta probada hasta el ultimo.
-  static const escalasDisponibles = <({double valor, String etiqueta})>[
-    (valor: 1.0, etiqueta: 'Normal'),
-    (valor: 1.3, etiqueta: 'Grande'),
-    (valor: 1.6, etiqueta: 'Más grande'),
-    (valor: 2.0, etiqueta: 'Máximo'),
-  ];
+  /// Su nombre lo pone la pantalla, en el idioma activo.
+  static const escalasDisponibles = <double>[1.0, 1.3, 1.6, 2.0];
 
   Preferencias copyWith({
     ThemeMode? tema,
