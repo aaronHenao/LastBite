@@ -7,6 +7,7 @@ import 'package:lastbite/core/notifications/vencimiento_checker.dart';
 import 'core/theme/app_theme.dart';
 import 'core/preferencias/preferencias.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/traducciones.dart';
 import 'core/preferencias/preferencias_provider.dart';
 import 'features/auth/presentation/auth_provider.dart';
 import 'features/auth/presentation/login_screen.dart';
@@ -43,6 +44,9 @@ class LastBiteApp extends ConsumerWidget {
       supportedLocales: L10n.supportedLocales,
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
+        // Lo que se arma sin pantalla (notificaciones) sale en el mismo
+        // idioma que la app.
+        textosActuales = L10n.of(context)!;
         final sistema = MediaQuery.of(context);
 
         // Mientras el ajuste de la app este en Normal manda el del sistema:

@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lastbite/features/compartida/data/despensa_compartida_repository.dart';
 import 'package:lastbite/core/data/despensa_ref.dart';
 import 'package:lastbite/features/despensa/data/despensa_repository.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import '../notifications/notification_service.dart';
 import '../../features/alertas/domain/alerta.dart';
 
@@ -46,6 +47,7 @@ class VencimientoChecker {
 
   Future<void> _enviarNotificaciones(List<Alerta> alertas) async {
     final notif = NotificationService.instance;
+    final t = textosActuales;
     int id = 200;
 
     for (final alerta in alertas) {
@@ -53,28 +55,26 @@ class VencimientoChecker {
         case AlertaTipo.aviso1:
           await notif.mostrarNotificacion(
             id: id++,
-            titulo: '⚠️ ${alerta.nombreProducto} vence mañana',
+            titulo: '⚠️ ${t.notifVenceManana(alerta.nombreProducto)}',
             cuerpo: alerta.tieneReceta
-                ? '${alerta.emoji} Aprovéchalo hoy — toca para ver una receta sugerida.'
-                : '${alerta.emoji} Es tu último día para usarlo. ¡No lo desperdicies!',
+                ? '${alerta.emoji} ${t.notifVenceMananaConReceta}'
+                : '${alerta.emoji} ${t.notifVenceMananaSinReceta}',
             payload: 'alertas', // para el deep link
           );
           break;
         case AlertaTipo.aviso3:
           await notif.mostrarNotificacion(
             id: id++,
-            titulo: '🕐 ${alerta.nombreProducto} vence en 3 días',
-            cuerpo:
-                '${alerta.emoji} Planifica una receta antes de que sea tarde.',
+            titulo: '🕐 ${t.notifVenceEn3(alerta.nombreProducto)}',
+            cuerpo: '${alerta.emoji} ${t.notifVenceEn3Cuerpo}',
             payload: 'alertas',
           );
           break;
         case AlertaTipo.vencido:
           await notif.mostrarNotificacion(
             id: id++,
-            titulo: '🚨 ${alerta.nombreProducto} ya venció',
-            cuerpo:
-                '${alerta.emoji} Retíralo de tu despensa.',
+            titulo: '🚨 ${t.notifVencido(alerta.nombreProducto)}',
+            cuerpo: '${alerta.emoji} ${t.notifVencidoCuerpo}',
             payload: 'alertas',
           );
           break;

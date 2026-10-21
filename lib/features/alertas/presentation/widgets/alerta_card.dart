@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lastbite/l10n/traducciones.dart';
+import 'package:lastbite/l10n/app_localizations.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
 import 'package:lastbite/core/widgets/pastilla_estado.dart';
 import 'package:lastbite/features/alertas/domain/alerta.dart';
@@ -82,7 +83,7 @@ class AlertaCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        alerta.titulo,
+                        _titulo(context.t, alerta.tipo),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.labelMedium?.copyWith(
@@ -106,17 +107,20 @@ class AlertaCard extends StatelessWidget {
                     child: IconButton(
                       onPressed: onDescartar,
                       icon: const Icon(Icons.close_rounded, size: 20),
-                      tooltip: 'Descartar alerta',
+                      tooltip: context.t.alertaDescartarTooltip,
                     ),
                   ),
                 ],
               ],
             ),
             const SizedBox(height: AppSpacing.md),
-            Text(alerta.mensaje, style: textTheme.bodySmall),
+            Text(_mensaje(context.t, alerta), style: textTheme.bodySmall),
             if (alerta.recetaSugerida != null) ...[
               const SizedBox(height: AppSpacing.md),
-              Text('RECETA SUGERIDA', style: AppTextStyles.rotulo(context)),
+              Text(
+                context.t.alertaRecetaSugerida,
+                style: AppTextStyles.rotulo(context),
+              ),
               const SizedBox(height: AppSpacing.sm),
               RecetaCard(
                 receta: alerta.recetaSugerida!,
@@ -129,3 +133,17 @@ class AlertaCard extends StatelessWidget {
     );
   }
 }
+
+String _titulo(L10n t, AlertaTipo tipo) => switch (tipo) {
+  AlertaTipo.aviso5 => t.alertaTituloAviso5,
+  AlertaTipo.aviso3 => t.alertaTituloAviso3,
+  AlertaTipo.aviso1 => t.alertaTituloAviso1,
+  AlertaTipo.vencido => t.alertaTituloVencido,
+};
+
+String _mensaje(L10n t, Alerta alerta) => switch (alerta.tipo) {
+  AlertaTipo.aviso5 => t.alertaMensajeAviso5(alerta.nombreProducto),
+  AlertaTipo.aviso3 => t.alertaMensajeAviso3(alerta.nombreProducto),
+  AlertaTipo.aviso1 => t.alertaMensajeAviso1(alerta.nombreProducto),
+  AlertaTipo.vencido => t.alertaMensajeVencido(alerta.nombreProducto),
+};

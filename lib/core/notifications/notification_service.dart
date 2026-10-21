@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:lastbite/l10n/traducciones.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
@@ -58,10 +59,10 @@ class NotificationService {
   }) async {
     if (kIsWeb) return;
 
-    const androidDetails = AndroidNotificationDetails(
+    final androidDetails = AndroidNotificationDetails(
       'lastbite_vencimientos',
-      'Alertas de vencimiento',
-      channelDescription: 'Notificaciones de productos próximos a vencer',
+      textosActuales.notifCanal,
+      channelDescription: textosActuales.notifCanalDescripcion,
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
@@ -71,7 +72,7 @@ class NotificationService {
       id,
       titulo,
       cuerpo,
-      const NotificationDetails(android: androidDetails),
+      NotificationDetails(android: androidDetails),
       payload: payload,
     );
   }

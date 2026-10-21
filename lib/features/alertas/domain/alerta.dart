@@ -41,45 +41,6 @@ class Alerta {
     }
   }
 
-  String get etiqueta {
-    switch (tipo) {
-      case AlertaTipo.aviso5:
-        return '5d';
-      case AlertaTipo.aviso3:
-        return '3d';
-      case AlertaTipo.aviso1:
-        return '1d';
-      case AlertaTipo.vencido:
-        return 'Vencido';
-    }
-  }
-
-  String get titulo {
-    switch (tipo) {
-      case AlertaTipo.aviso5:
-        return 'Primer aviso';
-      case AlertaTipo.aviso3:
-        return 'Aviso critico';
-      case AlertaTipo.aviso1:
-        return 'Ultimo dia';
-      case AlertaTipo.vencido:
-        return 'Producto vencido';
-    }
-  }
-
-  String get mensaje {
-    switch (tipo) {
-      case AlertaTipo.aviso5:
-        return 'Tu $nombreProducto vencera en 5 dias. Ten cuidado.';
-      case AlertaTipo.aviso3:
-        return 'Tu $nombreProducto vence en 3 dias. Te sugerimos una receta.';
-      case AlertaTipo.aviso1:
-        return 'Tu $nombreProducto vence manana. Aprovechalo hoy.';
-      case AlertaTipo.vencido:
-        return 'Tu $nombreProducto ya caduco. Retiralo de la despensa.';
-    }
-  }
-
   Map<String, dynamic> toMap() {
     return {
       'id': id,

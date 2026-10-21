@@ -1,8 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:lastbite/core/widgets/boton_ayuda.dart';
+import 'package:lastbite/features/ayuda/presentation/ayuda_screen.dart';
 import 'package:lastbite/core/responsive/responsive.dart';
 import 'package:lastbite/features/alertas/domain/alerta.dart';
+import 'package:lastbite/l10n/traducciones.dart';
 import 'package:lastbite/core/widgets/estado_vacio.dart';
 import 'package:lastbite/core/widgets/estado_error.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -61,7 +64,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
       ),
       error: (e, _) => Scaffold(
         body: EstadoError(
-          mensaje: 'No pudimos cargar tus alertas.',
+          mensaje: context.t.alertasErrorCarga,
           detalle: e,
           onReintentar: () => ref.read(alertasProvider.notifier).refrescar(),
         ),
@@ -90,7 +93,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'ALERTAS',
+                                      context.t.alertasRotulo,
                                       style: textTheme.titleSmall?.copyWith(
                                         letterSpacing: 2.4,
                                         color: context.paleta.apagado,
@@ -98,7 +101,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Caducidad y recetas',
+                                      context.t.alertasTitulo,
                                       style: textTheme.bodyLarge?.copyWith(
                                         fontSize: 24,
                                         fontWeight: FontWeight.w800,
@@ -108,28 +111,37 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                                   ],
                                 ),
                               ),
-
+                              const BotonAyuda(seccion: SeccionAyuda.alertas),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          // "Borrar todo" va junto a la nota que habla de
+                          // borrar: en la fila del titulo, con la ayuda al
+                          // lado, ya no entraba con el texto al doble.
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  context.t.alertasNota,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: context.paleta.apagado,
+                                  ),
+                                ),
+                              ),
                               if (alertas.isNotEmpty)
                                 TextButton(
                                   onPressed: () => _confirmarBorrado(context),
                                   style: TextButton.styleFrom(
                                     foregroundColor: context.paleta.vencido,
                                   ),
-                                  child: const Text(
-                                    'Borrar todo',
-                                    style: TextStyle(
+                                  child: Text(
+                                    context.t.alertasBorrarTodo,
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ),
                             ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Las alertas se mantienen hasta que decidas borrarlas.',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: context.paleta.apagado,
-                            ),
                           ),
                           if (avisoTraduccion != null) ...[
                             const SizedBox(height: 12),
@@ -176,16 +188,14 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                     ),
                   ),
                   if (alertas.isEmpty) ...[
-                    const SliverFillRemaining(
+                    SliverFillRemaining(
                       hasScrollBody: false,
                       // El vacio aca es buena noticia y hay que decirlo: antes
                       // solo informaba que no habia nada.
                       child: EstadoVacio(
                         icono: CupertinoIcons.checkmark_seal,
-                        titulo: 'Todo bajo control',
-                        descripcion:
-                            'Ningún producto de tu despensa está por vencerse. '
-                            'Te avisamos apenas alguno lo esté.',
+                        titulo: context.t.alertasVaciasTitulo,
+                        descripcion: context.t.alertasVaciasDescripcion,
                       ),
                     ),
                   ] else ...[
@@ -246,9 +256,9 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text('Alerta de ${alerta.nombreProducto} descartada'),
+          content: Text(context.t.alertaDescartada(alerta.nombreProducto)),
           action: SnackBarAction(
-            label: 'Deshacer',
+            label: context.t.accionDeshacer,
             onPressed: () => notifier.restaurar(alerta),
           ),
         ),
@@ -285,7 +295,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Borrar todas las alertas',
+                context.t.alertasBorrarPregunta,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
@@ -294,7 +304,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Esta accion eliminara las alertas actuales. Las nuevas se generaran cuando corresponda.',
+                context.t.alertasBorrarDescripcion,
                 style: TextStyle(fontSize: 12, color: context.paleta.apagado),
               ),
               const SizedBox(height: 16),
@@ -303,7 +313,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancelar'),
+                      child: Text(context.t.accionCancelar),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -315,7 +325,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Alertas eliminadas'),
+                              content: Text(context.t.alertasEliminadas),
                               backgroundColor: context.paleta.marca,
                             ),
                           );
@@ -324,7 +334,7 @@ class _AlertasScreenState extends ConsumerState<AlertasScreen> {
                       style: FilledButton.styleFrom(
                         backgroundColor: context.paleta.vencido,
                       ),
-                      child: const Text('Borrar todo'),
+                      child: Text(context.t.alertasBorrarTodo),
                     ),
                   ),
                 ],
@@ -422,7 +432,10 @@ class _FondoDescartar extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Descartar', style: AppTextStyles.rotulo(context)),
+          Text(
+            context.t.alertaDescartarCorto,
+            style: AppTextStyles.rotulo(context),
+          ),
           const SizedBox(width: AppSpacing.sm),
           Icon(Icons.delete_outline_rounded, color: paleta.vencido),
         ],

@@ -1,3 +1,4 @@
+import 'package:lastbite/l10n/traducciones.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -243,6 +244,7 @@ class AlertasNotifier extends AsyncNotifier<List<Alerta>> {
         number: 1,
         perfil: perfil,
         ingredientePrincipal: producto.nombre,
+        idioma: textosActuales.localeName,
       );
       final recetas = RecetaBusquedaRemoteModel.fromApiRawList(
         raw,
