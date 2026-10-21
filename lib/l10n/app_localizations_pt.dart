@@ -1441,6 +1441,12 @@ class L10nPt extends L10n {
   String get consultaEstadoVigente => 'Em bom estado';
 
   @override
+  String get consultaHistorialTitulo => 'Buscas recentes';
+
+  @override
+  String get consultaHistorialLimpiar => 'Limpar histórico';
+
+  @override
   String get recetasErrorFaltaClave =>
       'Falta a chave da IA. Rode o app com --dart-define-from-file=env.json.';
 

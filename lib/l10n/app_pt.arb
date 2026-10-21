@@ -403,6 +403,8 @@
   "consultaEstadoVencido": "Vencido",
   "consultaEstadoPorVencer": "Perto do vencimento",
   "consultaEstadoVigente": "Em bom estado",
+  "consultaHistorialTitulo": "Buscas recentes",
+  "consultaHistorialLimpiar": "Limpar histórico",
   "recetasErrorFaltaClave": "Falta a chave da IA. Rode o app com --dart-define-from-file=env.json.",
   "recetasErrorRespuestaVacia": "A IA respondeu vazio. Tente de novo.",
   "recetasErrorTiempo": "A IA demorou demais para responder. Tente de novo.",

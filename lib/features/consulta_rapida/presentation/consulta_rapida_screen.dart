@@ -6,6 +6,7 @@ import 'package:lastbite/core/widgets/estado_vacio.dart';
 import 'package:lastbite/core/widgets/pastilla_estado.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lastbite/core/theme/app_theme.dart';
+import 'package:lastbite/features/consulta_rapida/presentation/historial_busqueda_provider.dart';
 import 'package:lastbite/features/despensa/domain/producto.dart';
 import 'package:lastbite/features/despensa/presentation/despensa_provider.dart';
 import 'package:lastbite/core/widgets/estado_error.dart';
@@ -35,9 +36,19 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
     setState(() => _query = '');
   }
 
+  void _buscar(String termino) {
+    final valor = termino.trim();
+    _searchController.text = valor;
+    setState(() => _query = valor);
+    if (valor.isNotEmpty) {
+      ref.read(historialBusquedaProvider.notifier).agregar(valor);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncProductos = ref.watch(despensaProvider);
+    final historial = ref.watch(historialBusquedaProvider);
 
     return asyncProductos.when(
       loading: () => Scaffold(
@@ -88,6 +99,8 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
                     TextField(
                       controller: _searchController,
                       onChanged: (value) => setState(() => _query = value),
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: _buscar,
                       decoration: InputDecoration(
                         hintText: context.t.consultaBuscar,
                         hintStyle: TextStyle(color: context.paleta.apagado),
@@ -129,6 +142,15 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
                       ),
                     ),
                     const SizedBox(height: 18),
+                    if (_query.trim().isEmpty && historial.isNotEmpty) ...[
+                      _HistorialBusquedas(
+                        terminos: historial,
+                        onSeleccionar: _buscar,
+                        onLimpiar: () =>
+                            ref.read(historialBusquedaProvider.notifier).limpiar(),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     if (productos.isEmpty)
                       Expanded(
                         child: Center(
@@ -371,6 +393,63 @@ class _ConsultaRapidaScreenState extends ConsumerState<ConsultaRapidaScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Chips con las ultimas busquedas: volver a encontrar algo ya buscado no
+/// deberia depender de recordar el termino exacto otra vez.
+class _HistorialBusquedas extends StatelessWidget {
+  const _HistorialBusquedas({
+    required this.terminos,
+    required this.onSeleccionar,
+    required this.onLimpiar,
+  });
+
+  final List<String> terminos;
+  final ValueChanged<String> onSeleccionar;
+  final VoidCallback onLimpiar;
+
+  @override
+  Widget build(BuildContext context) {
+    final paleta = context.paleta;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                context.t.consultaHistorialTitulo,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: paleta.apagado,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: onLimpiar,
+              child: Text(context.t.consultaHistorialLimpiar),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final termino in terminos)
+              ActionChip(
+                label: Text(termino),
+                backgroundColor: paleta.superficie,
+                side: BorderSide(color: paleta.contorno),
+                labelStyle: TextStyle(color: paleta.tinta),
+                onPressed: () => onSeleccionar(termino),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

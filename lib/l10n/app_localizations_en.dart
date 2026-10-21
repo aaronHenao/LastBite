@@ -1432,6 +1432,12 @@ class L10nEn extends L10n {
   String get consultaEstadoVigente => 'Good';
 
   @override
+  String get consultaHistorialTitulo => 'Recent searches';
+
+  @override
+  String get consultaHistorialLimpiar => 'Clear history';
+
+  @override
   String get recetasErrorFaltaClave =>
       'The AI key is missing. Run the app with --dart-define-from-file=env.json.';
 

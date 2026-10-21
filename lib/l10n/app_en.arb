@@ -403,6 +403,8 @@
   "consultaEstadoVencido": "Expired",
   "consultaEstadoPorVencer": "Expiring soon",
   "consultaEstadoVigente": "Good",
+  "consultaHistorialTitulo": "Recent searches",
+  "consultaHistorialLimpiar": "Clear history",
   "recetasErrorFaltaClave": "The AI key is missing. Run the app with --dart-define-from-file=env.json.",
   "recetasErrorRespuestaVacia": "The AI sent an empty answer. Try again.",
   "recetasErrorTiempo": "The AI took too long to answer. Try again.",

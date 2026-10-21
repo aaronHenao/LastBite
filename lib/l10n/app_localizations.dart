@@ -2522,6 +2522,18 @@ abstract class L10n {
   /// **'En buen estado'**
   String get consultaEstadoVigente;
 
+  /// No description provided for @consultaHistorialTitulo.
+  ///
+  /// In es, this message translates to:
+  /// **'Búsquedas recientes'**
+  String get consultaHistorialTitulo;
+
+  /// No description provided for @consultaHistorialLimpiar.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar historial'**
+  String get consultaHistorialLimpiar;
+
   /// No description provided for @recetasErrorFaltaClave.
   ///
   /// In es, this message translates to:
